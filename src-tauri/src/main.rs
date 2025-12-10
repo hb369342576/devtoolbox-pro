@@ -4,7 +4,7 @@
 use serde::{Deserialize, Serialize};
 use std::net::TcpStream;
 use std::time::Duration;
-use sysinfo::{CpuExt, System, SystemExt};
+use sysinfo::System;
 use std::sync::Mutex;
 use tauri::State;
 
@@ -270,12 +270,12 @@ fn get_system_info(state: State<AppState>) -> SystemInfo {
     sys.refresh_all();
 
     SystemInfo {
-        os: sys.name().unwrap_or_else(|| "Unknown".to_string()),
-        kernel: sys.kernel_version().unwrap_or_else(|| "Unknown".to_string()),
-        hostname: sys.host_name().unwrap_or_else(|| "Unknown".to_string()),
-        cpu: sys.cpus()[0].brand().to_string(),
+        os: System::name().unwrap_or_else(|| "Unknown".to_string()),
+        kernel: System::kernel_version().unwrap_or_else(|| "Unknown".to_string()),
+        hostname: System::host_name().unwrap_or_else(|| "Unknown".to_string()),
+        cpu: sys.cpus().first().map(|cpu| cpu.brand().to_string()).unwrap_or_else(|| "Unknown".to_string()),
         memory: format!("{:.2} GB", sys.total_memory() as f64 / 1024.0 / 1024.0 / 1024.0),
-        uptime: format!("{} s", sys.uptime()),
+        uptime: format!("{} s", System::uptime()),
     }
 }
 
