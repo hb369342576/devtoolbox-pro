@@ -1,0 +1,19 @@
+[package]
+name = "devtoolbox"
+version = "1.0.0"
+description = "DevToolbox Pro Backend"
+authors = ["Developer"]
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2.0.0-beta", features = [] }
+
+[dependencies]
+tauri = { version = "2.0.0-beta", features = [] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+sysinfo = "0.30"
+chrono = "0.4"
+mysql = "24.0"
+calamine = "0.24"
+lopdf = "0.32"
