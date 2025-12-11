@@ -7,6 +7,7 @@ use std::time::Duration;
 use sysinfo::System;
 use std::sync::Mutex;
 use tauri::State;
+use mysql::prelude::*;
 
 // --- 结构体定义 ---
 
@@ -74,7 +75,7 @@ struct PdfRequest {
 #[derive(Debug, Serialize)]
 struct TableInfo {
     name: String,
-    rows: u64,
+    rows: i64,
     size: String,
     comment: Option<String>,
 }
@@ -96,12 +97,13 @@ struct ColumnInfo {
 #[derive(Debug, Serialize)]
 struct TableDetail {
     name: String,
-    rows: u64,
+    rows: i64,
     size: String,
     engine: Option<String>,
     collation: Option<String>,
     comment: Option<String>,
     columns: Vec<ColumnInfo>,
+    ddl: String,
 }
 
 // 全局状态 (用于系统监控)
@@ -111,84 +113,172 @@ struct AppState {
 
 // --- 1. 数据库相关命令 ---
 
-// 测试数据库连接 (真实的 TCP 探测)
+// 测试数据库连接 (真实的数据库认证)
 #[tauri::command]
-async fn db_test_connection(payload: DbConfig) -> bool {
-    // 简单实现：尝试建立 TCP 连接
-    // 在生产环境中，应该使用 sqlx 或对应数据库驱动进行真实认证
-    let address = format!("{}:{}", payload.host, payload.port);
-    match TcpStream::connect_timeout(&address.parse().unwrap_or("127.0.0.1:0".parse().unwrap()), Duration::from_secs(2)) {
-        Ok(_) => true,
-        Err(_) => false,
-    }
-}
-
-// 获取数据库列表 (Mocked for Demo, but ready for implementation)
-#[tauri::command]
-async fn db_get_databases(_id: String) -> Vec<String> {
-    // 实际应根据 ID 查找连接并查询
-    // 这里返回模拟的真实感数据
-    vec![
-        "information_schema".to_string(),
-        "mysql".to_string(),
-        "performance_schema".to_string(),
-        "sys".to_string(),
-        "app_db".to_string(),
-        "logs_db".to_string()
-    ]
-}
-
-// 获取表列表
-#[tauri::command]
-async fn db_get_tables(_id: String, db: String) -> Vec<TableInfo> {
-    // 模拟数据
-    let mut tables = Vec::new();
-    if db == "app_db" {
-        tables.push(TableInfo { name: "users".to_string(), rows: 100, size: "16KB".to_string(), comment: Some("Users table".to_string()) });
-        tables.push(TableInfo { name: "orders".to_string(), rows: 5000, size: "2MB".to_string(), comment: Some("Orders table".to_string()) });
-    } else {
-        tables.push(TableInfo { name: "sys_config".to_string(), rows: 10, size: "4KB".to_string(), comment: None });
-    }
-    tables
-}
-
-// 获取表结构
-#[tauri::command]
-async fn db_get_table_schema(_id: String, _db: String, table: String) -> Option<TableDetail> {
-    // 模拟根据表名返回不同的结构
-    let mut columns = Vec::new();
+async fn db_test_connection(payload: DbConfig) -> Result<String, String> {
+    // 构造连接字符串
+    let conn_str = format!(
+        "mysql://{}:{}@{}:{}",
+        payload.user,
+        payload.password.unwrap_or_default(),
+        payload.host,
+        payload.port
+    );
     
-    // ID Column (Common)
-    columns.push(ColumnInfo {
-        name: "id".to_string(),
-        col_type: "bigint".to_string(),
-        length: Some(20),
-        scale: None,
-        nullable: false,
-        isPrimaryKey: true,
-        defaultValue: None,
-        comment: Some("Primary Key".to_string()),
-    });
-
-    if table == "users" {
-        columns.push(ColumnInfo { name: "username".to_string(), col_type: "varchar".to_string(), length: Some(50), scale: None, nullable: false, isPrimaryKey: false, defaultValue: None, comment: None });
-        columns.push(ColumnInfo { name: "email".to_string(), col_type: "varchar".to_string(), length: Some(100), scale: None, nullable: true, isPrimaryKey: false, defaultValue: None, comment: None });
-    } else if table == "orders" {
-        columns.push(ColumnInfo { name: "order_no".to_string(), col_type: "varchar".to_string(), length: Some(32), scale: None, nullable: false, isPrimaryKey: false, defaultValue: None, comment: None });
-        columns.push(ColumnInfo { name: "amount".to_string(), col_type: "decimal".to_string(), length: Some(10), scale: Some(2), nullable: false, isPrimaryKey: false, defaultValue: Some("0.00".to_string()), comment: None });
+    // 尝试真实的数据库连接
+    match mysql::Conn::new(conn_str.as_str()) {
+        Ok(mut conn) => {
+            // 执行简单查询验证连接
+            match conn.query_drop("SELECT 1") {
+                Ok(_) => Ok("Connection successful".to_string()),
+                Err(e) => Err(format!("Connection established but query failed: {}", e)),
+            }
+        },
+        Err(e) => {
+            // 连接失败，返回详细错误
+            Err(format!("Failed to connect to {}@{}:{} - {}", 
+                payload.user, payload.host, payload.port, e))
+        },
     }
+}
 
-    columns.push(ColumnInfo { name: "created_at".to_string(), col_type: "datetime".to_string(), length: None, scale: None, nullable: false, isPrimaryKey: false, defaultValue: Some("CURRENT_TIMESTAMP".to_string()), comment: None });
+// 获取数据库列表 (真实查询)
+#[tauri::command]
+async fn db_get_databases(id: String) -> Result<Vec<String>, String> {
+    // 这里应该从全局状态或配置中获取连接信息
+    // 暂时使用传入的 id 作为连接字符串（格式：mysql://user:pass@host:port）
+    // 实际应用中，应该维护一个连接池或配置映射
+    
+    let parts: Vec<&str> = id.split("://").collect();
+    if parts.len() != 2 {
+        return Err("Invalid connection ID format".to_string());
+    }
+    
+    let conn_str = format!("mysql://{}", parts[1]);
+    
+    match mysql::Conn::new(conn_str.as_str()) {
+        Ok(mut conn) => {
+            match conn.query_map("SHOW DATABASES", |db_name: String| db_name) {
+                Ok(databases) => Ok(databases),
+                Err(e) => Err(format!("Failed to fetch databases: {}", e)),
+            }
+        },
+        Err(e) => Err(format!("Failed to connect: {}", e)),
+    }
+}
 
-    Some(TableDetail {
-        name: table,
-        rows: 100,
-        size: "16KB".to_string(),
-        engine: Some("InnoDB".to_string()),
-        collation: Some("utf8mb4_general_ci".to_string()),
-        comment: Some("Table Description".to_string()),
-        columns
-    })
+// 获取表列表 (真实查询)
+#[tauri::command]
+async fn db_get_tables(id: String, db: String) -> Result<Vec<TableInfo>, String> {
+    let parts: Vec<&str> = id.split("://").collect();
+    if parts.len() != 2 {
+        return Err("Invalid connection ID format".to_string());
+    }
+    
+    let conn_str = format!("mysql://{}/{}", parts[1], db);
+    
+    match mysql::Conn::new(conn_str.as_str()) {
+        Ok(mut conn) => {
+            let query = "SELECT TABLE_NAME, TABLE_ROWS, DATA_LENGTH, TABLE_COMMENT FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_TYPE = 'BASE TABLE'";
+            
+            match conn.query_map(query, |(name, rows, size_bytes, comment): (String, Option<u64>, Option<u64>, Option<String>)| {
+                TableInfo {
+                    name,
+                    rows: rows.unwrap_or(0) as i64,
+                    size: format_size(size_bytes.unwrap_or(0)),
+                    comment,
+                }
+            }) {
+                Ok(tables) => Ok(tables),
+                Err(e) => Err(format!("Failed to fetch tables: {}", e)),
+            }
+        },
+        Err(e) => Err(format!("Failed to connect: {}", e)),
+    }
+}
+
+// 获取表结构 (真实查询)
+#[tauri::command]
+async fn db_get_table_schema(id: String, db: String, table: String) -> Result<TableDetail, String> {
+    let parts: Vec<&str> = id.split("://").collect();
+    if parts.len() != 2 {
+        return Err("Invalid connection ID format".to_string());
+    }
+    
+    let conn_str = format!("mysql://{}/{}", parts[1], db);
+    
+    match mysql::Conn::new(conn_str.as_str()) {
+        Ok(mut conn) => {
+            // 获取列信息
+            let column_query = format!(
+                "SELECT COLUMN_NAME, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH, NUMERIC_SCALE, IS_NULLABLE, COLUMN_KEY, COLUMN_DEFAULT, COLUMN_COMMENT \
+                FROM information_schema.COLUMNS \
+                WHERE TABLE_SCHEMA = '{}' AND TABLE_NAME = '{}' \
+                ORDER BY ORDINAL_POSITION",
+                db, table
+            );
+            
+            let columns: Vec<ColumnInfo> = conn.query_map(&column_query, |(name, col_type, length, scale, nullable, key, default_val, comment): (String, String, Option<u64>, Option<u32>, String, String, Option<String>, Option<String>)| {
+                ColumnInfo {
+                    name,
+                    col_type,
+                    length: length.map(|l| l as u32),
+                    scale,
+                    nullable: nullable == "YES",
+                    isPrimaryKey: key == "PRI",
+                    defaultValue: default_val,
+                    comment,
+                }
+            }).map_err(|e| format!("Failed to fetch columns: {}", e))?;
+            
+            // 获取表信息
+            let table_query = format!(
+                "SELECT TABLE_ROWS, DATA_LENGTH, ENGINE, TABLE_COLLATION, TABLE_COMMENT \
+                FROM information_schema.TABLES \
+                WHERE TABLE_SCHEMA = '{}' AND TABLE_NAME = '{}'",
+                db, table
+            );
+            
+            let table_info: Option<(Option<u64>, Option<u64>, Option<String>, Option<String>, Option<String>)> = 
+                conn.query_first(&table_query).map_err(|e| format!("Failed to fetch table info: {}", e))?;
+            
+            let (rows, size_bytes, engine, collation, comment) = table_info.unwrap_or((None, None, None, None, None));
+            
+            // 获取建表语句
+            let ddl_query = format!("SHOW CREATE TABLE `{}`", table);
+            let ddl: Option<(String, String)> = conn.query_first(ddl_query).map_err(|e| format!("Failed to fetch DDL: {}", e))?;
+            let ddl_statement = ddl.map(|(_, create_sql)| create_sql).unwrap_or_default();
+            
+            Ok(TableDetail {
+                name: table,
+                rows: rows.unwrap_or(0) as i64,
+                size: format_size(size_bytes.unwrap_or(0)),
+                engine,
+                collation,
+                comment,
+                columns,
+                ddl: ddl_statement,
+            })
+        },
+        Err(e) => Err(format!("Failed to connect: {}", e)),
+    }
+}
+
+// 辅助函数：格式化字节大小
+fn format_size(bytes: u64) -> String {
+    const KB: u64 = 1024;
+    const MB: u64 = KB * 1024;
+    const GB: u64 = MB * 1024;
+    
+    if bytes >= GB {
+        format!("{:.2} GB", bytes as f64 / GB as f64)
+    } else if bytes >= MB {
+        format!("{:.2} MB", bytes as f64 / MB as f64)
+    } else if bytes >= KB {
+        format!("{:.2} KB", bytes as f64 / KB as f64)
+    } else {
+        format!("{} B", bytes)
+    }
 }
 
 // --- 2. Excel 相关命令 ---

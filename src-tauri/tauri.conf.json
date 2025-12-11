@@ -24,7 +24,8 @@
     ],
     "security": {
       "csp": "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdn.tailwindcss.com https://fonts.googleapis.com https://fonts.gstatic.com https://aistudiocdn.com https://api.dicebear.com"
-    }
+    },
+    "withGlobalTauri": true
   },
   "bundle": {
     "active": true,

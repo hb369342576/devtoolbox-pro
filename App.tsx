@@ -19,7 +19,7 @@ import { NAV_ITEMS } from './constants';
 
 /* --- Home Dashboard --- */
 const Dashboard: React.FC<{ onNavigate: (id: string) => void, lang: Language }> = ({ onNavigate, lang }) => {
-  
+
   const getDescription = (id: string, lang: Language) => {
     const descriptions: Record<string, Record<Language, string>> = {
       'data-source-manager': {
@@ -79,43 +79,42 @@ const Dashboard: React.FC<{ onNavigate: (id: string) => void, lang: Language }> 
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-12 py-8">
       <div className="space-y-4 text-center max-w-3xl px-4">
-         <h1 className="text-4xl md:text-5xl font-bold text-slate-900 dark:text-white tracking-tight">
-           {lang === 'zh' ? '欢迎使用' : 'Welcome to'} <span className="text-blue-600">DevToolbox</span>
-         </h1>
-         <p className="text-lg text-slate-600 dark:text-slate-400">
-           {lang === 'zh' 
-             ? '一站式开发者工具箱，集成数据库管理、PDF处理、系统监控等核心功能。' 
-             : 'One-stop developer toolkit integrating database management, PDF processing, and system monitoring.'}
-         </p>
+        <h1 className="text-4xl md:text-5xl font-bold text-slate-900 dark:text-white tracking-tight">
+          {lang === 'zh' ? '欢迎使用' : 'Welcome to'} <span className="text-blue-600">DevToolbox</span>
+        </h1>
+        <p className="text-lg text-slate-600 dark:text-slate-400">
+          {lang === 'zh'
+            ? '一站式开发者工具箱，集成数据库管理、PDF处理、系统监控等核心功能。'
+            : 'One-stop developer toolkit integrating database management, PDF processing, and system monitoring.'}
+        </p>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-7xl px-4">
         {tools.map((tool) => (
-          <button 
+          <button
             key={tool.id}
-            onClick={() => onNavigate(tool.id)} 
+            onClick={() => onNavigate(tool.id)}
             className="group relative p-6 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 text-left overflow-hidden"
           >
-             <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-transparent dark:from-blue-900/10 dark:to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-             
-             <div className="relative z-10">
-                <div className={`w-14 h-14 rounded-xl flex items-center justify-center mb-6 shadow-sm transition-transform group-hover:scale-105 ${
-                    tool.category === 'db' ? 'bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-300' :
-                    tool.category === 'office' ? 'bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-300' :
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-transparent dark:from-blue-900/10 dark:to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+
+            <div className="relative z-10">
+              <div className={`w-14 h-14 rounded-xl flex items-center justify-center mb-6 shadow-sm transition-transform group-hover:scale-105 ${tool.category === 'db' ? 'bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-300' :
+                  tool.category === 'office' ? 'bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-300' :
                     tool.category === 'knowledge' ? 'bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-300' :
-                    tool.category === 'user' ? 'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300' :
-                    'bg-purple-100 dark:bg-purple-500/20 text-purple-600 dark:text-purple-300'
+                      tool.category === 'user' ? 'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300' :
+                        'bg-purple-100 dark:bg-purple-500/20 text-purple-600 dark:text-purple-300'
                 }`}>
-                  <tool.icon size={28} />
-                </div>
-                
-                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3">
-                    {tool.label[lang]}
-                </h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                    {getDescription(tool.id, lang)}
-                </p>
-             </div>
+                <tool.icon size={28} />
+              </div>
+
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3">
+                {tool.label[lang]}
+              </h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+                {getDescription(tool.id, lang)}
+              </p>
+            </div>
           </button>
         ))}
       </div>
@@ -124,14 +123,29 @@ const Dashboard: React.FC<{ onNavigate: (id: string) => void, lang: Language }> 
 };
 
 export default function App() {
-  // Tabs State
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [openTabs, setOpenTabs] = useState<string[]>(['dashboard']); // Visible tabs in header
-  const [visitedTabs, setVisitedTabs] = useState<string[]>(['dashboard']); 
+  // Tabs State with persistence
+  const [activeTab, setActiveTab] = useState(() => {
+    const saved = localStorage.getItem('activeTab');
+    return saved || 'dashboard';
+  });
+  const [openTabs, setOpenTabs] = useState<string[]>(() => {
+    const saved = localStorage.getItem('openTabs');
+    return saved ? JSON.parse(saved) : ['dashboard'];
+  });
+  const [visitedTabs, setVisitedTabs] = useState<string[]>(() => {
+    const saved = localStorage.getItem('visitedTabs');
+    return saved ? JSON.parse(saved) : ['dashboard'];
+  });
 
-  // App Settings
-  const [lang, setLang] = useState<Language>('zh');
-  const [theme, setTheme] = useState<Theme>('light');
+  // App Settings with persistence
+  const [lang, setLang] = useState<Language>(() => {
+    const saved = localStorage.getItem('language');
+    return (saved as Language) || 'zh';
+  });
+  const [theme, setTheme] = useState<Theme>(() => {
+    const saved = localStorage.getItem('theme');
+    return (saved as Theme) || 'light';
+  });
   const [user, setUser] = useState<User | null>(null);
 
   // Centralized Data Source State
@@ -140,6 +154,32 @@ export default function App() {
     return saved ? JSON.parse(saved) : [];
   });
 
+  // Persist activeTab
+  useEffect(() => {
+    localStorage.setItem('activeTab', activeTab);
+  }, [activeTab]);
+
+  // Persist openTabs
+  useEffect(() => {
+    localStorage.setItem('openTabs', JSON.stringify(openTabs));
+  }, [openTabs]);
+
+  // Persist visitedTabs
+  useEffect(() => {
+    localStorage.setItem('visitedTabs', JSON.stringify(visitedTabs));
+  }, [visitedTabs]);
+
+  // Persist language
+  useEffect(() => {
+    localStorage.setItem('language', lang);
+  }, [lang]);
+
+  // Persist theme
+  useEffect(() => {
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  // Persist connections
   useEffect(() => {
     localStorage.setItem('db_connections', JSON.stringify(connections));
   }, [connections]);
@@ -157,11 +197,11 @@ export default function App() {
   useEffect(() => {
     const savedUser = localStorage.getItem('toolbox_user');
     if (savedUser) {
-       try {
-         setUser(JSON.parse(savedUser));
-       } catch (e) {
-         localStorage.removeItem('toolbox_user');
-       }
+      try {
+        setUser(JSON.parse(savedUser));
+      } catch (e) {
+        localStorage.removeItem('toolbox_user');
+      }
     }
   }, []);
 
@@ -174,12 +214,12 @@ export default function App() {
   const handleLogin = (username: string) => {
     const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`;
     const newUser: User = {
-       username,
-       nickname: username,
-       email: `${username}@devtoolbox.com`,
-       role: 'admin',
-       avatar: avatarUrl,
-       bio: 'Full Stack Developer using DevToolbox.'
+      username,
+      nickname: username,
+      email: `${username}@devtoolbox.com`,
+      role: 'admin',
+      avatar: avatarUrl,
+      bio: 'Full Stack Developer using DevToolbox.'
     };
     setUser(newUser);
     localStorage.setItem('toolbox_user', JSON.stringify(newUser));
@@ -208,15 +248,15 @@ export default function App() {
     if (id === 'dashboard') return;
     const newTabs = openTabs.filter(t => t !== id);
     setOpenTabs(newTabs);
-    
+
     if (activeTab === id) {
-       const index = openTabs.indexOf(id);
-       let nextId = 'dashboard';
-       if (newTabs.length > 0) {
-          const nextIndex = Math.max(0, index - 1);
-          nextId = newTabs[nextIndex] || 'dashboard';
-       }
-       setActiveTab(nextId);
+      const index = openTabs.indexOf(id);
+      let nextId = 'dashboard';
+      if (newTabs.length > 0) {
+        const nextIndex = Math.max(0, index - 1);
+        nextId = newTabs[nextIndex] || 'dashboard';
+      }
+      setActiveTab(nextId);
     }
   };
 
@@ -245,8 +285,8 @@ export default function App() {
   };
 
   return (
-    <Layout 
-      activeTab={activeTab} 
+    <Layout
+      activeTab={activeTab}
       onTabChange={handleNavigate}
       openTabs={openTabs}
       onCloseTab={handleCloseTab}
@@ -258,8 +298,8 @@ export default function App() {
       onLogout={handleLogout}
     >
       {visitedTabs.map(tabId => (
-        <div 
-          key={tabId} 
+        <div
+          key={tabId}
           className={activeTab === tabId ? 'h-full flex flex-col' : 'hidden'}
         >
           {renderView(tabId)}

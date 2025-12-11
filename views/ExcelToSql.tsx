@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  FileSpreadsheet, Upload, RefreshCw, Layers, FileCheck, Check, 
+import {
+  FileSpreadsheet, Upload, RefreshCw, Layers, FileCheck, Check,
   Play, Plus, Settings, Trash2, Edit, ChevronLeft, Save, X, Table, FileText,
   LayoutGrid, List
 } from 'lucide-react';
@@ -63,56 +63,59 @@ const TemplateModal: React.FC<{
           </h3>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><X size={20} /></button>
         </div>
-        
+
         <div className="p-6 space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{lang === 'zh' ? '模板名称' : 'Template Name'} <span className="text-red-500">*</span></label>
-            <input type="text" value={formData.name || ''} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg outline-none dark:text-white" placeholder="e.g. Company Standard" />
+            <input type="text" value={formData.name || ''} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg outline-none dark:text-white" placeholder="e.g. Company Standard" />
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{lang === 'zh' ? '描述' : 'Description'}</label>
-            <input type="text" value={formData.description || ''} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg outline-none dark:text-white" />
+            <input type="text" value={formData.description || ''} onChange={e => setFormData({ ...formData, description: e.target.value })} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg outline-none dark:text-white" />
           </div>
-          
+
           <div className="pt-4 border-t border-slate-100 dark:border-slate-700">
-             <h4 className="text-sm font-bold text-slate-500 mb-3 uppercase tracking-wider">{lang === 'zh' ? '解析规则' : 'Parsing Rules'}</h4>
-             <div className="grid grid-cols-2 gap-4">
-                <div>
-                   <label className="block text-xs font-medium text-slate-500 mb-1">{lang === 'zh' ? '数据起始行' : 'Data Start Row'}</label>
-                   <input type="number" min="1" value={formData.dataStartRow || ''} onChange={e => setFormData({...formData, dataStartRow: parseInt(e.target.value)})} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg outline-none dark:text-white" placeholder="2" />
-                </div>
-                <div>
-                   <label className="block text-xs font-medium text-slate-500 mb-1">{lang === 'zh' ? '字段名列号' : 'Name Column'}</label>
-                   <input type="text" value={formData.nameCol || ''} onChange={e => setFormData({...formData, nameCol: e.target.value.toUpperCase()})} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg outline-none dark:text-white" placeholder="A" />
-                </div>
-                <div>
-                   <label className="block text-xs font-medium text-slate-500 mb-1">{lang === 'zh' ? '类型列号' : 'Type Column'}</label>
-                   <input type="text" value={formData.typeCol || ''} onChange={e => setFormData({...formData, typeCol: e.target.value.toUpperCase()})} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg outline-none dark:text-white" placeholder="B" />
-                </div>
-                <div>
-                   <label className="block text-xs font-medium text-slate-500 mb-1">{lang === 'zh' ? '注释列号' : 'Comment Column'}</label>
-                   <input type="text" value={formData.commentCol || ''} onChange={e => setFormData({...formData, commentCol: e.target.value.toUpperCase()})} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg outline-none dark:text-white" placeholder="C" />
-                </div>
-             </div>
+            <h4 className="text-sm font-bold text-slate-500 mb-3 uppercase tracking-wider">{lang === 'zh' ? '解析规则' : 'Parsing Rules'}</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">{lang === 'zh' ? '数据起始行' : 'Data Start Row'}</label>
+                <input type="number" min="1" value={formData.dataStartRow || ''} onChange={e => setFormData({ ...formData, dataStartRow: parseInt(e.target.value) })} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg outline-none dark:text-white" placeholder="2" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">{lang === 'zh' ? '字段名列号' : 'Name Column'}</label>
+                <input type="text" value={formData.nameCol || ''} onChange={e => setFormData({ ...formData, nameCol: e.target.value.toUpperCase() })} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg outline-none dark:text-white" placeholder="A" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">{lang === 'zh' ? '类型列号' : 'Type Column'}</label>
+                <input type="text" value={formData.typeCol || ''} onChange={e => setFormData({ ...formData, typeCol: e.target.value.toUpperCase() })} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg outline-none dark:text-white" placeholder="B" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">{lang === 'zh' ? '注释列号' : 'Comment Column'}</label>
+                <input type="text" value={formData.commentCol || ''} onChange={e => setFormData({ ...formData, commentCol: e.target.value.toUpperCase() })} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg outline-none dark:text-white" placeholder="C" />
+              </div>
+            </div>
           </div>
         </div>
 
         <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 flex justify-end space-x-3 bg-slate-50 dark:bg-slate-800/50">
-           <button onClick={onClose} className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors">{lang === 'zh' ? '取消' : 'Cancel'}</button>
-           <button onClick={handleSubmit} className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors shadow-lg">{lang === 'zh' ? '保存' : 'Save'}</button>
+          <button onClick={onClose} className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors">{lang === 'zh' ? '取消' : 'Cancel'}</button>
+          <button onClick={handleSubmit} className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors shadow-lg">{lang === 'zh' ? '保存' : 'Save'}</button>
         </div>
       </div>
     </div>
   );
 };
 
+import { invoke } from '@tauri-apps/api/core';
+
 export const ExcelToSql: React.FC<{ lang: Language }> = ({ lang }) => {
-  const isTauri = typeof window !== 'undefined' && !!window.__TAURI__;
-  
+  // Reliable check for Tauri v2
+  const isTauri = !!(window as any).__TAURI_INTERNALS__ || !!(window as any).__TAURI__;
+
   // State for View Switching
   const [activeTemplate, setActiveTemplate] = useState<ExcelTemplate | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  
+
   // State for Templates
   const [templates, setTemplates] = useState<ExcelTemplate[]>(() => {
     const saved = localStorage.getItem('excel_templates');
@@ -175,13 +178,13 @@ export const ExcelToSql: React.FC<{ lang: Language }> = ({ lang }) => {
 
       if (isTauri) {
         try {
-          const sheetNames = await window.__TAURI__!.invoke('parse_excel_sheets', { 
-            fileName: uploadedFile.name 
+          const sheetNames = await invoke('parse_excel_sheets', {
+            fileName: uploadedFile.name
           }) as string[];
           setSheets(sheetNames);
         } catch (err) {
           console.error("Failed to parse excel", err);
-          setSheets(['Sheet1']); 
+          setSheets(['Sheet1']);
         }
       } else {
         setTimeout(() => setSheets(['Sheet1', 'Data_Dict']), 600);
@@ -193,36 +196,36 @@ export const ExcelToSql: React.FC<{ lang: Language }> = ({ lang }) => {
   const generateSql = async () => {
     if (!file || !selectedSheet || !activeTemplate) return;
     setIsProcessing(true);
-    
+
     // Construct config payload to send to backend
     const parseConfig = {
-       startRow: activeTemplate.dataStartRow,
-       cols: {
-         name: activeTemplate.nameCol,
-         type: activeTemplate.typeCol,
-         comment: activeTemplate.commentCol
-       }
+      startRow: activeTemplate.dataStartRow,
+      cols: {
+        name: activeTemplate.nameCol,
+        type: activeTemplate.typeCol,
+        comment: activeTemplate.commentCol
+      }
     };
 
     if (isTauri) {
-        try {
-           const sql = await window.__TAURI__!.invoke('generate_excel_sql', {
-              sheetName: selectedSheet,
-              dbType: dbType,
-              config: parseConfig // Hypothetical backend param
-           }) as string;
-           setGeneratedSql(sql);
-        } catch (e) {
-             const tableName = selectedSheet.toLowerCase().replace(/[^a-z0-9_]/g, '_');
-             const template = SQL_TEMPLATES[dbType].replace('{tableName}', tableName).replace('{sheetName}', selectedSheet);
-             setGeneratedSql(`-- Using Template: ${activeTemplate.name}\n-- Rules: Start Row ${activeTemplate.dataStartRow}, Cols [${activeTemplate.nameCol}, ${activeTemplate.typeCol}]\n\n${template}`);
-        }
-    } else {
+      try {
+        const sql = await invoke('generate_excel_sql', {
+          sheetName: selectedSheet,
+          dbType: dbType,
+          config: parseConfig // Hypothetical backend param
+        }) as string;
+        setGeneratedSql(sql);
+      } catch (e) {
         const tableName = selectedSheet.toLowerCase().replace(/[^a-z0-9_]/g, '_');
         const template = SQL_TEMPLATES[dbType].replace('{tableName}', tableName).replace('{sheetName}', selectedSheet);
         setGeneratedSql(`-- Using Template: ${activeTemplate.name}\n-- Rules: Start Row ${activeTemplate.dataStartRow}, Cols [${activeTemplate.nameCol}, ${activeTemplate.typeCol}]\n\n${template}`);
+      }
+    } else {
+      const tableName = selectedSheet.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+      const template = SQL_TEMPLATES[dbType].replace('{tableName}', tableName).replace('{sheetName}', selectedSheet);
+      setGeneratedSql(`-- Using Template: ${activeTemplate.name}\n-- Rules: Start Row ${activeTemplate.dataStartRow}, Cols [${activeTemplate.nameCol}, ${activeTemplate.typeCol}]\n\n${template}`);
     }
-    
+
     setIsProcessing(false);
   };
 
@@ -231,115 +234,115 @@ export const ExcelToSql: React.FC<{ lang: Language }> = ({ lang }) => {
     return (
       <div className="h-full flex flex-col">
         <div className="flex justify-between items-center mb-6">
-           <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center">
-             <FileSpreadsheet className="mr-3 text-green-600" />
-             {lang === 'zh' ? 'Excel 建表器 - 模板选择' : 'Excel Builder - Select Template'}
-           </h2>
-           <div className="flex items-center space-x-3">
-             <div className="bg-slate-100 dark:bg-slate-800 p-1 rounded-lg flex items-center border border-slate-200 dark:border-slate-700">
-               <button onClick={() => setViewMode('grid')} className={`p-1.5 rounded-md transition-all ${viewMode === 'grid' ? 'bg-white dark:bg-slate-700 text-green-600 shadow-sm' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}>
-                  <LayoutGrid size={16} />
-               </button>
-               <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-md transition-all ${viewMode === 'list' ? 'bg-white dark:bg-slate-700 text-green-600 shadow-sm' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}>
-                  <List size={16} />
-               </button>
-             </div>
-             <button onClick={handleAddNew} className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium flex items-center shadow-lg transition-colors">
-               <Plus size={18} className="mr-2" />
-               {lang === 'zh' ? '新建模板' : 'New Template'}
-             </button>
-           </div>
+          <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center">
+            <FileSpreadsheet className="mr-3 text-green-600" />
+            {lang === 'zh' ? 'Excel 建表器 - 模板选择' : 'Excel Builder - Select Template'}
+          </h2>
+          <div className="flex items-center space-x-3">
+            <div className="bg-slate-100 dark:bg-slate-800 p-1 rounded-lg flex items-center border border-slate-200 dark:border-slate-700">
+              <button onClick={() => setViewMode('grid')} className={`p-1.5 rounded-md transition-all ${viewMode === 'grid' ? 'bg-white dark:bg-slate-700 text-green-600 shadow-sm' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}>
+                <LayoutGrid size={16} />
+              </button>
+              <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-md transition-all ${viewMode === 'list' ? 'bg-white dark:bg-slate-700 text-green-600 shadow-sm' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}>
+                <List size={16} />
+              </button>
+            </div>
+            <button onClick={handleAddNew} className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium flex items-center shadow-lg transition-colors">
+              <Plus size={18} className="mr-2" />
+              {lang === 'zh' ? '新建模板' : 'New Template'}
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto pb-4">
-           {viewMode === 'grid' ? (
-             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-               {templates.map(tpl => (
-                 <div 
-                   key={tpl.id} 
-                   onClick={() => { setActiveTemplate(tpl); setGeneratedSql(''); setFile(null); }}
-                   className="group relative bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 hover:shadow-md hover:border-green-400 dark:hover:border-green-500 cursor-pointer transition-all"
-                 >
-                    <div className="flex items-start justify-between mb-4">
-                       <div className="p-3 rounded-lg bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400">
-                          <Table size={24} />
-                       </div>
-                       <div className="flex space-x-1">
-                          <button onClick={(e) => handleEditTemplate(tpl, e)} className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors relative z-10">
-                             <Edit size={18} />
-                          </button>
-                          <button onClick={(e) => handleDeleteTemplate(tpl.id, e)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors relative z-10">
-                             <Trash2 size={18} />
-                          </button>
-                       </div>
+          {viewMode === 'grid' ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {templates.map(tpl => (
+                <div
+                  key={tpl.id}
+                  onClick={() => { setActiveTemplate(tpl); setGeneratedSql(''); setFile(null); }}
+                  className="group relative bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 hover:shadow-md hover:border-green-400 dark:hover:border-green-500 cursor-pointer transition-all"
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="p-3 rounded-lg bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400">
+                      <Table size={24} />
                     </div>
-                    <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-1 truncate">{tpl.name}</h3>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-4 line-clamp-2 h-10">{tpl.description || (lang === 'zh' ? '无描述' : 'No description')}</p>
-                    
-                    <div className="flex items-center space-x-2 text-xs font-mono text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-700/50 p-2 rounded">
-                       <span title="Start Row">Row:{tpl.dataStartRow}</span>
-                       <span className="text-slate-300">|</span>
-                       <span title="Name Column">Name:{tpl.nameCol}</span>
-                       <span className="text-slate-300">|</span>
-                       <span title="Type Column">Type:{tpl.typeCol}</span>
+                    <div className="flex space-x-1">
+                      <button onClick={(e) => handleEditTemplate(tpl, e)} className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors relative z-10">
+                        <Edit size={18} />
+                      </button>
+                      <button onClick={(e) => handleDeleteTemplate(tpl.id, e)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors relative z-10">
+                        <Trash2 size={18} />
+                      </button>
                     </div>
-                 </div>
-               ))}
-               
-               <button onClick={handleAddNew} className="flex flex-col items-center justify-center p-6 rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 text-slate-400 hover:text-green-500 hover:border-green-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all min-h-[200px]">
-                  <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-3"><Plus size={24} /></div>
-                  <span className="font-medium">{lang === 'zh' ? '添加新解析规则' : 'Add New Rule'}</span>
-               </button>
-             </div>
-           ) : (
-             <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-               <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                 <div className="col-span-4">Template Name</div>
-                 <div className="col-span-4">Description</div>
-                 <div className="col-span-3">Rules (Row | Cols)</div>
-                 <div className="col-span-1 text-right">Actions</div>
-               </div>
-               <div className="divide-y divide-slate-100 dark:divide-slate-700">
-                 {templates.map(tpl => (
-                   <div 
-                     key={tpl.id} 
-                     onClick={() => { setActiveTemplate(tpl); setGeneratedSql(''); setFile(null); }}
-                     className="grid grid-cols-12 gap-4 px-6 py-4 items-center hover:bg-slate-50 dark:hover:bg-slate-700/30 cursor-pointer transition-colors"
-                   >
-                     <div className="col-span-4 flex items-center space-x-3">
-                       <div className="p-1.5 rounded-lg bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 flex-shrink-0">
-                         <Table size={16} />
-                       </div>
-                       <span className="font-medium text-slate-800 dark:text-white truncate">{tpl.name}</span>
-                     </div>
-                     <div className="col-span-4 text-sm text-slate-500 dark:text-slate-400 truncate">
-                       {tpl.description}
-                     </div>
-                     <div className="col-span-3 text-xs font-mono text-slate-500 dark:text-slate-400">
-                       Start: {tpl.dataStartRow} | Cols: {tpl.nameCol}, {tpl.typeCol}, {tpl.commentCol || '-'}
-                     </div>
-                     <div className="col-span-1 flex justify-end space-x-2">
-                        <button onClick={(e) => handleEditTemplate(tpl, e)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors relative z-10">
-                           <Edit size={16} />
-                        </button>
-                        <button onClick={(e) => handleDeleteTemplate(tpl.id, e)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors relative z-10">
-                           <Trash2 size={16} />
-                        </button>
-                     </div>
-                   </div>
-                 ))}
-                 {templates.length === 0 && (
-                   <div className="px-6 py-8 text-center text-slate-400 text-sm italic">{lang === 'zh' ? '暂无模板' : 'No templates found'}</div>
-                 )}
-               </div>
-             </div>
-           )}
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-1 truncate">{tpl.name}</h3>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-4 line-clamp-2 h-10">{tpl.description || (lang === 'zh' ? '无描述' : 'No description')}</p>
+
+                  <div className="flex items-center space-x-2 text-xs font-mono text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-700/50 p-2 rounded">
+                    <span title="Start Row">Row:{tpl.dataStartRow}</span>
+                    <span className="text-slate-300">|</span>
+                    <span title="Name Column">Name:{tpl.nameCol}</span>
+                    <span className="text-slate-300">|</span>
+                    <span title="Type Column">Type:{tpl.typeCol}</span>
+                  </div>
+                </div>
+              ))}
+
+              <button onClick={handleAddNew} className="flex flex-col items-center justify-center p-6 rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 text-slate-400 hover:text-green-500 hover:border-green-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all min-h-[200px]">
+                <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-3"><Plus size={24} /></div>
+                <span className="font-medium">{lang === 'zh' ? '添加新解析规则' : 'Add New Rule'}</span>
+              </button>
+            </div>
+          ) : (
+            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+              <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                <div className="col-span-4">Template Name</div>
+                <div className="col-span-4">Description</div>
+                <div className="col-span-3">Rules (Row | Cols)</div>
+                <div className="col-span-1 text-right">Actions</div>
+              </div>
+              <div className="divide-y divide-slate-100 dark:divide-slate-700">
+                {templates.map(tpl => (
+                  <div
+                    key={tpl.id}
+                    onClick={() => { setActiveTemplate(tpl); setGeneratedSql(''); setFile(null); }}
+                    className="grid grid-cols-12 gap-4 px-6 py-4 items-center hover:bg-slate-50 dark:hover:bg-slate-700/30 cursor-pointer transition-colors"
+                  >
+                    <div className="col-span-4 flex items-center space-x-3">
+                      <div className="p-1.5 rounded-lg bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 flex-shrink-0">
+                        <Table size={16} />
+                      </div>
+                      <span className="font-medium text-slate-800 dark:text-white truncate">{tpl.name}</span>
+                    </div>
+                    <div className="col-span-4 text-sm text-slate-500 dark:text-slate-400 truncate">
+                      {tpl.description}
+                    </div>
+                    <div className="col-span-3 text-xs font-mono text-slate-500 dark:text-slate-400">
+                      Start: {tpl.dataStartRow} | Cols: {tpl.nameCol}, {tpl.typeCol}, {tpl.commentCol || '-'}
+                    </div>
+                    <div className="col-span-1 flex justify-end space-x-2">
+                      <button onClick={(e) => handleEditTemplate(tpl, e)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors relative z-10">
+                        <Edit size={16} />
+                      </button>
+                      <button onClick={(e) => handleDeleteTemplate(tpl.id, e)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors relative z-10">
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {templates.length === 0 && (
+                  <div className="px-6 py-8 text-center text-slate-400 text-sm italic">{lang === 'zh' ? '暂无模板' : 'No templates found'}</div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
-        <TemplateModal 
-          isOpen={showModal} 
-          onClose={() => setShowModal(false)} 
-          template={editingTemplate} 
+        <TemplateModal
+          isOpen={showModal}
+          onClose={() => setShowModal(false)}
+          template={editingTemplate}
           onSave={handleSaveTemplate}
           lang={lang}
         />
@@ -352,19 +355,19 @@ export const ExcelToSql: React.FC<{ lang: Language }> = ({ lang }) => {
     <div className="flex flex-col h-full gap-4">
       {/* Header */}
       <div className="flex items-center justify-between bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-         <div className="flex items-center space-x-3">
-            <button onClick={() => setActiveTemplate(null)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 transition-colors">
-               <ChevronLeft size={20} />
-            </button>
-            <div>
-               <h3 className="font-bold text-slate-800 dark:text-white flex items-center">
-                  {activeTemplate.name}
-               </h3>
-               <p className="text-xs text-slate-500">
-                  {lang === 'zh' ? '规则: ' : 'Rule: '} Row {activeTemplate.dataStartRow}, Name [{activeTemplate.nameCol}], Type [{activeTemplate.typeCol}]
-               </p>
-            </div>
-         </div>
+        <div className="flex items-center space-x-3">
+          <button onClick={() => setActiveTemplate(null)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 transition-colors">
+            <ChevronLeft size={20} />
+          </button>
+          <div>
+            <h3 className="font-bold text-slate-800 dark:text-white flex items-center">
+              {activeTemplate.name}
+            </h3>
+            <p className="text-xs text-slate-500">
+              {lang === 'zh' ? '规则: ' : 'Rule: '} Row {activeTemplate.dataStartRow}, Name [{activeTemplate.nameCol}], Type [{activeTemplate.typeCol}]
+            </p>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full min-h-0">
@@ -387,30 +390,29 @@ export const ExcelToSql: React.FC<{ lang: Language }> = ({ lang }) => {
                   <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">{lang === 'zh' ? '选择工作表' : 'Select Worksheet'}</span>
                 </div>
                 <div className="flex-1 overflow-y-auto p-2 bg-white dark:bg-slate-900/50 space-y-1">
-                   {isProcessing && sheets.length === 0 ? (
-                     <div className="flex items-center justify-center py-8 text-slate-400">
-                       <RefreshCw className="animate-spin mr-2" size={16} />
-                       <span className="text-sm">{lang === 'zh' ? '正在解析...' : 'Parsing file...'}</span>
-                     </div>
-                   ) : (
-                     sheets.map(sheet => (
-                       <button
-                         key={sheet}
-                         onClick={() => setSelectedSheet(sheet)}
-                         className={`w-full text-left px-3 py-2 rounded-lg text-sm flex items-center justify-between transition-colors ${
-                           selectedSheet === sheet 
-                             ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800' 
-                             : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
-                         }`}
-                       >
-                         <span className="flex items-center">
-                           <FileCheck size={14} className={`mr-2 ${selectedSheet === sheet ? 'opacity-100' : 'opacity-0 group-hover:opacity-50'}`} />
-                           {sheet}
-                         </span>
-                         {selectedSheet === sheet && <Check size={14} />}
-                       </button>
-                     ))
-                   )}
+                  {isProcessing && sheets.length === 0 ? (
+                    <div className="flex items-center justify-center py-8 text-slate-400">
+                      <RefreshCw className="animate-spin mr-2" size={16} />
+                      <span className="text-sm">{lang === 'zh' ? '正在解析...' : 'Parsing file...'}</span>
+                    </div>
+                  ) : (
+                    sheets.map(sheet => (
+                      <button
+                        key={sheet}
+                        onClick={() => setSelectedSheet(sheet)}
+                        className={`w-full text-left px-3 py-2 rounded-lg text-sm flex items-center justify-between transition-colors ${selectedSheet === sheet
+                            ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800'
+                            : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+                          }`}
+                      >
+                        <span className="flex items-center">
+                          <FileCheck size={14} className={`mr-2 ${selectedSheet === sheet ? 'opacity-100' : 'opacity-0 group-hover:opacity-50'}`} />
+                          {sheet}
+                        </span>
+                        {selectedSheet === sheet && <Check size={14} />}
+                      </button>
+                    ))
+                  )}
                 </div>
               </div>
             )}
@@ -425,7 +427,7 @@ export const ExcelToSql: React.FC<{ lang: Language }> = ({ lang }) => {
           </div>
 
           <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-700">
-             <button onClick={generateSql} disabled={!selectedSheet || isProcessing} className={`w-full py-3 rounded-lg font-bold text-white flex items-center justify-center transition-all ${!selectedSheet || isProcessing ? 'bg-slate-300 dark:bg-slate-700 text-slate-500 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700 shadow-lg'}`}>
+            <button onClick={generateSql} disabled={!selectedSheet || isProcessing} className={`w-full py-3 rounded-lg font-bold text-white flex items-center justify-center transition-all ${!selectedSheet || isProcessing ? 'bg-slate-300 dark:bg-slate-700 text-slate-500 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700 shadow-lg'}`}>
               {isProcessing ? <RefreshCw className="animate-spin mr-2" /> : <Play className="mr-2" />}
               {lang === 'zh' ? '生成建表语句' : 'Generate SQL'}
             </button>
@@ -437,7 +439,7 @@ export const ExcelToSql: React.FC<{ lang: Language }> = ({ lang }) => {
           <div className="p-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 flex justify-between items-center">
             <span className="font-semibold text-slate-700 dark:text-slate-200">{lang === 'zh' ? 'SQL 预览' : 'SQL Preview'}</span>
             <button onClick={() => navigator.clipboard.writeText(generatedSql)} disabled={!generatedSql} className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 font-medium disabled:opacity-50 flex items-center">
-               <Save size={14} className="mr-1" /> {lang === 'zh' ? '复制' : 'Copy'}
+              <Save size={14} className="mr-1" /> {lang === 'zh' ? '复制' : 'Copy'}
             </button>
           </div>
           <div className="flex-1 p-4 overflow-auto bg-[#1e1e1e]">

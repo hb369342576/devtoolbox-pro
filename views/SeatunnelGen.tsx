@@ -152,8 +152,11 @@ export const SeatunnelGen: React.FC<{
 
     setIsGenerating(true);
     try {
-      if (window.__TAURI__) {
-        const config = await window.__TAURI__!.invoke('generate_seatunnel_config', {
+      // Reliable check for Tauri v2
+      const isTauri = !!(window as any).__TAURI_INTERNALS__ || !!(window as any).__TAURI__;
+
+      if (isTauri) {
+        const config = await invoke('generate_seatunnel_config', {
           source: activeJob.source,
           sink: activeJob.sink
         }) as string;

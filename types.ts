@@ -46,6 +46,7 @@ export interface TableDetail extends TableInfo {
   engine?: string;
   collation?: string;
   columns: ColumnInfo[];
+  ddl: string;
 }
 
 export interface PdfFile {
@@ -138,7 +139,7 @@ export interface MappingProfile {
   id: string;
   name: string;
   updatedAt: number;
-  
+
   // Canvas Data
   sourceConn?: DbConnection;
   targetConn?: DbConnection;
