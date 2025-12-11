@@ -1,18 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import {
-   GitCompare, ArrowRight, Database, ChevronRight,
+   GitCompare, ArrowRight, Database, ChevronRight, Search,
    Key, Filter, SortAsc, SortDesc, Play, CheckCircle,
-   AlertCircle, ChevronLeft, Plus, X, RefreshCw
+   AlertCircle, ChevronLeft, Plus, X, RefreshCw, Edit, Trash2
 } from 'lucide-react';
 import { Language, DbConnection, CompareConfig, CompareKey, CompareResultRow, TableInfo, TableDetail } from '../types';
 import { getTexts } from '../locales';
 import { invoke } from '@tauri-apps/api/core';
+import { ConfirmModal } from '../components/ConfirmModal';
 
 /* --- Helper Types --- */
 interface SideConfig {
    connId: string;
    db: string;
    table: string;
+}
+
+interface SavedCompareConfig {
+   id: string;
+   name: string;
+   sourceConfig: SideConfig;
+   targetConfig: SideConfig;
+   primaryKeys: CompareKey[];
+   filterCondition: string;
+   createdAt: number;
 }
 
 export const DataCompareTool: React.FC<{
@@ -22,10 +33,18 @@ export const DataCompareTool: React.FC<{
    const t = getTexts(lang);
 
    // --- View State ---
-   const [viewMode, setViewMode] = useState<'config' | 'result'>('config');
+   const [viewMode, setViewMode] = useState<'list' | 'config' | 'result'>('list');
    const [isLoading, setIsLoading] = useState(false);
 
+   // --- Saved Configs ---
+   const [savedConfigs, setSavedConfigs] = useState<SavedCompareConfig[]>(() => {
+      const saved = localStorage.getItem('compare_configs');
+      return saved ? JSON.parse(saved) : [];
+   });
+   const [editingConfigId, setEditingConfigId] = useState<string | null>(null);
+
    // --- Configuration State ---
+   const [configName, setConfigName] = useState('');
    const [sourceConfig, setSourceConfig] = useState<SideConfig>({ connId: '', db: '', table: '' });
    const [targetConfig, setTargetConfig] = useState<SideConfig>({ connId: '', db: '', table: '' });
 
@@ -35,14 +54,39 @@ export const DataCompareTool: React.FC<{
    const [sourceTables, setSourceTables] = useState<TableInfo[]>([]);
    const [targetTables, setTargetTables] = useState<TableInfo[]>([]);
 
+   // Search state
+   const [sourceTableSearch, setSourceTableSearch] = useState('');
+   const [targetTableSearch, setTargetTableSearch] = useState('');
+
    // Rules
    const [primaryKeys, setPrimaryKeys] = useState<CompareKey[]>([]);
-   const [availableColumns, setAvailableColumns] = useState<string[]>([]); // Derived from source table
+   const [availableColumns, setAvailableColumns] = useState<string[]>([]);
    const [filterCondition, setFilterCondition] = useState('');
 
    // --- Result State ---
    const [results, setResults] = useState<CompareResultRow[]>([]);
    const [stats, setStats] = useState({ match: 0, diff: 0, sourceOnly: 0, targetOnly: 0 });
+
+   // --- Delete Confirm & Alert ---
+   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: string }>({ isOpen: false, id: '' });
+   const [alertState, setAlertState] = useState<{ isOpen: boolean; title: string; message: string }>({ isOpen: false, title: '', message: '' });
+
+   const showAlert = (title: string, message: string) => {
+      setAlertState({ isOpen: true, title, message });
+   };
+
+   // Save configs to localStorage
+   useEffect(() => {
+      localStorage.setItem('compare_configs', JSON.stringify(savedConfigs));
+   }, [savedConfigs]);
+
+   // Filtered tables
+   const filteredSourceTables = sourceTables.filter(t =>
+      t.name.toLowerCase().includes(sourceTableSearch.toLowerCase())
+   );
+   const filteredTargetTables = targetTables.filter(t =>
+      t.name.toLowerCase().includes(targetTableSearch.toLowerCase())
+   );
 
    // --- Effects: Load DBs when Connection Changes ---
    useEffect(() => {
@@ -114,6 +158,57 @@ export const DataCompareTool: React.FC<{
       }
    };
 
+   // --- Config Management ---
+   const handleNewConfig = () => {
+      setConfigName('');
+      setSourceConfig({ connId: '', db: '', table: '' });
+      setTargetConfig({ connId: '', db: '', table: '' });
+      setPrimaryKeys([]);
+      setFilterCondition('');
+      setEditingConfigId(null);
+      setViewMode('config');
+   };
+
+   const handleEditConfig = (config: SavedCompareConfig) => {
+      setConfigName(config.name);
+      setSourceConfig(config.sourceConfig);
+      setTargetConfig(config.targetConfig);
+      setPrimaryKeys(config.primaryKeys);
+      setFilterCondition(config.filterCondition);
+      setEditingConfigId(config.id);
+      setViewMode('config');
+   };
+
+   const handleSaveConfig = () => {
+      if (!configName.trim()) {
+         showAlert(lang === 'zh' ? '错误' : 'Error', lang === 'zh' ? '请输入配置名称' : 'Please enter config name');
+         return;
+      }
+
+      const config: SavedCompareConfig = {
+         id: editingConfigId || Date.now().toString(),
+         name: configName,
+         sourceConfig,
+         targetConfig,
+         primaryKeys,
+         filterCondition,
+         createdAt: Date.now()
+      };
+
+      if (editingConfigId) {
+         setSavedConfigs(prev => prev.map(c => c.id === editingConfigId ? config : c));
+      } else {
+         setSavedConfigs(prev => [config, ...prev]);
+      }
+
+      setViewMode('list');
+   };
+
+   const handleDeleteConfig = (id: string) => {
+      setSavedConfigs(prev => prev.filter(c => c.id !== id));
+      setConfirmDelete({ isOpen: false, id: '' });
+   };
+
    // --- Key Management ---
    const addKey = () => {
       if (primaryKeys.length < 4) {
@@ -134,7 +229,7 @@ export const DataCompareTool: React.FC<{
    // --- Comparison Logic ---
    const handleCompare = () => {
       if (!sourceConfig.table || !targetConfig.table || primaryKeys.length === 0 || !primaryKeys[0].field) {
-         alert(lang === 'zh' ? '请完善配置' : 'Please complete configuration');
+         showAlert(lang === 'zh' ? '配置不完整' : 'Incomplete Config', lang === 'zh' ? '请选择源端表、目标端表并设置主键' : 'Please select source table, target table and set primary keys');
          return;
       }
 
@@ -148,7 +243,6 @@ export const DataCompareTool: React.FC<{
             const r = Math.random();
             const pk = `100${i}`;
             if (r > 0.8) {
-               // Mismatch
                mockResults.push({
                   keyDisplay: pk,
                   status: 'diff',
@@ -157,7 +251,6 @@ export const DataCompareTool: React.FC<{
                   diffFields: ['username']
                });
             } else if (r > 0.7) {
-               // Source Only
                mockResults.push({
                   keyDisplay: pk,
                   status: 'only_source',
@@ -166,7 +259,6 @@ export const DataCompareTool: React.FC<{
                   diffFields: []
                });
             } else if (r > 0.6) {
-               // Target Only
                mockResults.push({
                   keyDisplay: pk,
                   status: 'only_target',
@@ -175,7 +267,6 @@ export const DataCompareTool: React.FC<{
                   diffFields: []
                });
             } else {
-               // Match
                mockResults.push({
                   keyDisplay: pk,
                   status: 'match',
@@ -199,13 +290,140 @@ export const DataCompareTool: React.FC<{
       }, 1500);
    };
 
+   // --- Render List View ---
+   if (viewMode === 'list') {
+      return (
+         <div className="h-full flex flex-col p-6 space-y-6">
+            <ConfirmModal
+               isOpen={confirmDelete.isOpen}
+               title={lang === 'zh' ? '确认删除' : 'Confirm Delete'}
+               message={lang === 'zh' ? '确定要删除这个对比配置吗？' : 'Are you sure you want to delete this config?'}
+               confirmText={lang === 'zh' ? '删除' : 'Delete'}
+               cancelText={lang === 'zh' ? '取消' : 'Cancel'}
+               onConfirm={() => handleDeleteConfig(confirmDelete.id)}
+               onCancel={() => setConfirmDelete({ isOpen: false, id: '' })}
+               type="danger"
+            />
+            <ConfirmModal
+               isOpen={alertState.isOpen}
+               title={alertState.title}
+               message={alertState.message}
+               confirmText={lang === 'zh' ? '确定' : 'OK'}
+               cancelText=""
+               onConfirm={() => setAlertState({ isOpen: false, title: '', message: '' })}
+               onCancel={() => setAlertState({ isOpen: false, title: '', message: '' })}
+               type="danger"
+            />
+
+            <div className="flex items-center justify-between">
+               <div className="flex items-center">
+                  <GitCompare className="mr-3 text-indigo-600" size={24} />
+                  <h2 className="text-2xl font-bold text-slate-800 dark:text-white">{t.dataCompare.title}</h2>
+               </div>
+               <button
+                  onClick={handleNewConfig}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium flex items-center space-x-2 shadow-lg transition-colors"
+               >
+                  <Plus size={18} />
+                  <span>{lang === 'zh' ? '新建对比' : 'New Compare'}</span>
+               </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+               {/* Existing Configs */}
+               {savedConfigs.map(config => (
+                  <div
+                     key={config.id}
+                     className="group bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 hover:shadow-lg transition-all cursor-pointer"
+                     onDoubleClick={() => {
+                        handleEditConfig(config);
+                     }}
+                  >
+                     <div className="flex justify-between items-start mb-4">
+                        <h3 className="font-bold text-lg text-slate-800 dark:text-white truncate flex-1">{config.name}</h3>
+                        <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                           <button
+                              onClick={(e) => {
+                                 e.stopPropagation();
+                                 handleEditConfig(config);
+                              }}
+                              className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg"
+                           >
+                              <Edit size={16} />
+                           </button>
+                           <button
+                              onClick={(e) => {
+                                 e.stopPropagation();
+                                 setConfirmDelete({ isOpen: true, id: config.id });
+                              }}
+                              className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"
+                           >
+                              <Trash2 size={16} />
+                           </button>
+                        </div>
+                     </div>
+                     <div className="space-y-2 text-sm">
+                        <div className="flex items-center text-slate-600 dark:text-slate-400">
+                           <span className="font-medium mr-2">{lang === 'zh' ? '源端:' : 'Source:'}</span>
+                           <span className="truncate">{config.sourceConfig.table || '-'}</span>
+                        </div>
+                        <div className="flex items-center text-slate-600 dark:text-slate-400">
+                           <span className="font-medium mr-2">{lang === 'zh' ? '目标:' : 'Target:'}</span>
+                           <span className="truncate">{config.targetConfig.table || '-'}</span>
+                        </div>
+                     </div>
+                  </div>
+               ))}
+
+               {/* Add New Card - 放在最后 */}
+               <button
+                  onClick={handleNewConfig}
+                  className="group bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-6 rounded-xl border-2 border-dashed border-blue-300 dark:border-blue-700 hover:border-blue-500 dark:hover:border-blue-500 hover:shadow-lg transition-all min-h-[140px] flex flex-col items-center justify-center"
+               >
+                  <div className="w-14 h-14 rounded-full bg-blue-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                     <Plus size={28} className="text-white" />
+                  </div>
+                  <span className="font-bold text-blue-600 dark:text-blue-400">
+                     {lang === 'zh' ? '新建对比配置' : 'New Compare Config'}
+                  </span>
+               </button>
+            </div>
+         </div>
+      );
+   }
+
    // --- Render Config View ---
    if (viewMode === 'config') {
       return (
-         <div className="h-full flex flex-col space-y-6 max-w-5xl mx-auto">
-            <div className="flex items-center mb-2">
-               <GitCompare className="mr-3 text-indigo-600" size={24} />
-               <h2 className="text-2xl font-bold text-slate-800 dark:text-white">{t.dataCompare.title}</h2>
+         <div className="h-full flex flex-col space-y-6 max-w-6xl mx-auto p-6">
+            <div className="flex items-center justify-between mb-2">
+               <div className="flex items-center">
+                  <button onClick={() => setViewMode('list')} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg mr-2">
+                     <ChevronLeft size={20} />
+                  </button>
+                  <GitCompare className="mr-3 text-indigo-600" size={24} />
+                  <h2 className="text-2xl font-bold text-slate-800 dark:text-white">
+                     {editingConfigId ? (lang === 'zh' ? '编辑对比' : 'Edit Compare') : (lang === 'zh' ? '新建对比' : 'New Compare')}
+                  </h2>
+               </div>
+               <button
+                  onClick={handleSaveConfig}
+                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium"
+               >
+                  {lang === 'zh' ? '保存配置' : 'Save Config'}
+               </button>
+            </div>
+
+            {/* Config Name */}
+            <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+               <label className="block text-sm font-bold text-slate-400 uppercase mb-2">{lang === 'zh' ? '配置名称' : 'Config Name'}</label>
+               <input
+                  type="text"
+                  value={configName}
+                  onChange={(e) => setConfigName(e.target.value)}
+                  placeholder={lang === 'zh' ? '输入配置名称...' : 'Enter config name...'}
+                  className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg text-sm outline-none dark:text-white"
+               />
             </div>
 
             {/* Top: Source & Target Selection */}
@@ -216,93 +434,111 @@ export const DataCompareTool: React.FC<{
                </div>
 
                {/* Source */}
-               <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border-l-4 border-l-blue-500 shadow-sm border border-slate-200 dark:border-slate-700">
+               <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border-l-4 border-l-blue-500 shadow-sm border border-slate-200 dark:border-slate-700 w-full max-w-md">
                   <h3 className="font-bold text-slate-700 dark:text-slate-200 mb-4 flex items-center">
                      <Database className="mr-2 text-blue-500" size={18} /> {t.dataCompare.sourceSide}
                   </h3>
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                      <div>
                         <label className="block text-xs font-bold text-slate-400 uppercase mb-1">{t.dataCompare.selectConn}</label>
                         <select
                            value={sourceConfig.connId}
                            onChange={e => setSourceConfig({ ...sourceConfig, connId: e.target.value })}
-                           className="w-full p-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg text-sm outline-none dark:text-white"
+                           className="w-full p-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg text-sm outline-none dark:text-white truncate"
                         >
                            <option value="">-- Select --</option>
                            {connections.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </select>
                      </div>
-                     <div className="grid grid-cols-2 gap-3">
-                        <div>
-                           <label className="block text-xs font-bold text-slate-400 uppercase mb-1">{t.dataCompare.selectDb}</label>
-                           <select
-                              value={sourceConfig.db}
-                              onChange={e => setSourceConfig({ ...sourceConfig, db: e.target.value })}
-                              disabled={!sourceConfig.connId}
-                              className="w-full p-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg text-sm outline-none dark:text-white disabled:opacity-50"
-                           >
-                              <option value="">-- DB --</option>
-                              {sourceDbs.map(d => <option key={d} value={d}>{d}</option>)}
-                           </select>
-                        </div>
-                        <div>
-                           <label className="block text-xs font-bold text-slate-400 uppercase mb-1">{t.dataCompare.selectTable}</label>
-                           <select
-                              value={sourceConfig.table}
-                              onChange={e => setSourceConfig({ ...sourceConfig, table: e.target.value })}
+                     <div>
+                        <label className="block text-xs font-bold text-slate-400 uppercase mb-1">{t.dataCompare.selectDb}</label>
+                        <select
+                           value={sourceConfig.db}
+                           onChange={e => setSourceConfig({ ...sourceConfig, db: e.target.value })}
+                           disabled={!sourceConfig.connId}
+                           className="w-full p-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg text-sm outline-none dark:text-white disabled:opacity-50 truncate"
+                        >
+                           <option value="">-- DB --</option>
+                           {sourceDbs.map(d => <option key={d} value={d}>{d}</option>)}
+                        </select>
+                     </div>
+                     <div>
+                        <label className="block text-xs font-bold text-slate-400 uppercase mb-1">{t.dataCompare.selectTable}</label>
+                        <div className="relative mb-2">
+                           <Search size={14} className="absolute left-2 top-2 text-slate-400" />
+                           <input
+                              type="text"
+                              placeholder={lang === 'zh' ? '搜索表...' : 'Search...'}
+                              value={sourceTableSearch}
+                              onChange={(e) => setSourceTableSearch(e.target.value)}
                               disabled={!sourceConfig.db}
-                              className="w-full p-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg text-sm outline-none dark:text-white disabled:opacity-50"
-                           >
-                              <option value="">-- Table --</option>
-                              {sourceTables.map(t => <option key={t.name} value={t.name}>{t.name}</option>)}
-                           </select>
+                              className="w-full pl-8 pr-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg text-sm outline-none disabled:opacity-50"
+                           />
                         </div>
+                        <select
+                           value={sourceConfig.table}
+                           onChange={e => setSourceConfig({ ...sourceConfig, table: e.target.value })}
+                           disabled={!sourceConfig.db}
+                           className="w-full p-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg text-sm outline-none dark:text-white disabled:opacity-50 truncate"
+                        >
+                           <option value="">-- Table --</option>
+                           {filteredSourceTables.map(t => <option key={t.name} value={t.name}>{t.name}</option>)}
+                        </select>
                      </div>
                   </div>
                </div>
 
                {/* Target */}
-               <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border-l-4 border-l-green-500 shadow-sm border border-slate-200 dark:border-slate-700">
+               <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border-l-4 border-l-green-500 shadow-sm border border-slate-200 dark:border-slate-700 w-full max-w-md">
                   <h3 className="font-bold text-slate-700 dark:text-slate-200 mb-4 flex items-center">
                      <Database className="mr-2 text-green-500" size={18} /> {t.dataCompare.targetSide}
                   </h3>
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                      <div>
                         <label className="block text-xs font-bold text-slate-400 uppercase mb-1">{t.dataCompare.selectConn}</label>
                         <select
                            value={targetConfig.connId}
                            onChange={e => setTargetConfig({ ...targetConfig, connId: e.target.value })}
-                           className="w-full p-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg text-sm outline-none dark:text-white"
+                           className="w-full p-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg text-sm outline-none dark:text-white truncate"
                         >
                            <option value="">-- Select --</option>
                            {connections.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </select>
                      </div>
-                     <div className="grid grid-cols-2 gap-3">
-                        <div>
-                           <label className="block text-xs font-bold text-slate-400 uppercase mb-1">{t.dataCompare.selectDb}</label>
-                           <select
-                              value={targetConfig.db}
-                              onChange={e => setTargetConfig({ ...targetConfig, db: e.target.value })}
-                              disabled={!targetConfig.connId}
-                              className="w-full p-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg text-sm outline-none dark:text-white disabled:opacity-50"
-                           >
-                              <option value="">-- DB --</option>
-                              {targetDbs.map(d => <option key={d} value={d}>{d}</option>)}
-                           </select>
-                        </div>
-                        <div>
-                           <label className="block text-xs font-bold text-slate-400 uppercase mb-1">{t.dataCompare.selectTable}</label>
-                           <select
-                              value={targetConfig.table}
-                              onChange={e => setTargetConfig({ ...targetConfig, table: e.target.value })}
+                     <div>
+                        <label className="block text-xs font-bold text-slate-400 uppercase mb-1">{t.dataCompare.selectDb}</label>
+                        <select
+                           value={targetConfig.db}
+                           onChange={e => setTargetConfig({ ...targetConfig, db: e.target.value })}
+                           disabled={!targetConfig.connId}
+                           className="w-full p-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg text-sm outline-none dark:text-white disabled:opacity-50 truncate"
+                        >
+                           <option value="">-- DB --</option>
+                           {targetDbs.map(d => <option key={d} value={d}>{d}</option>)}
+                        </select>
+                     </div>
+                     <div>
+                        <label className="block text-xs font-bold text-slate-400 uppercase mb-1">{t.dataCompare.selectTable}</label>
+                        <div className="relative mb-2">
+                           <Search size={14} className="absolute left-2 top-2 text-slate-400" />
+                           <input
+                              type="text"
+                              placeholder={lang === 'zh' ? '搜索表...' : 'Search...'}
+                              value={targetTableSearch}
+                              onChange={(e) => setTargetTableSearch(e.target.value)}
                               disabled={!targetConfig.db}
-                              className="w-full p-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg text-sm outline-none dark:text-white disabled:opacity-50"
-                           >
-                              <option value="">-- Table --</option>
-                              {targetTables.map(t => <option key={t.name} value={t.name}>{t.name}</option>)}
-                           </select>
+                              className="w-full pl-8 pr-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg text-sm outline-none disabled:opacity-50"
+                           />
                         </div>
+                        <select
+                           value={targetConfig.table}
+                           onChange={e => setTargetConfig({ ...targetConfig, table: e.target.value })}
+                           disabled={!targetConfig.db}
+                           className="w-full p-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg text-sm outline-none dark:text-white disabled:opacity-50 truncate"
+                        >
+                           <option value="">-- Table --</option>
+                           {filteredTargetTables.map(t => <option key={t.name} value={t.name}>{t.name}</option>)}
+                        </select>
                      </div>
                   </div>
                </div>

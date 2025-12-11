@@ -3,9 +3,11 @@ import {
    ArrowRightLeft, Plus, Save, Download, Upload, Trash2,
    RefreshCw, LayoutGrid, List, Edit, ArrowRight, X, Database,
    Link, AlertTriangle, FileJson, Check, GripHorizontal, Plug,
-   ZoomIn, ZoomOut, Move, LayoutTemplate, MousePointer2, ChevronLeft
+   ZoomIn, ZoomOut, Move, LayoutTemplate, MousePointer2, ChevronLeft, Search
 } from 'lucide-react';
 import { Language, MappingProfile, FieldMapping, DbConnection, DatabaseType, TableInfo, CanvasNode, CanvasLink, ColumnInfo, TableDetail } from '../types';
+import { invoke } from '@tauri-apps/api/core';
+import { ConfirmModal } from '../components/ConfirmModal';
 
 /* --- Helper: Type Compatibility Check --- */
 const checkTypeCompatibility = (sourceType: string = '', targetType: string = ''): { compatible: boolean; warning?: string } => {
@@ -115,8 +117,14 @@ export const FieldMappingTool: React.FC<{
    const [draggingNode, setDraggingNode] = useState<string | null>(null);
    const [linkingSource, setLinkingSource] = useState<string | null>(null);
 
+   // New: Table dragging state
+   const [draggingTable, setDraggingTable] = useState<{ tableName: string; type: 'source' | 'target'; dbName: string } | null>(null);
+   const [dragPreviewPos, setDragPreviewPos] = useState<{ x: number; y: number } | null>(null);
+
    // --- Sidebar State ---
    const [activeSideTab, setActiveSideTab] = useState<'source' | 'target'>('source');
+   const [sourceTableSearch, setSourceTableSearch] = useState('');
+   const [targetTableSearch, setTargetTableSearch] = useState('');
 
    // Store selected connection objects
    const [sourceConn, setSourceConn] = useState<DbConnection | undefined>(undefined);
@@ -129,6 +137,7 @@ export const FieldMappingTool: React.FC<{
    // --- Modal State ---
    const [activeLink, setActiveLink] = useState<CanvasLink | null>(null);
    const [showMappingModal, setShowMappingModal] = useState(false);
+   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; profileId: string }>({ isOpen: false, profileId: '' });
 
    // --- Profiles List ---
    const [profiles, setProfiles] = useState<MappingProfile[]>(() => {
@@ -179,7 +188,9 @@ export const FieldMappingTool: React.FC<{
       try {
          let dbs: string[] = [];
          if (isTauri) {
-            dbs = await invoke('db_get_databases', { id: conn.id });
+            // Use connection string format
+            const connStr = `mysql://${conn.user}:${conn.password || ''}@${conn.host}:${conn.port}`;
+            dbs = await invoke('db_get_databases', { id: connStr });
          } else {
             await new Promise(r => setTimeout(r, 600));
             dbs = ['web_mock_db_1', 'test_schema', 'production'];
@@ -205,7 +216,9 @@ export const FieldMappingTool: React.FC<{
       try {
          let tables: TableInfo[] = [];
          if (isTauri) {
-            tables = await invoke('db_get_tables', { id: conn.id, db: dbName });
+            // Use connection string format
+            const connStr = `mysql://${conn.user}:${conn.password || ''}@${conn.host}:${conn.port}`;
+            tables = await invoke('db_get_tables', { id: connStr, db: dbName });
          } else {
             await new Promise(r => setTimeout(r, 400));
             tables = [
@@ -218,7 +231,11 @@ export const FieldMappingTool: React.FC<{
          else setTargetNav(prev => ({ ...prev, step: 'tables', tableList: tables, currentDb: dbName }));
 
       } catch (e) {
-         alert('Failed to load tables');
+         console.error('Failed to load tables:', e);
+         // Show some mock data on error
+         const mockTables = [{ name: 'error_mock_table', rows: 0, size: '0KB' }];
+         if (side === 'source') setSourceNav(prev => ({ ...prev, step: 'tables', tableList: mockTables, currentDb: dbName }));
+         else setTargetNav(prev => ({ ...prev, step: 'tables', tableList: mockTables, currentDb: dbName }));
       }
       setIsLoadingSide(false);
    };
@@ -228,56 +245,18 @@ export const FieldMappingTool: React.FC<{
       else setTargetNav(prev => ({ ...prev, step: 'dbs', currentDb: '' }));
    };
 
-   // --- Canvas Logic (Same as before) ---
-   const handleDragStart = (e: React.DragEvent, tableName: string, type: 'source' | 'target') => {
-      const dbName = type === 'source' ? sourceNav.currentDb : targetNav.currentDb;
-      e.dataTransfer.setData('application/json', JSON.stringify({ tableName, type, dbName }));
-   };
-
-   const handleDrop = async (e: React.DragEvent) => {
+   // --- New Mouse-based Drag Logic ---
+   const handleTableMouseDown = (e: React.MouseEvent, tableName: string, type: 'source' | 'target') => {
       e.preventDefault();
-      const dataStr = e.dataTransfer.getData('application/json');
-      if (!dataStr) return;
-      const { tableName, type, dbName } = JSON.parse(dataStr);
-
-      const rect = e.currentTarget.getBoundingClientRect();
-      const x = (e.clientX - rect.left - view.x) / view.zoom;
-      const y = (e.clientY - rect.top - view.y) / view.zoom;
-
-      const conn = type === 'source' ? sourceConn : targetConn;
-      if (!conn) return;
-
-      let columns: ColumnInfo[] = [];
-      if (isTauri) {
-         try {
-            const schema = await invoke('db_get_table_schema', {
-               id: conn.id, db: dbName, table: tableName
-            }) as TableDetail;
-            columns = schema.columns;
-         } catch (e) {
-            columns = [{ name: 'id', type: 'bigint', nullable: false, isPrimaryKey: true }];
-         }
-      } else {
-         columns = [{ name: 'id', type: 'int', nullable: false, isPrimaryKey: true }, { name: 'name', type: 'varchar', length: 255, nullable: true, isPrimaryKey: false }];
-      }
-
-      const newNode: CanvasNode = {
-         id: Math.random().toString(36).substr(2, 9),
-         type, x, y, tableName,
-         dbType: conn.type,
-         columns
-      };
-      setNodes(prev => [...prev, newNode]);
+      const dbName = type === 'source' ? sourceNav.currentDb : targetNav.currentDb;
+      setDraggingTable({ tableName, type, dbName });
+      setDragPreviewPos({ x: e.clientX, y: e.clientY });
    };
 
-   const handleDragOver = (e: React.DragEvent) => e.preventDefault();
-   const handleCanvasMouseDown = (e: React.MouseEvent) => {
-      if ((e.target as HTMLElement).tagName === 'svg' || (e.target as HTMLElement).classList.contains('canvas-bg')) {
-         setIsPanning(true); setLastMousePos({ x: e.clientX, y: e.clientY });
-      }
-   };
-   const handleMouseMove = (e: React.MouseEvent) => {
-      if (isPanning) {
+   const handleCanvasMouseMove = (e: React.MouseEvent) => {
+      if (draggingTable && dragPreviewPos) {
+         setDragPreviewPos({ x: e.clientX, y: e.clientY });
+      } else if (isPanning) {
          const dx = e.clientX - lastMousePos.x;
          const dy = e.clientY - lastMousePos.y;
          setView(prev => ({ ...prev, x: prev.x + dx, y: prev.y + dy }));
@@ -286,7 +265,58 @@ export const FieldMappingTool: React.FC<{
          setNodes(prev => prev.map(n => n.id === draggingNode ? { ...n, x: n.x + e.movementX / view.zoom, y: n.y + e.movementY / view.zoom } : n));
       }
    };
-   const handleMouseUp = () => { setIsPanning(false); setDraggingNode(null); };
+
+   const handleCanvasMouseUp = async (e: React.MouseEvent) => {
+      if (draggingTable) {
+         console.log('📍 Dropping table on canvas');
+         const canvas = e.currentTarget as HTMLElement;
+         const rect = canvas.getBoundingClientRect();
+         const x = (e.clientX - rect.left - view.x) / view.zoom;
+         const y = (e.clientY - rect.top - view.y) / view.zoom;
+
+         const conn = draggingTable.type === 'source' ? sourceConn : targetConn;
+         if (conn) {
+            let columns: ColumnInfo[] = [];
+            if (isTauri) {
+               try {
+                  const connStr = `mysql://${conn.user}:${conn.password || ''}@${conn.host}:${conn.port}`;
+                  const schema = await invoke('db_get_table_schema', {
+                     id: connStr, db: draggingTable.dbName, table: draggingTable.tableName
+                  }) as TableDetail;
+                  columns = schema.columns;
+               } catch (e) {
+                  console.error('Failed to load table schema:', e);
+                  columns = [{ name: 'id', type: 'bigint', nullable: false, isPrimaryKey: true }];
+               }
+            } else {
+               columns = [{ name: 'id', type: 'int', nullable: false, isPrimaryKey: true }, { name: 'name', type: 'varchar', length: 255, nullable: true, isPrimaryKey: false }];
+            }
+
+            const newNode: CanvasNode = {
+               id: Math.random().toString(36).substr(2, 9),
+               type: draggingTable.type, x, y,
+               tableName: draggingTable.tableName,
+               dbType: conn.type,
+               columns
+            };
+            setNodes(prev => [...prev, newNode]);
+            console.log('✅ Table added to canvas:', newNode);
+         }
+
+         setDraggingTable(null);
+         setDragPreviewPos(null);
+      }
+
+      setIsPanning(false);
+      setDraggingNode(null);
+   };
+   const handleCanvasMouseDownInternal = (e: React.MouseEvent) => {
+      if ((e.target as HTMLElement).tagName === 'svg' || (e.target as HTMLElement).classList.contains('canvas-area')) {
+         setIsPanning(true);
+         setLastMousePos({ x: e.clientX, y: e.clientY });
+      }
+   };
+
    const handleWheel = (e: React.WheelEvent) => {
       if (e.ctrlKey) { e.preventDefault(); setView(prev => ({ ...prev, zoom: Math.min(Math.max(0.2, prev.zoom - e.deltaY * 0.001), 3) })); }
    };
@@ -302,17 +332,27 @@ export const FieldMappingTool: React.FC<{
    };
 
    const handleNodeMouseDown = (e: React.MouseEvent, id: string) => { if (linkingSource) return; e.stopPropagation(); setDraggingNode(id); };
-   const handleNodeClick = (id: string, type: 'source' | 'target') => {
-      if (!linkingSource) { if (type === 'source') setLinkingSource(id); }
-      else {
+   const handleNodeDoubleClick = (id: string, type: 'source' | 'target') => {
+      if (!linkingSource) {
+         if (type === 'source') setLinkingSource(id);
+      } else {
          if (type === 'target') {
-            const exists = links.find(l => l.sourceNodeId === linkingSource && l.targetNodeId === id);
-            if (!exists) {
+            const existingLink = links.find(l => l.sourceNodeId === linkingSource && l.targetNodeId === id);
+            if (existingLink) {
+               // 已存在连接，直接打开映射框
+               setActiveLink(existingLink);
+               setShowMappingModal(true);
+            } else {
+               // 没有连接，创建新连接
                const newLink: CanvasLink = { id: Math.random().toString(36).substr(2, 9), sourceNodeId: linkingSource, targetNodeId: id, mappings: [] };
-               setLinks(prev => [...prev, newLink]); setActiveLink(newLink); setShowMappingModal(true);
+               setLinks(prev => [...prev, newLink]);
+               setActiveLink(newLink);
+               setShowMappingModal(true);
             }
             setLinkingSource(null);
-         } else { setLinkingSource(null); }
+         } else {
+            setLinkingSource(null);
+         }
       }
    };
    const handleAutoMap = () => { if (!activeLink) return; const sNode = nodes.find(n => n.id === activeLink.sourceNodeId); const tNode = nodes.find(n => n.id === activeLink.targetNodeId); if (!sNode || !tNode) return; const newMaps: FieldMapping[] = []; sNode.columns.forEach(sc => { const tc = tNode.columns.find(c => c.name === sc.name); if (tc) newMaps.push({ id: Math.random().toString(), sourceField: sc.name, sourceType: sc.type, targetField: tc.name, targetType: tc.type, description: 'Auto' }); }); setActiveLink({ ...activeLink, mappings: newMaps }); setLinks(links.map(l => l.id === activeLink.id ? { ...activeLink, mappings: newMaps } : l)); };
@@ -332,14 +372,30 @@ export const FieldMappingTool: React.FC<{
    const handleSaveProfile = () => {
       if (!activeProfile) return;
       const updated: MappingProfile = { ...activeProfile, sourceConn, targetConn, nodes, links, viewport: view, updatedAt: Date.now() };
-      setProfiles(prev => { const ex = prev.find(p => p.id === updated.id); return ex ? prev.map(p => p.id === updated.id ? updated : p) : [updated, ...prev]; });
+      setProfiles(prev => { const ex = prev.find(p => p.id === updated.id); return ex ? prev.map(p => p.id === updated.id ? updated : p) : [...prev, updated]; });
       setActiveProfile(null); // Return to list view
    };
-   const handleDeleteProfile = (id: string, e: React.MouseEvent) => { e.stopPropagation(); if (window.confirm('Delete?')) setProfiles(p => p.filter(x => x.id !== id)); };
+   const handleDeleteProfile = (id: string, e: React.MouseEvent) => {
+      e.stopPropagation();
+      setConfirmDelete({ isOpen: true, profileId: id });
+   };
 
    if (!activeProfile) {
       return (
          <div className="h-full flex flex-col">
+            <ConfirmModal
+               isOpen={confirmDelete.isOpen}
+               title={lang === 'zh' ? '确认删除' : 'Confirm Delete'}
+               message={lang === 'zh' ? '确定要删除这个映射项目吗？' : 'Are you sure you want to delete this mapping project?'}
+               confirmText={lang === 'zh' ? '删除' : 'Delete'}
+               cancelText={lang === 'zh' ? '取消' : 'Cancel'}
+               onConfirm={() => {
+                  setProfiles(p => p.filter(x => x.id !== confirmDelete.profileId));
+                  setConfirmDelete({ isOpen: false, profileId: '' });
+               }}
+               onCancel={() => setConfirmDelete({ isOpen: false, profileId: '' })}
+               type="danger"
+            />
             <div className="flex justify-between items-center mb-6">
                <h2 className="text-xl font-bold dark:text-white flex items-center"><ArrowRightLeft className="mr-3 text-indigo-600" />{lang === 'zh' ? '可视化数据映射' : 'Visual Mapping'}</h2>
                <div className="flex items-center space-x-3">
@@ -347,7 +403,11 @@ export const FieldMappingTool: React.FC<{
                      <button onClick={() => setViewMode('grid')} className={`p-1.5 rounded ${viewMode === 'grid' ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-400'}`}><LayoutGrid size={16} /></button>
                      <button onClick={() => setViewMode('list')} className={`p-1.5 rounded ${viewMode === 'list' ? 'bg-white dark:bg-slate-700 text-indigo-600' : 'text-slate-400'}`}><List size={16} /></button>
                   </div>
-                  <button onClick={() => setActiveProfile({ id: Date.now().toString(), name: lang === 'zh' ? '新映射项目' : 'New Project', updatedAt: Date.now(), nodes: [], links: [] })} className="px-4 py-2 bg-indigo-600 text-white rounded-lg flex items-center shadow-lg hover:bg-indigo-700 transition-colors"><Plus size={18} className="mr-2" />{lang === 'zh' ? '新建项目' : 'New Project'}</button>
+                  <button onClick={() => {
+                     const newProfile = { id: Date.now().toString(), name: lang === 'zh' ? '新映射项目' : 'New Project', updatedAt: Date.now(), nodes: [], links: [] };
+                     setProfiles(prev => [...prev, newProfile]);
+                     setActiveProfile(newProfile);
+                  }} className="px-4 py-2 bg-indigo-600 text-white rounded-lg flex items-center shadow-lg hover:bg-indigo-700 transition-colors"><Plus size={18} className="mr-2" />{lang === 'zh' ? '新建项目' : 'New Project'}</button>
                </div>
             </div>
 
@@ -364,7 +424,21 @@ export const FieldMappingTool: React.FC<{
                            </div>
                         </div>
                      ))}
-                     {profiles.length === 0 && <div className="col-span-full py-12 text-center text-slate-400 text-sm italic">{lang === 'zh' ? '暂无项目' : 'No projects found'}</div>}
+                     {/* 新建卡片 */}
+                     <div
+                        onClick={() => {
+                           const newProfile = { id: Date.now().toString(), name: lang === 'zh' ? '新映射项目' : 'New Project', updatedAt: Date.now(), nodes: [], links: [] };
+                           setProfiles(prev => [...prev, newProfile]);
+                           setActiveProfile(newProfile);
+                        }}
+                        className="p-6 bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 border-2 border-dashed border-indigo-300 dark:border-indigo-700 rounded-xl hover:shadow-md text-center cursor-pointer transition-all hover:border-indigo-500 dark:hover:border-indigo-500 flex flex-col items-center justify-center min-h-[200px]"
+                     >
+                        <div className="p-4 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 rounded-full mb-3">
+                           <Plus size={32} />
+                        </div>
+                        <h3 className="font-bold text-lg text-indigo-700 dark:text-indigo-300">{lang === 'zh' ? '新建项目' : 'New Project'}</h3>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{lang === 'zh' ? '点击创建新的映射项目' : 'Click to create a new mapping'}</p>
+                     </div>
                   </div>
                ) : (
                   <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border dark:border-slate-700 overflow-hidden">
@@ -408,34 +482,84 @@ export const FieldMappingTool: React.FC<{
                <button onClick={() => setActiveSideTab('target')} className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider ${activeSideTab === 'target' ? 'text-green-600 border-b-2 border-green-600 bg-green-50 dark:bg-green-900/10' : 'text-slate-500'}`}>Target DB</button>
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
-               <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-lg border dark:border-slate-700">
-                  <div className="flex justify-between items-center mb-2">
-                     <span className="text-xs font-bold text-slate-400 uppercase">Connection</span>
-                     <button onClick={() => handleOpenSelector(activeSideTab)} className="text-xs text-blue-500 hover:underline">{activeConn ? 'Change' : 'Select'}</button>
+               <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-lg border dark:border-slate-700">
+                  <div className="flex justify-between items-center mb-3">
+                     <span className="text-xs font-bold text-slate-400 uppercase">数据源连接</span>
                   </div>
                   {activeConn ? (
-                     <div><div className="font-bold text-sm dark:text-white">{activeConn.name}</div><div className="text-xs text-slate-500">{activeConn.type}</div></div>
-                  ) : <div className="text-xs text-slate-400 italic">No connection selected</div>}
+                     <div className="mb-3">
+                        <div className="font-bold text-sm dark:text-white flex items-center">
+                           <Database size={16} className="mr-2 text-indigo-600" />
+                           {activeConn.name}
+                        </div>
+                        <div className="text-xs text-slate-500 ml-6">{activeConn.type} • {activeConn.host}</div>
+                     </div>
+                  ) : (
+                     <div className="text-xs text-slate-400 italic mb-3">未选择数据源</div>
+                  )}
+                  <button
+                     onClick={() => handleOpenSelector(activeSideTab)}
+                     className="w-full px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white rounded-lg font-medium flex items-center justify-center shadow-lg transition-all"
+                  >
+                     <Plug size={18} className="mr-2" />
+                     {activeConn ? '更换数据源' : '选择数据源'}
+                  </button>
                </div>
 
                {activeConn && (
-                  <div className="border-t dark:border-slate-700 pt-4">
-                     {currentNav.step === 'dbs' ? (
+                  <div className="border-t dark:border-slate-700 pt-4 space-y-4">
+                     {/* Database Selector */}
+                     <div>
+                        <label className="block text-xs font-bold text-slate-400 uppercase mb-2">选择数据库</label>
+                        {isLoadingSide ? (
+                           <div className="text-center py-4"><RefreshCw className="animate-spin inline" size={20} /></div>
+                        ) : (
+                           <select
+                              value={currentNav.currentDb}
+                              onChange={(e) => {
+                                 const db = e.target.value;
+                                 if (db) handleSelectDb(activeSideTab, db);
+                              }}
+                              className="w-full p-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg text-sm outline-none dark:text-white"
+                           >
+                              <option value="">-- 选择数据库 --</option>
+                              {currentNav.dbList.map(db => <option key={db} value={db}>{db}</option>)}
+                           </select>
+                        )}
+                     </div>
+
+                     {/* Table Selector with Search */}
+                     {currentNav.currentDb && (
                         <div>
-                           <h4 className="text-xs font-bold text-slate-400 uppercase mb-2">Databases</h4>
-                           {isLoadingSide ? <div className="text-center"><RefreshCw className="animate-spin inline" /></div> :
-                              <div className="space-y-1">{currentNav.dbList.map(db => <button key={db} onClick={() => handleSelectDb(activeSideTab, db)} className="w-full text-left px-3 py-2 rounded text-sm hover:bg-slate-100 dark:hover:bg-slate-700 dark:text-slate-300 flex items-center"><Database size={14} className="mr-2" />{db}</button>)}</div>
-                           }
-                        </div>
-                     ) : (
-                        <div>
-                           <div className="flex items-center justify-between mb-3"><button onClick={() => handleBackToDbs(activeSideTab)} className="text-xs text-blue-500 flex items-center"><ChevronLeft size={12} /> Back</button><span className="text-xs font-bold text-slate-500 truncate max-w-[150px]">{currentNav.currentDb}</span></div>
-                           <h4 className="text-xs font-bold text-slate-400 uppercase mb-2">Tables</h4>
-                           <div className="space-y-2">{currentNav.tableList.map(t => (
-                              <div key={t.name} draggable onDragStart={(e) => handleDragStart(e, t.name, activeSideTab)} className={`p-2 rounded border dark:border-slate-700 cursor-grab bg-white dark:bg-slate-900 ${activeSideTab === 'source' ? 'border-l-4 border-l-blue-500' : 'border-l-4 border-l-green-500'}`}>
-                                 <div className="font-medium text-sm dark:text-slate-200 flex items-center"><GripHorizontal size={14} className="mr-2 text-slate-400" />{t.name}</div>
-                              </div>
-                           ))}</div>
+                           <label className="block text-xs font-bold text-slate-400 uppercase mb-2">选择数据表</label>
+                           {/* Search Box */}
+                           <div className="relative mb-2">
+                              <Search size={14} className="absolute left-2 top-2 text-slate-400" />
+                              <input
+                                 type="text"
+                                 placeholder="搜索表..."
+                                 value={activeSideTab === 'source' ? sourceTableSearch : targetTableSearch}
+                                 onChange={(e) => activeSideTab === 'source' ? setSourceTableSearch(e.target.value) : setTargetTableSearch(e.target.value)}
+                                 className="w-full pl-8 pr-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg text-sm outline-none"
+                              />
+                           </div>
+                           {/* Table Cards */}
+                           <div className="space-y-2 max-h-96 overflow-y-auto custom-scrollbar">
+                              {currentNav.tableList
+                                 .filter(t => t.name.toLowerCase().includes((activeSideTab === 'source' ? sourceTableSearch : targetTableSearch).toLowerCase()))
+                                 .map(t => (
+                                    <div
+                                       key={t.name}
+                                       onMouseDown={(e) => handleTableMouseDown(e, t.name, activeSideTab)}
+                                       className={`p-2 rounded border dark:border-slate-700 cursor-grab active:cursor-grabbing bg-white dark:bg-slate-900 hover:shadow-md transition-shadow ${activeSideTab === 'source' ? 'border-l-4 border-l-blue-500' : 'border-l-4 border-l-green-500'}`}
+                                    >
+                                       <div className="font-medium text-sm dark:text-slate-200 flex items-center" style={{ pointerEvents: 'none' }}>
+                                          <GripHorizontal size={14} className="mr-2 text-slate-400" />
+                                          {t.name}
+                                       </div>
+                                    </div>
+                                 ))}
+                           </div>
                         </div>
                      )}
                   </div>
@@ -444,19 +568,38 @@ export const FieldMappingTool: React.FC<{
          </div>
 
          {/* Canvas */}
-         <div className="flex-1 bg-slate-50 dark:bg-slate-900 overflow-hidden relative canvas-bg" onDrop={handleDrop} onDragOver={handleDragOver} onMouseDown={handleCanvasMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onWheel={handleWheel} style={{ cursor: isPanning ? 'grabbing' : 'default', backgroundImage: 'radial-gradient(circle, #94a3b8 1px, transparent 1px)', backgroundSize: `${20 * view.zoom}px ${20 * view.zoom}px`, backgroundPosition: `${view.x}px ${view.y}px` }}>
+         <div
+            className="flex-1 bg-slate-50 dark:bg-slate-900 overflow-hidden relative canvas-area"
+            onMouseDown={handleCanvasMouseDownInternal}
+            onMouseMove={handleCanvasMouseMove}
+            onMouseUp={handleCanvasMouseUp}
+            onWheel={handleWheel}
+            style={{
+               cursor: draggingTable ? 'copy' : (isPanning ? 'grabbing' : 'default'),
+               backgroundImage: 'radial-gradient(circle, #94a3b8 1px, transparent 1px)',
+               backgroundSize: `${20 * view.zoom}px ${20 * view.zoom}px`,
+               backgroundPosition: `${view.x}px ${view.y}px`
+            }}
+         >
             <div className="absolute top-4 right-4 flex flex-col gap-2 z-20">
                <div className="bg-white dark:bg-slate-800 p-1 rounded-lg shadow border dark:border-slate-700 flex flex-col"><button onClick={() => setView(v => ({ ...v, zoom: Math.min(v.zoom + 0.1, 3) }))} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700"><ZoomIn size={18} /></button><button onClick={() => setView(v => ({ ...v, zoom: Math.max(v.zoom - 0.1, 0.2) }))} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700"><ZoomOut size={18} /></button><button onClick={() => setView({ x: 0, y: 0, zoom: 1 })} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700"><Move size={18} /></button></div>
                <button onClick={handleAutoLayout} className="bg-white dark:bg-slate-800 p-2 rounded-lg shadow border dark:border-slate-700"><LayoutTemplate size={18} /></button>
             </div>
-            <div style={{ transform: `translate(${view.x}px, ${view.y}px) scale(${view.zoom})`, transformOrigin: '0 0', width: '100%', height: '100%' }}>
+            <div
+               style={{
+                  transform: `translate(${view.x}px, ${view.y}px) scale(${view.zoom})`,
+                  transformOrigin: '0 0',
+                  width: '100%',
+                  height: '100%'
+               }}
+            >
                <svg className="absolute top-0 left-0 w-[5000px] h-[5000px] pointer-events-none overflow-visible">{renderLinks()}{linkingSource && <line x1={nodes.find(n => n.id === linkingSource)?.x! + 220} y1={nodes.find(n => n.id === linkingSource)?.y! + 30} x2={(lastMousePos.x - 320 - view.x) / view.zoom} y2={(lastMousePos.y - 56 - view.y) / view.zoom} stroke="#94a3b8" strokeWidth="2" strokeDasharray="5,5" />}</svg>
                {nodes.map(node => (
-                  <div key={node.id} style={{ left: node.x, top: node.y }} onMouseDown={(e) => handleNodeMouseDown(e, node.id)} onClick={() => handleNodeClick(node.id, node.type)} className={`absolute w-[220px] bg-white dark:bg-slate-800 rounded-lg shadow-lg border-2 z-10 ${node.type === 'source' ? 'border-blue-500' : 'border-green-500'} ${linkingSource === node.id ? 'ring-4 ring-blue-500/30' : ''}`}>
+                  <div key={node.id} style={{ left: node.x, top: node.y, pointerEvents: 'auto' }} onMouseDown={(e) => handleNodeMouseDown(e, node.id)} onDoubleClick={() => handleNodeDoubleClick(node.id, node.type)} className={`absolute w-[220px] bg-white dark:bg-slate-800 rounded-lg shadow-lg border-2 z-10 ${node.type === 'source' ? 'border-blue-500' : 'border-green-500'} ${linkingSource === node.id ? 'ring-4 ring-blue-500/30' : ''}`}>
                      <div className={`px-3 py-2 border-b text-xs font-bold text-white flex justify-between items-center rounded-t-md ${node.type === 'source' ? 'bg-blue-500' : 'bg-green-500'}`}><span>{node.tableName}</span><button onClick={(e) => { e.stopPropagation(); setNodes(n => n.filter(x => x.id !== node.id)); setLinks(l => l.filter(x => x.sourceNodeId !== node.id && x.targetNodeId !== node.id)) }}><X size={14} /></button></div>
                      <div className="p-2 max-h-[250px] overflow-y-auto space-y-1 text-xs bg-slate-50 dark:bg-slate-900/50">{node.columns.map(c => <div key={c.name} className="flex justify-between p-1 bg-white dark:bg-slate-800 rounded border dark:border-slate-700"><span>{c.name}</span><span className="text-[10px] text-slate-400">{c.type}</span></div>)}</div>
-                     {node.type === 'source' && <div className="absolute -right-3 top-8 w-6 h-6 bg-white dark:bg-slate-800 border-2 border-blue-500 rounded-full flex items-center justify-center cursor-pointer hover:scale-110 shadow-sm z-20"><MousePointer2 size={12} className="text-blue-500 rotate-90" /></div>}
-                     {node.type === 'target' && <div className="absolute -left-3 top-8 w-6 h-6 bg-white dark:bg-slate-800 border-2 border-green-500 rounded-full flex items-center justify-center cursor-pointer hover:scale-110 shadow-sm z-20"><Link size={12} className="text-green-500" /></div>}
+                     {node.type === 'source' && <div onClick={() => handleNodeDoubleClick(node.id, node.type)} className="absolute -right-3 top-8 w-6 h-6 bg-white dark:bg-slate-800 border-2 border-blue-500 rounded-full flex items-center justify-center cursor-pointer hover:scale-110 shadow-sm z-20"><MousePointer2 size={12} className="text-blue-500 rotate-90" /></div>}
+                     {node.type === 'target' && <div onClick={() => handleNodeDoubleClick(node.id, node.type)} className="absolute -left-3 top-8 w-6 h-6 bg-white dark:bg-slate-800 border-2 border-green-500 rounded-full flex items-center justify-center cursor-pointer hover:scale-110 shadow-sm z-20"><Link size={12} className="text-green-500" /></div>}
                   </div>
                ))}
             </div>

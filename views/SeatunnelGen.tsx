@@ -2,8 +2,11 @@ import React, { useState } from 'react';
 import { Language, DbConnection, ScriptJob, JobConfig } from '../types';
 import {
   Workflow, Plus, Trash2, ChevronLeft, Save, X,
-  LayoutGrid, List, ArrowRight, Database, Play, Settings
+  LayoutGrid, List, ArrowRight, Database, Play, Settings, Plug, Search
 } from 'lucide-react';
+import { invoke } from '@tauri-apps/api/core';
+import { TableInfo } from '../types';
+import { ConfirmModal } from '../components/ConfirmModal';
 
 // 数据源选择弹窗
 const DataSourceSelectorModal: React.FC<{
@@ -88,6 +91,20 @@ export const SeatunnelGen: React.FC<{
   const [generatedConfig, setGeneratedConfig] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
 
+  // 新增：数据库和表状态
+  const [sourceDbs, setSourceDbs] = useState<string[]>([]);
+  const [sinkDbs, setSinkDbs] = useState<string[]>([]);
+  const [sourceTables, setSourceTables] = useState<TableInfo[]>([]);
+  const [sinkTables, setSinkTables] = useState<TableInfo[]>([]);
+  const [sourceTableSearch, setSourceTableSearch] = useState('');
+  const [sinkTableSearch, setSinkTableSearch] = useState('');
+  const [isLoadingDbs, setIsLoadingDbs] = useState(false);
+  const [isLoadingTables, setIsLoadingTables] = useState(false);
+  const isTauri = typeof window !== 'undefined' && !!(window as any).__TAURI_INTERNALS__;
+
+  // 删除确认状态
+  const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; jobId: string }>({ isOpen: false, jobId: '' });
+
   const handleCreateJob = () => {
     const newJob: ScriptJob = {
       id: Date.now().toString(),
@@ -104,13 +121,16 @@ export const SeatunnelGen: React.FC<{
 
   const handleDeleteJob = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (window.confirm(lang === 'zh' ? '确定删除此任务吗？' : 'Delete this job?')) {
-      saveJobs(jobs.filter(j => j.id !== id));
-      if (activeJob?.id === id) setActiveJob(null);
-    }
+    setConfirmDelete({ isOpen: true, jobId: id });
   };
 
-  const handleSelectDataSource = (conn: DbConnection) => {
+  const confirmDeleteJob = () => {
+    saveJobs(jobs.filter(j => j.id !== confirmDelete.jobId));
+    if (activeJob?.id === confirmDelete.jobId) setActiveJob(null);
+    setConfirmDelete({ isOpen: false, jobId: '' });
+  };
+
+  const handleSelectDataSource = async (conn: DbConnection) => {
     if (activeJob && selectingFor) {
       const jobConfig: JobConfig = {
         type: conn.type,
@@ -125,9 +145,54 @@ export const SeatunnelGen: React.FC<{
       const updatedJob = { ...activeJob, [selectingFor]: jobConfig };
       setActiveJob(updatedJob);
       saveJobs(jobs.map(j => j.id === activeJob.id ? updatedJob : j));
+
+      // 加载数据库列表
+      await loadDatabases(conn, selectingFor);
     }
     setShowSelector(false);
     setSelectingFor(null);
+  };
+
+  // 加载数据库列表
+  const loadDatabases = async (conn: DbConnection, side: 'source' | 'sink') => {
+    setIsLoadingDbs(true);
+    try {
+      let dbs: string[] = [];
+      if (isTauri) {
+        const connStr = `mysql://${conn.user}:${conn.password || ''}@${conn.host}:${conn.port}`;
+        dbs = await invoke('db_get_databases', { id: connStr });
+      } else {
+        dbs = ['demo_db_1', 'demo_db_2', 'test_schema'];
+      }
+      if (side === 'source') setSourceDbs(dbs);
+      else setSinkDbs(dbs);
+    } catch (e) {
+      console.error('Failed to load databases:', e);
+      if (side === 'source') setSourceDbs([]);
+      else setSinkDbs([]);
+    }
+    setIsLoadingDbs(false);
+  };
+
+  // 加载表列表
+  const loadTables = async (conn: JobConfig, dbName: string, side: 'source' | 'sink') => {
+    setIsLoadingTables(true);
+    try {
+      let tables: TableInfo[] = [];
+      if (isTauri) {
+        const connStr = `mysql://${conn.user}:${conn.password || ''}@${conn.host}:${conn.port}`;
+        tables = await invoke('db_get_tables', { id: connStr, db: dbName });
+      } else {
+        tables = [{ name: 'table_1', rows: 100, size: '1KB' }, { name: 'table_2', rows: 200, size: '2KB' }];
+      }
+      if (side === 'source') setSourceTables(tables);
+      else setSinkTables(tables);
+    } catch (e) {
+      console.error('Failed to load tables:', e);
+      if (side === 'source') setSourceTables([]);
+      else setSinkTables([]);
+    }
+    setIsLoadingTables(false);
   };
 
   const updateJobDetails = (part: 'source' | 'sink', key: keyof JobConfig, value: string) => {
@@ -208,6 +273,16 @@ sink {
   if (!activeJob) {
     return (
       <div className="h-full flex flex-col">
+        <ConfirmModal
+          isOpen={confirmDelete.isOpen}
+          title={lang === 'zh' ? '确认删除' : 'Confirm Delete'}
+          message={lang === 'zh' ? '确定要删除这个同步任务吗？' : 'Are you sure you want to delete this sync job?'}
+          confirmText={lang === 'zh' ? '删除' : 'Delete'}
+          cancelText={lang === 'zh' ? '取消' : 'Cancel'}
+          onConfirm={confirmDeleteJob}
+          onCancel={() => setConfirmDelete({ isOpen: false, jobId: '' })}
+          type="danger"
+        />
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center">
             <Workflow className="mr-3 text-purple-600" />
@@ -352,38 +427,88 @@ sink {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-6">
           {/* Source Config Card */}
           <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col">
-            <div className="p-4 border-b border-slate-200 dark:border-slate-700 bg-blue-50 dark:bg-blue-900/10 flex justify-between items-center">
+            <div className="p-4 border-b border-slate-200 dark:border-slate-700 bg-blue-50 dark:bg-blue-900/10">
               <span className="font-bold text-blue-700 dark:text-blue-300 flex items-center"><Database size={16} className="mr-2" /> Source</span>
-              <button
-                onClick={() => { setShowSelector(true); setSelectingFor('source'); }}
-                className="text-xs bg-white dark:bg-slate-800 border border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400 px-3 py-1 rounded-full hover:bg-blue-50 transition-colors"
-              >
-                {lang === 'zh' ? '选择数据源' : 'Select Connection'}
-              </button>
             </div>
             <div className="p-6 space-y-4 flex-1">
               {activeJob.source.host ? (
                 <>
-                  <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700">
-                    <div className="text-xs text-slate-400 uppercase font-bold mb-1">Current Connection</div>
-                    <div className="font-mono text-sm text-slate-700 dark:text-slate-300 font-bold">{activeJob.source.type}</div>
-                    <div className="text-xs text-slate-500 mt-1 truncate">{activeJob.source.host}:{activeJob.source.port}</div>
-                    <div className="text-xs text-slate-500 mt-1">DB: <span className="font-mono bg-slate-200 dark:bg-slate-800 px-1 rounded">{activeJob.source.database || 'Default'}</span></div>
+                  <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 mb-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="text-xs text-slate-400 uppercase font-bold">数据源连接</div>
+                    </div>
+                    <div className="font-bold text-sm dark:text-white flex items-center mb-1">
+                      <Database size={16} className="mr-2 text-blue-600" />
+                      {activeJob.source.type}
+                    </div>
+                    <div className="text-xs text-slate-500 ml-6">{activeJob.source.host}:{activeJob.source.port}</div>
                   </div>
+                  <button
+                    onClick={() => { setShowSelector(true); setSelectingFor('source'); }}
+                    className="w-full px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg font-medium flex items-center justify-center shadow-lg transition-all"
+                  >
+                    <Plug size={18} className="mr-2" />
+                    更换数据源
+                  </button>
+
+                  {/* Database Selector */}
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{lang === 'zh' ? '源表名' : 'Source Table'}</label>
-                    <input
-                      value={activeJob.source.table}
-                      onChange={e => updateJobDetails('source', 'table', e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 dark:text-white transition-all"
-                      placeholder="e.g. users"
-                    />
+                    <label className="block text-xs font-bold text-slate-400 uppercase mb-2">选择数据库</label>
+                    <select
+                      value={activeJob.source.database}
+                      onChange={async (e) => {
+                        const db = e.target.value;
+                        updateJobDetails('source', 'database', db);
+                        if (db) await loadTables(activeJob.source, db, 'source');
+                      }}
+                      disabled={isLoadingDbs}
+                      className="w-full p-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg text-sm outline-none dark:text-white disabled:opacity-50"
+                    >
+                      <option value="">-- 选择数据库 --</option>
+                      {sourceDbs.map(db => <option key={db} value={db}>{db}</option>)}
+                    </select>
                   </div>
+
+                  {/* Table Selector with Search */}
+                  {activeJob.source.database && (
+                    <div>
+                      <label className="block text-xs font-bold text-slate-400 uppercase mb-2">选择数据表</label>
+                      <div className="relative mb-2">
+                        <Search size={14} className="absolute left-2 top-2 text-slate-400" />
+                        <input
+                          type="text"
+                          placeholder="搜索表..."
+                          value={sourceTableSearch}
+                          onChange={(e) => setSourceTableSearch(e.target.value)}
+                          disabled={isLoadingTables}
+                          className="w-full pl-8 pr-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg text-sm outline-none disabled:opacity-50"
+                        />
+                      </div>
+                      <select
+                        value={activeJob.source.table}
+                        onChange={e => updateJobDetails('source', 'table', e.target.value)}
+                        disabled={isLoadingTables}
+                        className="w-full p-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg text-sm outline-none dark:text-white disabled:opacity-50"
+                      >
+                        <option value="">-- 选择表 --</option>
+                        {sourceTables
+                          .filter(t => t.name.toLowerCase().includes(sourceTableSearch.toLowerCase()))
+                          .map(t => <option key={t.name} value={t.name}>{t.name}</option>)}
+                      </select>
+                    </div>
+                  )}
                 </>
               ) : (
                 <div className="h-full flex flex-col items-center justify-center text-slate-400 py-8">
                   <Settings size={40} className="mb-2 opacity-30" />
-                  <p className="text-sm">{lang === 'zh' ? '请先选择源端数据连接' : 'Please select a source connection'}</p>
+                  <p className="text-sm mb-4">请先选择源端数据连接</p>
+                  <button
+                    onClick={() => { setShowSelector(true); setSelectingFor('source'); }}
+                    className="px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg font-medium flex items-center shadow-lg transition-all"
+                  >
+                    <Plug size={18} className="mr-2" />
+                    选择数据源
+                  </button>
                 </div>
               )}
             </div>
@@ -391,38 +516,88 @@ sink {
 
           {/* Sink Config Card */}
           <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col">
-            <div className="p-4 border-b border-slate-200 dark:border-slate-700 bg-green-50 dark:bg-green-900/10 flex justify-between items-center">
+            <div className="p-4 border-b border-slate-200 dark:border-slate-700 bg-green-50 dark:bg-green-900/10">
               <span className="font-bold text-green-700 dark:text-green-300 flex items-center"><Database size={16} className="mr-2" /> Sink</span>
-              <button
-                onClick={() => { setShowSelector(true); setSelectingFor('sink'); }}
-                className="text-xs bg-white dark:bg-slate-800 border border-green-200 dark:border-green-800 text-green-600 dark:text-green-400 px-3 py-1 rounded-full hover:bg-green-50 transition-colors"
-              >
-                {lang === 'zh' ? '选择数据源' : 'Select Connection'}
-              </button>
             </div>
             <div className="p-6 space-y-4 flex-1">
               {activeJob.sink.host ? (
                 <>
-                  <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700">
-                    <div className="text-xs text-slate-400 uppercase font-bold mb-1">Current Connection</div>
-                    <div className="font-mono text-sm text-slate-700 dark:text-slate-300 font-bold">{activeJob.sink.type}</div>
-                    <div className="text-xs text-slate-500 mt-1 truncate">{activeJob.sink.host}:{activeJob.sink.port}</div>
-                    <div className="text-xs text-slate-500 mt-1">DB: <span className="font-mono bg-slate-200 dark:bg-slate-800 px-1 rounded">{activeJob.sink.database || 'Default'}</span></div>
+                  <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 mb-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="text-xs text-slate-400 uppercase font-bold">数据源连接</div>
+                    </div>
+                    <div className="font-bold text-sm dark:text-white flex items-center mb-1">
+                      <Database size={16} className="mr-2 text-green-600" />
+                      {activeJob.sink.type}
+                    </div>
+                    <div className="text-xs text-slate-500 ml-6">{activeJob.sink.host}:{activeJob.sink.port}</div>
                   </div>
+                  <button
+                    onClick={() => { setShowSelector(true); setSelectingFor('sink'); }}
+                    className="w-full px-4 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-lg font-medium flex items-center justify-center shadow-lg transition-all"
+                  >
+                    <Plug size={18} className="mr-2" />
+                    更换数据源
+                  </button>
+
+                  {/* Database Selector */}
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{lang === 'zh' ? '目标表名' : 'Target Table'}</label>
-                    <input
-                      value={activeJob.sink.table}
-                      onChange={e => updateJobDetails('sink', 'table', e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg outline-none focus:ring-2 focus:ring-green-500 dark:text-white transition-all"
-                      placeholder="e.g. ods_users"
-                    />
+                    <label className="block text-xs font-bold text-slate-400 uppercase mb-2">选择数据库</label>
+                    <select
+                      value={activeJob.sink.database}
+                      onChange={async (e) => {
+                        const db = e.target.value;
+                        updateJobDetails('sink', 'database', db);
+                        if (db) await loadTables(activeJob.sink, db, 'sink');
+                      }}
+                      disabled={isLoadingDbs}
+                      className="w-full p-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg text-sm outline-none dark:text-white disabled:opacity-50"
+                    >
+                      <option value="">-- 选择数据库 --</option>
+                      {sinkDbs.map(db => <option key={db} value={db}>{db}</option>)}
+                    </select>
                   </div>
+
+                  {/* Table Selector with Search */}
+                  {activeJob.sink.database && (
+                    <div>
+                      <label className="block text-xs font-bold text-slate-400 uppercase mb-2">选择数据表</label>
+                      <div className="relative mb-2">
+                        <Search size={14} className="absolute left-2 top-2 text-slate-400" />
+                        <input
+                          type="text"
+                          placeholder="搜索表..."
+                          value={sinkTableSearch}
+                          onChange={(e) => setSinkTableSearch(e.target.value)}
+                          disabled={isLoadingTables}
+                          className="w-full pl-8 pr-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg text-sm outline-none disabled:opacity-50"
+                        />
+                      </div>
+                      <select
+                        value={activeJob.sink.table}
+                        onChange={e => updateJobDetails('sink', 'table', e.target.value)}
+                        disabled={isLoadingTables}
+                        className="w-full p-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg text-sm outline-none dark:text-white disabled:opacity-50"
+                      >
+                        <option value="">-- 选择表 --</option>
+                        {sinkTables
+                          .filter(t => t.name.toLowerCase().includes(sinkTableSearch.toLowerCase()))
+                          .map(t => <option key={t.name} value={t.name}>{t.name}</option>)}
+                      </select>
+                    </div>
+                  )}
                 </>
               ) : (
                 <div className="h-full flex flex-col items-center justify-center text-slate-400 py-8">
                   <Settings size={40} className="mb-2 opacity-30" />
-                  <p className="text-sm">{lang === 'zh' ? '请先选择目标端数据连接' : 'Please select a sink connection'}</p>
+                  <p className="text-sm mb-4">请先选择目标端数据连接</p>
+                  <button
+                    onClick={() => { setShowSelector(true); setSelectingFor('sink'); }}
+                    className="px-4 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-lg font-medium flex items-center shadow-lg transition-all"
+                  >
+                    <Plug size={18} className="mr-2" />
+                    选择数据源
+                  </button>
                 </div>
               )}
             </div>
