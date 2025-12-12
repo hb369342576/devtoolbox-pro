@@ -5,9 +5,20 @@ DevToolbox Pro 是一个基于 **Tauri 2.0** + **React 19** + **Rust** 构建的
 ## 🛠️ 技术栈
 
 *   **前端**: React 19, TypeScript, Tailwind CSS, Lucide Icons, Recharts
+*   **状态管理**: Zustand (轻量级全局状态管理)
 *   **后端**: Rust (Tauri Host Process)
 *   **框架**: Tauri 2.0
 *   **构建工具**: Vite
+
+## 🏗️ 架构特性
+
+*   **Feature-Based**: 功能模块化，易于扩展
+*   **Zustand Stores**: 8个专用Store统一管理状态
+*   **TypeScript**: 完整类型安全
+*   **组件原子化**: 高复用性组件设计
+*   **性能优化**: Selector细粒度更新
+
+> 📚 查看 [STORES.md](./STORES.md) 了解所有Store的详细信息
 
 ## ✨ 核心功能
 
@@ -45,7 +56,7 @@ Windows 必须安装 **Microsoft Visual Studio C++ 生成工具** 才能编译 R
 ### 1. 安装依赖
 在项目根目录下运行：
 ```bash
-npm install
+npmstall
 ```
 
 ### 2. 配置后端代码 (关键步骤)

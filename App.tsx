@@ -1,19 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { Layout } from './components/Layout';
-import { Login } from './views/Login';
-import { UserProfile } from './views/UserProfile';
-import { DbViewer } from './views/DbViewer';
-import { ExcelToSql } from './views/ExcelToSql';
-import { SeatunnelGen } from './views/SeatunnelGen';
-import { PdfTools } from './views/PdfTools';
-import { TimeUtility } from './views/TimeUtility';
-import { SystemMonitor } from './views/SystemMonitor';
-import { Settings } from './views/Settings';
-import { FieldMappingTool } from './views/FieldMappingTool';
-import { InterviewQuestions } from './views/InterviewQuestions';
-import { Notes } from './views/Notes';
-import { DataSourceManager } from './views/DataSourceManager';
-import { DataCompareTool } from './views/DataCompareTool'; // Import New View
+import { Layout } from './components/ui/Layout';
+import { Login } from './features/Login';
+import { UserProfile } from './features/UserProfile';
+import { DbViewer } from './features/DbViewer';
+import { ExcelToSql } from './features/ExcelToSql';
+import { SeatunnelGen } from './features/SeatunnelGen';
+import { PdfTools } from './features/PdfTools';
+import { TimeUtility } from './features/TimeUtility';
+import { SystemMonitor } from './features/SystemMonitor';
+import { Settings } from './features/Settings';
+import { FieldMappingTool } from './features/FieldMappingTool';
+import { InterviewQuestions } from './features/InterviewQuestions';
+import { Notes } from './features/Notes';
+import { DataSourceManager } from './features/DataSourceManager';
+import { DataCompareTool } from './features/DataCompareTool';
 import { Language, Theme, User, DbConnection } from './types';
 import { NAV_ITEMS } from './constants';
 
@@ -94,24 +94,30 @@ const Dashboard: React.FC<{ onNavigate: (id: string) => void, lang: Language }> 
           <button
             key={tool.id}
             onClick={() => onNavigate(tool.id)}
-            className="group relative p-6 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 text-left overflow-hidden"
+            className="group relative p-6 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border-2 border-slate-200 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-2xl hover:shadow-blue-500/20 hover:-translate-y-2 transition-all duration-300 text-left overflow-hidden"
           >
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-transparent dark:from-blue-900/10 dark:to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            {/* Gradient overlay on hover */}
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-indigo-50/30 to-transparent dark:from-blue-900/20 dark:via-indigo-900/10 dark:to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+            {/* Shine effect on hover */}
+            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+            </div>
 
             <div className="relative z-10">
-              <div className={`w-14 h-14 rounded-xl flex items-center justify-center mb-6 shadow-sm transition-transform group-hover:scale-105 ${tool.category === 'db' ? 'bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-300' :
-                  tool.category === 'office' ? 'bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-300' :
-                    tool.category === 'knowledge' ? 'bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-300' :
-                      tool.category === 'user' ? 'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300' :
-                        'bg-purple-100 dark:bg-purple-500/20 text-purple-600 dark:text-purple-300'
+              <div className={`w-14 h-14 rounded-xl flex items-center justify-center mb-6 shadow-sm transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg ${tool.category === 'db' ? 'bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-300 group-hover:bg-blue-200 dark:group-hover:bg-blue-500/30' :
+                tool.category === 'office' ? 'bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-300 group-hover:bg-red-200 dark:group-hover:bg-red-500/30' :
+                  tool.category === 'knowledge' ? 'bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-300 group-hover:bg-orange-200 dark:group-hover:bg-orange-500/30' :
+                    tool.category === 'user' ? 'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 group-hover:bg-indigo-200 dark:group-hover:bg-indigo-500/30' :
+                      'bg-purple-100 dark:bg-purple-500/20 text-purple-600 dark:text-purple-300 group-hover:bg-purple-200 dark:group-hover:bg-purple-500/30'
                 }`}>
-                <tool.icon size={28} />
+                <tool.icon size={28} className="group-hover:scale-110 transition-transform duration-300" />
               </div>
 
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3">
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-300">
                 {tool.label[lang]}
               </h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+              <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed group-hover:text-slate-700 dark:group-hover:text-slate-300 transition-colors duration-300">
                 {getDescription(tool.id, lang)}
               </p>
             </div>

@@ -9,6 +9,8 @@ export interface NavItem {
   label: Record<Language, string>;
   icon: LucideIcon;
   category: 'core' | 'db' | 'office' | 'system' | 'user' | 'knowledge';
+  order: number; // 排序编号
+  visible: boolean; // 是否显示
 }
 
 export type DatabaseType = 'MySQL' | 'PostgreSQL' | 'Doris' | 'Oracle' | 'SQL Server' | 'SQLite';

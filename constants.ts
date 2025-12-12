@@ -1,9 +1,9 @@
-import { 
-  Database, 
-  FileSpreadsheet, 
-  Cpu, 
-  Clock, 
-  FileText, 
+import {
+  Database,
+  FileSpreadsheet,
+  Cpu,
+  Clock,
+  FileText,
   LayoutDashboard,
   Workflow,
   UserCircle,
@@ -20,79 +20,105 @@ export const NAV_ITEMS: NavItem[] = [
     id: 'dashboard',
     label: { en: 'Dashboard', zh: '首页' },
     icon: LayoutDashboard,
-    category: 'core'
+    category: 'core',
+    order: 1,
+    visible: true
   },
   {
     id: 'notes',
     label: { en: 'Dev Notes', zh: '开发笔记' },
     icon: StickyNote,
-    category: 'knowledge'
+    category: 'knowledge',
+    order: 2,
+    visible: true
   },
   {
     id: 'interview-questions',
     label: { en: 'Interview Q&A', zh: '问题锦集' },
     icon: BookOpen,
-    category: 'knowledge'
+    category: 'knowledge',
+    order: 3,
+    visible: true
   },
   {
     id: 'data-source-manager',
-    label: { en: 'Data Sources', zh: '数据源管理' },
+    label: { en: 'Data Sources', zh: '数据中心' },
     icon: DatabaseZap,
-    category: 'db'
+    category: 'db',
+    order: 4,
+    visible: true
   },
   {
     id: 'db-viewer',
-    label: { en: 'Table Viewer', zh: '表结构查看器' },
+    label: { en: 'Table Viewer', zh: '表结构器' },
     icon: Database,
-    category: 'db'
+    category: 'db',
+    order: 5,
+    visible: true
   },
   {
     id: 'data-compare',
-    label: { en: 'Data Compare', zh: '数据对比工具' },
+    label: { en: 'Data Compare', zh: '数据对比' },
     icon: GitCompare,
-    category: 'db'
+    category: 'db',
+    order: 6,
+    visible: true
   },
   {
     id: 'excel-sql',
-    label: { en: 'Excel Builder', zh: 'Excel建表器' },
+    label: { en: 'Excel Builder', zh: '表格建表' },
     icon: FileSpreadsheet,
-    category: 'db'
+    category: 'db',
+    order: 7,
+    visible: true
   },
   {
     id: 'seatunnel',
-    label: { en: 'Seatunnel Gen', zh: '任务脚本生成' },
+    label: { en: 'Seatunnel Gen', zh: '任务脚本' },
     icon: Workflow,
-    category: 'db'
+    category: 'db',
+    order: 8,
+    visible: true
   },
   {
     id: 'field-mapping',
-    label: { en: 'Field Mapping', zh: '数据映射工具' },
+    label: { en: 'Field Mapping', zh: '数据映射' },
     icon: ArrowRightLeft,
-    category: 'db'
+    category: 'db',
+    order: 9,
+    visible: true
   },
   {
     id: 'pdf-tools',
-    label: { en: 'PDF Tools', zh: 'PDF编辑器' },
+    label: { en: 'PDF Tools', zh: '文档编辑' },
     icon: FileText,
-    category: 'office'
+    category: 'office',
+    order: 10,
+    visible: true
   },
   {
     id: 'time-tools',
     label: { en: 'Time Utilities', zh: '时间工具' },
     icon: Clock,
-    category: 'system'
+    category: 'system',
+    order: 11,
+    visible: true
   },
   {
     id: 'monitor',
     label: { en: 'System Monitor', zh: '系统监控' },
     icon: Cpu,
-    category: 'system'
+    category: 'system',
+    order: 12,
+    visible: true
   },
   {
     id: 'profile',
     label: { en: 'User Profile', zh: '用户中心' },
     icon: UserCircle,
-    category: 'user'
+    category: 'user',
+    order: 13,
+    visible: true
   }
 ];
 
