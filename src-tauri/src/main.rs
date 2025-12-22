@@ -380,6 +380,14 @@ fn get_system_stats(state: State<AppState>) -> SystemStats {
 // --- 5. PDF 相关命令 ---
 
 #[tauri::command]
+fn save_file(path: String, data: Vec<u8>) -> Result<String, String> {
+    use std::io::Write;
+    let mut file = std::fs::File::create(&path).map_err(|e| e.to_string())?;
+    file.write_all(&data).map_err(|e| e.to_string())?;
+    Ok("Success".to_string())
+}
+
+#[tauri::command]
 async fn process_pdf(mode: String, files: Vec<String>, meta: Option<serde_json::Value>) -> Result<String, String> {
     // 真实场景使用 lopdf 或 pdf-cpu 库
     println!("Processing PDF: Mode={}, Files={:?}, Meta={:?}", mode, files, meta);
@@ -388,12 +396,42 @@ async fn process_pdf(mode: String, files: Vec<String>, meta: Option<serde_json::
     Ok("Success".to_string())
 }
 
+#[tauri::command]
+fn open_explorer(path: String) -> Result<(), String> {
+    println!("Opening explorer at path: {}", path);
+    #[cfg(target_os = "windows")]
+    {
+        let win_path = path.replace("/", "\\");
+        std::process::Command::new("explorer")
+            .arg(win_path)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn get_download_dir() -> Result<String, String> {
+    dirs::download_dir()
+        .map(|p| p.to_string_lossy().to_string())
+        .ok_or_else(|| "Could not find download directory".to_string())
+}
+
 fn main() {
     let state = AppState {
         sys: Mutex::new(System::new_all()),
     };
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init())
         .manage(state)
         .invoke_handler(tauri::generate_handler![
             db_test_connection,
@@ -405,7 +443,10 @@ fn main() {
             generate_seatunnel_config,
             get_system_info,
             get_system_stats,
-            process_pdf
+            process_pdf,
+            save_file,
+            open_explorer,
+            get_download_dir
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

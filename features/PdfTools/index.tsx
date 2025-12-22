@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Scissors, Minimize2, Layers, Trash2, Download, Eye, X, Edit, Save } from 'lucide-react';
+import { FileText, Scissors, Minimize2, Layers, Trash2, Download, Eye, X, Edit, Save, FolderOpen } from 'lucide-react';
 import { Language, PdfFile } from '../../types';
 
 interface PdfFileWithBlob extends PdfFile {
@@ -13,19 +13,80 @@ interface PdfFileWithBlob extends PdfFile {
   };
 }
 
-import { invoke } from '@tauri-apps/api/core';
+import { PDFDocument } from 'pdf-lib';
+import JSZip from 'jszip';
+import { useToast } from '../../components/ui/Toast';
+
+// Safe invoke wrapper
+// Safe invoke wrapper
+const invoke = (cmd: string, args: any) => {
+  const tauri = (window as any).__TAURI__;
+  if (tauri) {
+    if (tauri.core && tauri.core.invoke) return tauri.core.invoke(cmd, args);
+    if (tauri.invoke) return tauri.invoke(cmd, args);
+  }
+  return Promise.reject("Tauri API not found");
+};
 
 export const PdfTools: React.FC<{ lang: Language }> = ({ lang }) => {
-  // NOTE: `getTexts` is not defined in the provided context. Assuming it's defined elsewhere or will be added.
-  // For now, commenting it out to maintain syntactical correctness.
-  // const t = getTexts(lang);
-  // Reliable check for Tauri v2
   const isTauri = !!(window as any).__TAURI_INTERNALS__ || !!(window as any).__TAURI__;
-  const [activeMode, setActiveMode] = useState<'merge' | 'split' | 'compress' | 'view' | 'edit'>('merge');
-  const [files, setFiles] = useState<PdfFileWithBlob[]>([]);
+  const { toast } = useToast();
+  const [activeMode, setActiveMode] = useState<'merge' | 'split' | 'compress' | 'view'>('merge');
   const [isSaving, setIsSaving] = useState(false);
+  // State for all modes
+  const [toolStates, setToolStates] = useState<{
+    [key: string]: {
+      files: PdfFileWithBlob[];
+      outputName: string;
+      outputDir: string;
+      splitRange: { start: string; end: string };
+      customPages: string;
+      compressionLevel: 'low' | 'medium' | 'high';
+    }
+  }>({
+    merge: { files: [], outputName: '', outputDir: '', splitRange: { start: '', end: '' }, customPages: '', compressionLevel: 'medium' },
+    split: { files: [], outputName: '', outputDir: '', splitRange: { start: '', end: '' }, customPages: '', compressionLevel: 'medium' },
+    compress: { files: [], outputName: '', outputDir: '', splitRange: { start: '', end: '' }, customPages: '', compressionLevel: 'medium' },
+    view: { files: [], outputName: '', outputDir: '', splitRange: { start: '', end: '' }, customPages: '', compressionLevel: 'medium' },
+  });
 
-  // 清理 Blob URL 避免内存泄漏
+  const currentState = toolStates[activeMode];
+
+  const updateCurrentState = (updates: Partial<typeof currentState>) => {
+    setToolStates(prev => ({
+      ...prev,
+      [activeMode]: { ...prev[activeMode], ...updates }
+    }));
+  };
+
+  // Helper to set files specifically (common op)
+  const setFiles = (files: PdfFileWithBlob[]) => updateCurrentState({ files });
+  // Helper for callback updates
+  const setFilesCallback = (cb: (prev: PdfFileWithBlob[]) => PdfFileWithBlob[]) => {
+    setToolStates(prev => ({
+      ...prev,
+      [activeMode]: { ...prev[activeMode], files: cb(prev[activeMode].files) }
+    }));
+  };
+
+  const files = currentState.files;
+  const outputName = currentState.outputName;
+  const outputDir = currentState.outputDir;
+  const splitRange = currentState.splitRange;
+  const customPages = currentState.customPages;
+  const compressionLevel = currentState.compressionLevel;
+
+  const setOutputName = (val: string) => updateCurrentState({ outputName: val });
+  const setOutputDir = (val: string) => updateCurrentState({ outputDir: val });
+  const setSplitRange = (val: { start: string, end: string }) => updateCurrentState({ splitRange: val });
+  const setCustomPages = (val: string) => updateCurrentState({ customPages: val });
+  const setCompressionLevel = (val: 'low' | 'medium' | 'high') => updateCurrentState({ compressionLevel: val });
+
+  // Clean up ALL blob URLs when component unmounts or files change deeply
+  // Note: This effect is tricky with independent states. 
+  // We should iterate all states to cleanup? Or just current?
+  // Use a simpler approach: cleanup on unmount only, or when specific files are removed.
+  // For now, let's keep it simple: cleanup current mode files if they change.
   useEffect(() => {
     return () => {
       files.forEach(f => {
@@ -34,15 +95,9 @@ export const PdfTools: React.FC<{ lang: Language }> = ({ lang }) => {
     };
   }, [files]);
 
-  // 切换模式时清空文件
-  useEffect(() => {
-    setFiles([]);
-  }, [activeMode]);
-
   // 处理文件上传
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      // FIX: Explicitly type 'f' as File to resolve type inference issues.
       const newFiles: PdfFileWithBlob[] = Array.from(e.target.files).map((f: File) => ({
         id: Math.random().toString(36).substr(2, 9),
         name: f.name,
@@ -52,10 +107,11 @@ export const PdfTools: React.FC<{ lang: Language }> = ({ lang }) => {
         metadata: { title: f.name.replace('.pdf', ''), author: '', subject: '', keywords: '' }
       }));
 
-      if (activeMode === 'view' || activeMode === 'edit') {
-        setFiles([newFiles[0]]); // 单文件模式
+      if (activeMode === 'view') {
+        const file = newFiles[0];
+        setFiles([file]);
       } else {
-        setFiles(prev => [...prev, ...newFiles]); // 多文件模式
+        setFilesCallback(prev => [...prev, ...newFiles]);
       }
       e.target.value = '';
     }
@@ -68,40 +124,205 @@ export const PdfTools: React.FC<{ lang: Language }> = ({ lang }) => {
   // 更新元数据
   const updateMetadata = (key: string, value: string) => {
     if (files.length > 0) {
-      const updated = { ...files[0] };
-      updated.metadata = { ...updated.metadata!, [key]: value };
-      setFiles([updated]);
+      setFilesCallback(prev => {
+        const updated = [...prev];
+        if (updated[0]) {
+          updated[0] = {
+            ...updated[0],
+            metadata: { ...updated[0].metadata!, [key]: value }
+          };
+        }
+        return updated;
+      });
     }
   };
 
-  // 处理文件操作 (调用后端)
-  const handleProcess = async () => {
-    setIsSaving(true);
-    if (isTauri) {
+  // Handle download/save
+  const downloadBlob = async (blob: Blob, filename: string) => {
+    // 1. If custom directory is set, try backend save
+    if (isTauri && outputDir && outputDir.trim()) {
       try {
-        // NOTE: `outputDir`, `mode`, `password` are not defined in the provided context.
-        // Assuming they are defined elsewhere or will be added.
-        // For now, using placeholder values or commenting out to maintain syntactical correctness.
-        const outputDir = "some/output/directory"; // Placeholder
-        const mode = activeMode; // Using activeMode as 'mode'
-        const password = null; // Placeholder
+        const buffer = await blob.arrayBuffer();
+        const data = Array.from(new Uint8Array(buffer));
 
-        await invoke('process_pdf', {
-          input_path: files[0].name, // Assuming files[0].name is the path for now, as `path` property is not in PdfFileWithBlob
-          output_dir: outputDir,
-          operation: mode === 'merge' ? 'merge' : 'split', // This logic might need adjustment based on actual `mode`
-          password: password || null
+        let targetDir = outputDir.replace(/[\\/]$/, '');
+        const sep = targetDir.includes('\\') ? '\\' : '/';
+        const fullPath = `${targetDir}${sep}${filename}`;
+
+        await invoke('save_file', { path: fullPath, data });
+        toast({
+          title: lang === 'zh' ? '已保存' : 'Saved',
+          description: fullPath,
+          variant: 'success'
         });
-        alert('Success (Backend)');
+        return;
       } catch (e) {
-        console.error(e);
-        alert('Backend Error');
+        console.error("Save failed, fallback to download", e);
+        toast({ title: 'Backend Save Failed', description: String(e), variant: 'destructive' });
+        // Fallback to default download
       }
-    } else {
-      // Web 模式模拟
-      setTimeout(() => alert('Web Simulation: Success'), 1000);
     }
-    setIsSaving(false);
+
+    // 2. Default Web/Fallback Download
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  // Select custom directory
+  const handleSelectDir = async () => {
+    try {
+      const tauri = (window as any).__TAURI__;
+      if (tauri && tauri.dialog) {
+        const selected = await tauri.dialog.open({ directory: true });
+        if (selected && typeof selected === 'string') {
+          setOutputDir(selected);
+        }
+      }
+    } catch (e) {
+      console.error("Dialog error", e);
+    }
+  };
+
+  // Open directory (Custom or Default)
+  const handleOpenDir = async () => {
+    try {
+      let path = outputDir;
+      if (!path) {
+        // Get default download dir
+        const defaultPath = await invoke('get_download_dir', {});
+        if (typeof defaultPath === 'string') path = defaultPath;
+      }
+
+      if (path) {
+        await invoke('open_explorer', { path });
+      } else {
+        toast({ title: 'Error', description: 'Cannot determine directory path', variant: 'destructive' });
+      }
+    } catch (e) {
+      toast({ title: 'Error opening folder', description: String(e), variant: 'destructive' });
+    }
+  };
+
+  // 处理文件操作
+  const handleProcess = async () => {
+    if (files.length === 0) return;
+    setIsSaving(true);
+    toast({
+      title: lang === 'zh' ? '处理中...' : 'Processing...',
+      description: lang === 'zh' ? '正在处理您的 PDF 文件' : 'Processing your PDF files',
+      variant: 'default'
+    });
+
+    try {
+      const baseName = outputName || files[0]?.name.replace('.pdf', '') || 'output';
+      // Sanitize filename: remove directory usage from filename itself
+      const finalName = baseName;
+
+      if (activeMode === 'merge') {
+        const mergedPdf = await PDFDocument.create();
+        for (const pdfFile of files) {
+          const arrayBuffer = await pdfFile.file.arrayBuffer();
+          const pdf = await PDFDocument.load(arrayBuffer);
+          const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+          copiedPages.forEach((page) => mergedPdf.addPage(page));
+        }
+        const pdfBytes = await mergedPdf.save();
+        downloadBlob(new Blob([pdfBytes as any], { type: 'application/pdf' }), `${finalName.endsWith('.pdf') ? finalName : finalName + '.pdf'}`);
+        toast({ title: lang === 'zh' ? '合并成功' : 'Merge Success', variant: 'success' });
+
+      } else if (activeMode === 'split') {
+        const pdfFile = files[0];
+        const arrayBuffer = await pdfFile.file.arrayBuffer();
+        const pdfDoc = await PDFDocument.load(arrayBuffer);
+        const zip = new JSZip();
+
+        const pageCount = pdfDoc.getPageCount();
+        const pagesToExport: number[] = [];
+
+        if (customPages && customPages.trim()) {
+          // Parse "1,3,5-7" style
+          const parts = customPages.split(/[,，]/); // Support both Eng and CN comma
+          parts.forEach(p => {
+            p = p.trim();
+            if (p.includes('-')) {
+              const [startStr, endStr] = p.split('-');
+              const start = parseInt(startStr);
+              const end = parseInt(endStr);
+              if (!isNaN(start) && !isNaN(end) && start <= end) {
+                for (let k = start; k <= end; k++) {
+                  if (k >= 1 && k <= pageCount) pagesToExport.push(k - 1);
+                }
+              }
+            } else {
+              const pageNum = parseInt(p);
+              if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= pageCount) {
+                pagesToExport.push(pageNum - 1); // 0-based
+              }
+            }
+          });
+          // Unique sort
+          const unique = Array.from(new Set(pagesToExport)).sort((a, b) => a - b);
+          pagesToExport.length = 0;
+          pagesToExport.push(...unique);
+
+        } else {
+          // Range fallback
+          let start = parseInt(splitRange.start) || 1;
+          let end = parseInt(splitRange.end) || pageCount;
+          start = Math.max(1, start);
+          end = Math.min(pageCount, end);
+          if (start > end) start = end;
+
+          for (let i = start - 1; i < end; i++) pagesToExport.push(i);
+        }
+
+        // Process unique sorted pages. Default to ALL if nothing selected?
+        // If range keys are empty and logic defaults to 1-pageCount, it works.
+        // My fallback code above handles the default cases effectively.
+        const uniquePages = Array.from(new Set(pagesToExport)).sort((a, b) => a - b);
+
+        // Safety check: if no pages selected (e.g. invalid input), export all? Or warn?
+        // Let's default to all if empty to avoid empty zip
+        const finalPages = uniquePages.length > 0 ? uniquePages : Array.from({ length: pageCount }, (_, i) => i);
+
+        for (const i of finalPages) {
+          const newPdf = await PDFDocument.create();
+          const [page] = await newPdf.copyPages(pdfDoc, [i]);
+          newPdf.addPage(page);
+          const pdfBytes = await newPdf.save();
+          zip.file(`${pdfFile.name.replace('.pdf', '')}_page_${i + 1}.pdf`, pdfBytes);
+        }
+
+        const content = await zip.generateAsync({ type: "blob" });
+        downloadBlob(content, `${finalName.replace('.zip', '')}.zip`);
+        toast({ title: lang === 'zh' ? '拆分成功' : 'Split Success', variant: 'success' });
+
+      } else if (activeMode === 'compress') {
+        const pdfFile = files[0];
+        const arrayBuffer = await pdfFile.file.arrayBuffer();
+        const pdfDoc = await PDFDocument.load(arrayBuffer);
+        const pdfBytes = await pdfDoc.save();
+        downloadBlob(new Blob([pdfBytes as any], { type: 'application/pdf' }), `compressed_${finalName.endsWith('.pdf') ? finalName : finalName + '.pdf'}`);
+        toast({ title: lang === 'zh' ? '压缩成功' : 'Compression Success', variant: 'success' });
+
+      }
+
+    } catch (e) {
+      console.error("PDF Processing Error", e);
+      toast({
+        title: lang === 'zh' ? '处理失败' : 'Failed',
+        description: String(e),
+        variant: 'destructive'
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // 工具模式配置
@@ -110,7 +331,6 @@ export const PdfTools: React.FC<{ lang: Language }> = ({ lang }) => {
     { id: 'split', icon: Scissors, label: { en: 'Split', zh: '拆分' } },
     { id: 'compress', icon: Minimize2, label: { en: 'Compress', zh: '压缩' } },
     { id: 'view', icon: Eye, label: { en: 'View', zh: '浏览' } },
-    { id: 'edit', icon: Edit, label: { en: 'Edit Props', zh: '编辑属性' } },
   ];
 
   return (
@@ -152,56 +372,124 @@ export const PdfTools: React.FC<{ lang: Language }> = ({ lang }) => {
               <iframe src={files[0].previewUrl} className="w-full h-full" title="PDF Viewer" />
             </div>
           </div>
-        ) : activeMode === 'edit' && files.length > 0 ? (
-          /* 编辑属性模式 */
-          <div className="flex flex-col h-full max-w-2xl mx-auto w-full">
-            <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-200 dark:border-slate-700">
-              <h3 className="text-xl font-bold text-slate-800 dark:text-white flex items-center">
-                <Edit className="mr-2 text-red-600" />
-                {lang === 'zh' ? '编辑元数据' : 'Edit Metadata'}
-              </h3>
-              <button onClick={() => setFiles([])} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
-            </div>
-            <div className="flex-1 space-y-6">
-              <div className="p-4 bg-slate-50 dark:bg-slate-700/30 rounded-lg border border-slate-200 dark:border-slate-600 flex items-center space-x-4 mb-6">
-                <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded flex items-center justify-center text-red-600 dark:text-red-400">
-                  <FileText size={24} />
-                </div>
-                <div className="flex-1">
-                  <p className="font-bold text-slate-800 dark:text-white text-lg truncate">{files[0].name}</p>
-                  <p className="text-sm text-slate-500">{files[0].size}</p>
-                </div>
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{lang === 'zh' ? '标题' : 'Title'}</label>
-                  <input type="text" value={files[0].metadata?.title} onChange={(e) => updateMetadata('title', e.target.value)} className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 outline-none dark:text-white" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{lang === 'zh' ? '作者' : 'Author'}</label>
-                  <input type="text" value={files[0].metadata?.author} onChange={(e) => updateMetadata('author', e.target.value)} className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 outline-none dark:text-white" />
-                </div>
-              </div>
-            </div>
-            <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700 flex justify-end">
-              <button onClick={handleProcess} disabled={isSaving} className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium shadow-lg transition-all flex items-center">
-                {isSaving ? <Minimize2 className="animate-spin mr-2" size={18} /> : <Save className="mr-2" size={18} />}
-                {lang === 'zh' ? '保存更改' : 'Save Changes'}
-              </button>
-            </div>
-          </div>
         ) : (
           <>
             {/* 上传区域 */}
-            <div className="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl p-8 mb-6 bg-slate-50 dark:bg-slate-900/50 flex flex-col items-center justify-center relative group hover:border-red-400 transition-colors shrink-0">
-              <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mb-4">
-                {activeMode === 'view' ? <Eye className="w-8 h-8 text-red-500" /> : <FileText className="w-8 h-8 text-red-500" />}
+            <div className="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl p-6 mb-6 bg-slate-50 dark:bg-slate-900/50 flex flex-col items-center justify-center relative group hover:border-red-400 transition-colors shrink-0 h-32">
+              <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mb-2">
+                {activeMode === 'view' ? <Eye className="w-5 h-5 text-red-500" /> : <FileText className="w-5 h-5 text-red-500" />}
               </div>
-              <p className="text-lg font-medium text-slate-700 dark:text-slate-300">
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
                 {lang === 'zh' ? '点击选择或拖拽PDF文件' : 'Click to select or drag PDF files'}
               </p>
               <input type="file" accept=".pdf" multiple={activeMode === 'merge'} onChange={handleFileUpload} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
             </div>
+
+
+
+            {/* 参数配置区域 */}
+            {activeMode !== 'view' && (
+              <div className="mb-6 p-4 bg-slate-50 dark:bg-slate-700/30 rounded-lg border border-slate-200 dark:border-slate-700 space-y-4">
+                {/* Common: Output Filename */}
+                {/* Output Settings */}
+                <div className="flex space-x-4">
+                  {/* Directory Selection */}
+                  <div className="flex-1">
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{lang === 'zh' ? '输出目录' : 'Output Directory'}</label>
+                    <div className="flex space-x-2">
+                      <input
+                        type="text"
+                        value={outputDir || (lang === 'zh' ? '默认 (系统下载目录)' : 'Default (Downloads)')}
+                        readOnly
+                        className={`flex-1 px-3 py-1.5 border rounded text-sm outline-none ${outputDir ? 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600' : 'bg-slate-100 dark:bg-slate-700/50 text-slate-500 border-transparent'}`}
+                      />
+                      <button onClick={handleSelectDir} className="px-3 py-1.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 rounded text-xs font-bold transition-colors whitespace-nowrap">
+                        {lang === 'zh' ? '选择..' : 'Select..'}
+                      </button>
+                      <button
+                        onClick={handleOpenDir}
+                        className="px-3 py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 rounded text-xs font-bold flex items-center transition-colors whitespace-nowrap"
+                        title={lang === 'zh' ? '打开目录' : 'Open Directory'}
+                      >
+                        <FolderOpen size={14} className="mr-1" />
+                        {lang === 'zh' ? '打开' : 'Open'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Filename */}
+                  <div className="flex-1">
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{lang === 'zh' ? '输出文件名 (可选)' : 'Output Filename (Optional)'}</label>
+                    <input
+                      type="text"
+                      value={outputName}
+                      onChange={(e) => setOutputName(e.target.value)}
+                      className="w-full px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-sm outline-none focus:border-red-500"
+                      placeholder={lang === 'zh' ? '默认' : 'Default'}
+                    />
+                  </div>
+                </div>
+
+                {/* Split Params */}
+                {activeMode === 'split' && (
+                  <div className="flex space-x-4">
+                    <div className="w-24">
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{lang === 'zh' ? '起始页' : 'Start Page'}</label>
+                      <input
+                        type="number" min="1"
+                        value={splitRange.start}
+                        onChange={(e) => setSplitRange({ ...splitRange, start: e.target.value })}
+                        className="w-full px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-sm outline-none focus:border-red-500"
+                        disabled={!!customPages}
+                      />
+                    </div>
+                    <div className="w-24">
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{lang === 'zh' ? '结束页' : 'End Page'}</label>
+                      <input
+                        type="number" min="1"
+                        value={splitRange.end}
+                        onChange={(e) => setSplitRange({ ...splitRange, end: e.target.value })}
+                        className="w-full px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-sm outline-none focus:border-red-500"
+                        disabled={!!customPages}
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{lang === 'zh' ? '或指定页面 (如 1,3,5)' : 'Or Specific Pages (e.g., 1,3,5)'}</label>
+                      <input
+                        type="text"
+                        value={customPages}
+                        onChange={(e) => setCustomPages(e.target.value)}
+                        className="w-full px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-sm outline-none focus:border-red-500"
+                        placeholder="1, 3, 5"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Compress Params */}
+                {activeMode === 'compress' && (
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{lang === 'zh' ? '压缩程度' : 'Compression Level'}</label>
+                    <div className="flex space-x-2">
+                      {(['low', 'medium', 'high'] as const).map(level => (
+                        <button
+                          key={level}
+                          onClick={() => setCompressionLevel(level)}
+                          className={`px-3 py-1.5 rounded text-xs font-bold uppercase transition-colors ${compressionLevel === level
+                            ? 'bg-red-500 text-white'
+                            : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-300'}`}
+                        >
+                          {level}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      * {lang === 'zh' ? '注：浏览器端压缩能力有限，主要通过重组结构优化体积。' : 'Note: Browser-side compression is limited to structure optimization.'}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* 文件列表 */}
             <div className="flex-1 overflow-y-auto space-y-3 mb-6 min-h-0">
@@ -221,13 +509,13 @@ export const PdfTools: React.FC<{ lang: Language }> = ({ lang }) => {
             </div>
 
             {/* 底部操作栏 */}
-            {activeMode !== 'view' && activeMode !== 'edit' && (
+            {activeMode !== 'view' && (
               <div className="pt-6 border-t border-slate-200 dark:border-slate-700 flex justify-end shrink-0">
                 <button onClick={handleProcess} disabled={files.length === 0 || isSaving} className="px-8 py-3 bg-red-600 hover:bg-red-700 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white rounded-lg font-bold shadow-lg transition-all flex items-center">
                   <Download className="mr-2" size={20} />
-                  {activeMode === 'merge' ? (lang === 'zh' ? '合并并下载' : 'Merge & Download') :
-                    activeMode === 'split' ? (lang === 'zh' ? '拆分并下载' : 'Split & Download') :
-                      (lang === 'zh' ? '压缩并下载' : 'Compress & Download')}
+                  {activeMode === 'merge' ? (lang === 'zh' ? '合并' : 'Merge') :
+                    activeMode === 'split' ? (lang === 'zh' ? '拆分' : 'Split') :
+                      (lang === 'zh' ? '压缩' : 'Compress')}
                 </button>
               </div>
             )}
