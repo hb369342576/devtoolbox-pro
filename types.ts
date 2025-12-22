@@ -11,6 +11,7 @@ export interface NavItem {
   category: 'core' | 'db' | 'office' | 'system' | 'user' | 'knowledge';
   order: number; // 排序编号
   visible: boolean; // 是否显示
+  children?: NavItem[]; // 子菜单
 }
 
 export type DatabaseType = 'MySQL' | 'PostgreSQL' | 'Doris' | 'Oracle' | 'SQL Server' | 'SQLite';

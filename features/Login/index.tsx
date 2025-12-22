@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { User, Lock, ArrowRight } from 'lucide-react';
 import { Language } from '../../types';
 import { useLoginLogic } from './hooks/useLoginLogic';
+import { Register } from './Register';
 
 interface LoginProps {
     onLogin: (username: string) => void;
@@ -10,10 +11,32 @@ interface LoginProps {
 
 /**
  * Login 功能主组件
- * 重构后的简洁版本，业务逻辑已抽离到 Hook
+ * 支持登录和注册模式切换
  */
 export const Login: React.FC<LoginProps> = ({ onLogin, lang }) => {
     const { formData, state, handleSubmit, updateFormData } = useLoginLogic(onLogin);
+    const [view, setView] = useState<'login' | 'register'>('login');
+
+    if (view === 'register') {
+        return (
+            <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center p-4 relative overflow-hidden">
+                {/* Background decoration */}
+                <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+                    <div className="absolute -top-[20%] -right-[10%] w-[600px] h-[600px] rounded-full bg-blue-400/20 blur-3xl"></div>
+                    <div className="absolute -bottom-[20%] -left-[10%] w-[600px] h-[600px] rounded-full bg-indigo-400/20 blur-3xl"></div>
+                </div>
+
+                <Register
+                    onRegisterSuccess={(username) => {
+                        // Auto login after register
+                        onLogin(username);
+                    }}
+                    onBack={() => setView('login')}
+                    lang={lang}
+                />
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center p-4 relative overflow-hidden">
@@ -23,7 +46,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, lang }) => {
                 <div className="absolute -bottom-[20%] -left-[10%] w-[600px] h-[600px] rounded-full bg-indigo-400/20 blur-3xl"></div>
             </div>
 
-            <div className="w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 relative z-10 overflow-hidden">
+            <div className="w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 relative z-10 overflow-hidden animate-in fade-in zoom-in-95 duration-300">
                 <div className="p-8">
                     {/* Header */}
                     <div className="text-center mb-8">
@@ -109,6 +132,15 @@ export const Login: React.FC<LoginProps> = ({ onLogin, lang }) => {
                             )}
                         </button>
                     </form>
+
+                    <div className="mt-6 text-center">
+                        <button
+                            onClick={() => setView('register')}
+                            className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 hover:underline"
+                        >
+                            {lang === 'zh' ? '没有账号? 立即注册' : "Don't have an account? Sign Up"}
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

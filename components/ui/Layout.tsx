@@ -15,6 +15,8 @@ interface LayoutProps {
   onThemeChange: (theme: Theme) => void;
   user: User | null;
   onLogout: () => void;
+  expandedMenus: string[];
+  onToggleMenu: (id: string) => void;
 }
 
 export const Layout: React.FC<LayoutProps> = ({
@@ -28,7 +30,9 @@ export const Layout: React.FC<LayoutProps> = ({
   theme,
   onThemeChange,
   user,
-  onLogout
+  onLogout,
+  expandedMenus,
+  onToggleMenu
 }) => {
   const [collapsed, setCollapsed] = useState(false);
 
@@ -55,22 +59,117 @@ export const Layout: React.FC<LayoutProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Helper to get tab info (label & icon)
+
+
+  // Helper to get tab info recursively
   const getTabInfo = (id: string) => {
-    const navItem = NAV_ITEMS.find(i => i.id === id);
+    const findItem = (items: typeof NAV_ITEMS): typeof NAV_ITEMS[0] | undefined => {
+      for (const item of items) {
+        if (item.id === id) return item;
+        if (item.children) {
+          const found = findItem(item.children);
+          if (found) return found;
+        }
+      }
+      return undefined;
+    };
+
+    const navItem = findItem(NAV_ITEMS);
     if (navItem) return navItem;
 
     if (id === 'settings') {
       return {
         label: { en: 'Settings', zh: '系统设置' },
-        icon: Settings
+        icon: Settings,
+        category: 'system',
+        order: 999,
+        visible: true,
+        id: 'settings'
       };
     }
     // Fallback
     return {
       label: { en: 'Unknown', zh: '未知页面' },
-      icon: Settings
+      icon: Settings,
+      category: 'system',
+      order: 999,
+      visible: true,
+      id: 'unknown'
     };
+  };
+
+  const toggleMenu = (id: string) => {
+    setExpandedMenus(prev =>
+      prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]
+    );
+  };
+
+  const renderNavItem = (item: typeof NAV_ITEMS[0], level = 0) => {
+    const isParent = !!item.children;
+    const isExpanded = expandedMenus.includes(item.id);
+    const isActive = activeTab === item.id;
+    const isChildActive = isParent && item.children?.some(c => c.id === activeTab);
+
+    // Indentation based on level
+    const paddingLeft = level === 0 ? 'px-3' : 'px-3 pl-9';
+
+    if (isParent) {
+      return (
+        <div key={item.id} className="mb-1">
+          <button
+            onClick={() => {
+              if (collapsed) setCollapsed(false);
+              onToggleMenu(item.id);
+            }}
+            className={`
+              w-full flex items-center ${paddingLeft} py-3 rounded-lg transition-colors duration-200
+              ${isChildActive
+                ? 'text-blue-600 dark:text-blue-400 font-medium'
+                : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50'}
+            `}
+            title={collapsed ? item.label[lang] : ''}
+          >
+            <item.icon className={`w-5 h-5 flex-shrink-0 ${isChildActive ? 'text-blue-600 dark:text-blue-400' : ''}`} />
+            {!collapsed && (
+              <>
+                <span className="ml-3 text-sm font-medium whitespace-nowrap flex-1 text-left">
+                  {item.label[lang]}
+                </span>
+                <ChevronRight size={16} className={`transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} />
+              </>
+            )}
+          </button>
+          {/* Render Children if Expanded */}
+          <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isExpanded && !collapsed ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
+            <div className="mt-1 space-y-1">
+              {item.children?.map(child => renderNavItem(child, level + 1))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Leaf Node
+    return (
+      <button
+        key={item.id}
+        onClick={() => onTabChange(item.id)}
+        className={`
+          w-full flex items-center ${paddingLeft} py-3 rounded-lg transition-colors duration-200
+          ${isActive
+            ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400'
+            : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50'}
+        `}
+        title={collapsed ? item.label[lang] : ''}
+      >
+        <item.icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-blue-600 dark:text-blue-400' : ''}`} />
+        {!collapsed && (
+          <span className="ml-3 text-sm font-medium whitespace-nowrap">
+            {item.label[lang]}
+          </span>
+        )}
+      </button>
+    );
   };
 
   return (
@@ -100,29 +199,7 @@ export const Layout: React.FC<LayoutProps> = ({
           {NAV_ITEMS
             .filter(item => item.visible)
             .sort((a, b) => a.order - b.order)
-            .map((item) => {
-              const isActive = activeTab === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => onTabChange(item.id)}
-                  className={`
-                  w-full flex items-center px-3 py-3 rounded-lg transition-colors duration-200
-                  ${isActive
-                      ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400'
-                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50'}
-                `}
-                  title={collapsed ? item.label[lang] : ''}
-                >
-                  <item.icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-blue-600 dark:text-blue-400' : ''}`} />
-                  {!collapsed && (
-                    <span className="ml-3 text-sm font-medium whitespace-nowrap">
-                      {item.label[lang]}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
+            .map((item) => renderNavItem(item))}
         </nav>
 
         <div className="p-4 border-t border-slate-200 dark:border-slate-700 space-y-2">

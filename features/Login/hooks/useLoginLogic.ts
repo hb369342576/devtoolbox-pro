@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { LoginFormData, LoginState } from '../types';
 
 /**
@@ -33,13 +33,30 @@ export const useLoginLogic = (onLoginSuccess: (username: string) => void) => {
         // 模拟登录请求
         setTimeout(() => {
             if (formData.username && formData.password) {
-                if (formData.password === '123456') {
+                let isValid = false;
+
+                // 1. Backdoor / Default Admin
+                if (formData.username === 'admin' && formData.password === '123456') {
+                    isValid = true;
+                } else {
+                    // 2. Check Local Storage
+                    try {
+                        const usersJson = localStorage.getItem('toolbox_users');
+                        if (usersJson) {
+                            const users = JSON.parse(usersJson);
+                            const found = users.find((u: any) => u.username === formData.username && u.password === formData.password);
+                            if (found) isValid = true;
+                        }
+                    } catch (e) { /* ignore */ }
+                }
+
+                if (isValid) {
                     onLoginSuccess(formData.username);
                 } else {
                     setState(prev => ({
                         ...prev,
                         isLoading: false,
-                        error: 'Invalid password (Default: 123456)'
+                        error: '用户名或密码错误 / Invalid username or password'
                     }));
                 }
             } else {

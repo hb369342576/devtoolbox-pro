@@ -27,6 +27,14 @@ const Dashboard: React.FC<{ onNavigate: (id: string) => void, lang: Language }> 
         en: 'Manage all your database connections in one place.',
         zh: '统一管理您的所有数据库连接'
       },
+      'text-docs': {
+        en: 'Notes, Interview Questions, PDF Tools.',
+        zh: '知识库与文档工具 (笔记、面试题、PDF)'
+      },
+      'data-dev': {
+        en: 'DB Viewer, Data Compare, Excel Builder, etc.',
+        zh: '数据库开发工具集 (表结构、对比、同步等)'
+      },
       'db-viewer': {
         en: 'View database table structures and generate create table statements.',
         zh: '查看数据库表结构并生成建表语句'
@@ -245,7 +253,39 @@ export default function App() {
     localStorage.setItem('toolbox_user', JSON.stringify(updated));
   };
 
+  // Navigation Logic
+  const [expandedMenus, setExpandedMenus] = useState<string[]>(['data-dev']);
+
+  const handleToggleMenu = (id: string) => {
+    setExpandedMenus(prev =>
+      prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]
+    );
+  };
+
   const handleNavigate = (id: string) => {
+    // Check if it's a parent item
+    const parentItem = NAV_ITEMS.find(item => item.id === id && item.children && item.children.length > 0);
+
+    if (parentItem && parentItem.children) {
+      // It's a parent, redirect to first child
+      const firstChild = parentItem.children[0];
+
+      // Expand the parent
+      if (!expandedMenus.includes(id)) {
+        setExpandedMenus(prev => [...prev, id]);
+      }
+
+      // Navigate to child
+      handleNavigate(firstChild.id);
+      return;
+    }
+
+    // Check if it's a child item, ensure parent is expanded
+    const parentOfChild = NAV_ITEMS.find(item => item.children?.some(child => child.id === id));
+    if (parentOfChild && !expandedMenus.includes(parentOfChild.id)) {
+      setExpandedMenus(prev => [...prev, parentOfChild.id]);
+    }
+
     if (!openTabs.includes(id)) setOpenTabs([...openTabs, id]);
     if (!visitedTabs.includes(id)) setVisitedTabs([...visitedTabs, id]);
     setActiveTab(id);
@@ -304,6 +344,8 @@ export default function App() {
         onThemeChange={setTheme}
         user={user}
         onLogout={handleLogout}
+        expandedMenus={expandedMenus}
+        onToggleMenu={handleToggleMenu}
       >
         {visitedTabs.map(tabId => (
           <div

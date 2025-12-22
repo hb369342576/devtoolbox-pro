@@ -25,20 +25,38 @@ export const NAV_ITEMS: NavItem[] = [
     visible: true
   },
   {
-    id: 'notes',
-    label: { en: 'Dev Notes', zh: '开发笔记' },
-    icon: StickyNote,
-    category: 'knowledge',
-    order: 2,
-    visible: true
-  },
-  {
-    id: 'interview-questions',
-    label: { en: 'Interview Q&A', zh: '问题锦集' },
+    id: 'text-docs',
+    label: { en: 'Text Documents', zh: '文本文档' },
     icon: BookOpen,
-    category: 'knowledge',
-    order: 3,
-    visible: true
+    category: 'office',
+    order: 3, // Adjusted order (moved up)
+    visible: true,
+    children: [
+      {
+        id: 'notes',
+        label: { en: 'Dev Notes', zh: '开发笔记' },
+        icon: StickyNote,
+        category: 'knowledge',
+        order: 1,
+        visible: true
+      },
+      {
+        id: 'interview-questions',
+        label: { en: 'Interview Q&A', zh: '问题锦集' },
+        icon: BookOpen,
+        category: 'knowledge',
+        order: 2,
+        visible: true
+      },
+      {
+        id: 'pdf-tools',
+        label: { en: 'PDF Tools', zh: '文档编辑' },
+        icon: FileText,
+        category: 'office',
+        order: 3,
+        visible: true
+      }
+    ]
   },
   {
     id: 'data-source-manager',
@@ -49,53 +67,56 @@ export const NAV_ITEMS: NavItem[] = [
     visible: true
   },
   {
-    id: 'db-viewer',
-    label: { en: 'Table Viewer', zh: '表结构器' },
-    icon: Database,
+    id: 'data-dev',
+    label: { en: 'Data Development', zh: '数据开发' },
+    icon: Database, // Using Database icon for the group
     category: 'db',
     order: 5,
-    visible: true
+    visible: true,
+    children: [
+      {
+        id: 'db-viewer',
+        label: { en: 'Table Viewer', zh: '表结构器' },
+        icon: Database,
+        category: 'db',
+        order: 1,
+        visible: true
+      },
+      {
+        id: 'data-compare',
+        label: { en: 'Data Compare', zh: '数据对比' },
+        icon: GitCompare,
+        category: 'db',
+        order: 2,
+        visible: true
+      },
+      {
+        id: 'excel-sql',
+        label: { en: 'Excel Builder', zh: '表格建表' },
+        icon: FileSpreadsheet,
+        category: 'db',
+        order: 3,
+        visible: true
+      },
+      {
+        id: 'seatunnel',
+        label: { en: 'Seatunnel Gen', zh: '任务脚本' },
+        icon: Workflow,
+        category: 'db',
+        order: 4,
+        visible: true
+      },
+      {
+        id: 'field-mapping',
+        label: { en: 'Field Mapping', zh: '数据映射' },
+        icon: ArrowRightLeft,
+        category: 'db',
+        order: 5,
+        visible: true
+      }
+    ]
   },
-  {
-    id: 'data-compare',
-    label: { en: 'Data Compare', zh: '数据对比' },
-    icon: GitCompare,
-    category: 'db',
-    order: 6,
-    visible: true
-  },
-  {
-    id: 'excel-sql',
-    label: { en: 'Excel Builder', zh: '表格建表' },
-    icon: FileSpreadsheet,
-    category: 'db',
-    order: 7,
-    visible: true
-  },
-  {
-    id: 'seatunnel',
-    label: { en: 'Seatunnel Gen', zh: '任务脚本' },
-    icon: Workflow,
-    category: 'db',
-    order: 8,
-    visible: true
-  },
-  {
-    id: 'field-mapping',
-    label: { en: 'Field Mapping', zh: '数据映射' },
-    icon: ArrowRightLeft,
-    category: 'db',
-    order: 9,
-    visible: true
-  },
-  {
-    id: 'pdf-tools',
-    label: { en: 'PDF Tools', zh: '文档编辑' },
-    icon: FileText,
-    category: 'office',
-    order: 10,
-    visible: true
-  },
+
   {
     id: 'time-tools',
     label: { en: 'Time Utilities', zh: '时间工具' },
