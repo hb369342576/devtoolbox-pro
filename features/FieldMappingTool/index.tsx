@@ -7,6 +7,10 @@ import { useFieldMappingStore } from './store';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import { ViewModeToggle } from '../../components/shared/ViewModeToggle';
 import { useViewMode } from '../../store/globalStore';
+import { Sidebar } from './components/Sidebar';
+import { Canvas } from './components/Canvas';
+import { MappingModal } from './components/MappingModal';
+import { ToastProvider } from '../../components/ui/Toast';
 
 /**
  * FieldMappingTool - 可视化字段映射工具
@@ -26,6 +30,13 @@ export const FieldMappingTool: React.FC<{
    const setActiveProfile = useFieldMappingStore((state) => state.setActiveProfile);
    const addProfile = useFieldMappingStore((state) => state.addProfile);
    const deleteProfile = useFieldMappingStore((state) => state.deleteProfile);
+
+   // Custom Drag-and-Drop Hooks
+   const draggedItem = useFieldMappingStore((state) => state.draggedItem);
+   const setDraggedItem = useFieldMappingStore((state) => state.setDraggedItem);
+   const addNode = useFieldMappingStore((state) => state.addNode);
+   const nodes = useFieldMappingStore((state) => state.nodes);
+   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
    // 本地UI状态
    const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; profileId: string }>({
@@ -49,6 +60,19 @@ export const FieldMappingTool: React.FC<{
    const handleDeleteProfile = (id: string, e: React.MouseEvent) => {
       e.stopPropagation();
       setConfirmDelete({ isOpen: true, profileId: id });
+   };
+
+   // Custom Drag-and-Drop Handlers
+   const handleGlobalMouseMove = (e: React.MouseEvent) => {
+      if (draggedItem) {
+         setMousePos({ x: e.clientX, y: e.clientY });
+      }
+   };
+
+   const handleGlobalMouseUp = async () => {
+      if (draggedItem) {
+         setDraggedItem(null);
+      }
    };
 
    // 项目列表视图
@@ -178,32 +202,38 @@ export const FieldMappingTool: React.FC<{
       );
    }
 
-   // 编辑器视图（画布）
-   // 注意：这里应该渲染完整的画布编辑器
-   // 由于原始代码太复杂，这里保留原有结构的核心部分
-   // 实际使用时可以进一步拆分为子组件
+
+   // Listen for global mouse move for Ghost
    return (
-      <div className="flex h-full gap-0 overflow-hidden relative">
-         {/* 提示：编辑器视图需要实现完整的画布功能 */}
-         {/* 包含：Sidebar、Canvas、MappingModal等组件 */}
-         <div className="flex-1 flex items-center justify-center bg-slate-50 dark:bg-slate-900">
-            <div className="text-center">
-               <ArrowRightLeft size={48} className="mx-auto mb-4 text-slate-400" />
-               <h3 className="text-xl font-bold text-slate-700 dark:text-slate-300 mb-2">
-                  {activeProfile.name}
-               </h3>
-               <p className="text-slate-500 mb-6">
-                  {lang === 'zh' ? '画布编辑器（完整实现请参考原始代码）' : 'Canvas Editor'}
-               </p>
-               <button
-                  onClick={() => setActiveProfile(null)}
-                  className="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 flex items-center mx-auto"
+      <ToastProvider>
+         <div
+            className="flex h-full gap-0 overflow-hidden relative"
+            onMouseMove={handleGlobalMouseMove}
+            onMouseUp={handleGlobalMouseUp}
+         >
+            <Sidebar
+               lang={lang}
+               connections={connections}
+               activeProfile={activeProfile}
+               onBack={() => setActiveProfile(null)}
+               onSave={() => useFieldMappingStore.getState().saveCurrentProfile()}
+            />
+
+            <Canvas lang={lang} connections={connections} />
+
+            <MappingModal lang={lang} />
+
+            {/* Ghost Drag Element */}
+            {draggedItem && (
+               <div
+                  className="fixed pointer-events-none z-50 p-2 bg-white dark:bg-slate-800 border-2 border-indigo-500 rounded shadow-2xl opacity-80 flex items-center"
+                  style={{ left: mousePos.x + 10, top: mousePos.y + 10 }}
                >
-                  <ChevronLeft size={18} className="mr-2" />
-                  {lang === 'zh' ? '返回项目列表' : 'Back to Projects'}
-               </button>
-            </div>
+                  <span className="font-bold text-sm dark:text-white">{draggedItem.table.name}</span>
+                  <span className="ml-2 text-xs text-slate-500">({draggedItem.side})</span>
+               </div>
+            )}
          </div>
-      </div>
+      </ToastProvider>
    );
 };

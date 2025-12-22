@@ -19,6 +19,7 @@ interface DbViewerState {
     // 表结构
     columns: ColumnInfo[];
     tableData: any[];
+    ddl: string;
 
     // UI状态
     viewMode: 'tree' | 'list';
@@ -37,6 +38,7 @@ interface DbViewerState {
 
     // Actions - 数据管理
     setColumns: (columns: ColumnInfo[]) => void;
+    setDdl: (ddl: string) => void;
     setTableData: (data: any[]) => void;
 
     // Actions - UI
@@ -59,6 +61,7 @@ export const useDbViewerStore = create<DbViewerState>()((set, get) => ({
     tableSearch: '',
     columns: [],
     tableData: [],
+    ddl: '',
     viewMode: 'tree',
     isLoading: false,
     showSqlGenerator: false,
@@ -77,7 +80,8 @@ export const useDbViewerStore = create<DbViewerState>()((set, get) => ({
     setSelectedDatabase: (db) => set({
         selectedDatabase: db,
         tables: [],
-        selectedTable: null
+        selectedTable: null,
+        tableSearch: ''
     }),
 
     // 表管理
@@ -87,6 +91,7 @@ export const useDbViewerStore = create<DbViewerState>()((set, get) => ({
 
     // 数据管理
     setColumns: (columns) => set({ columns }),
+    setDdl: (ddl) => set({ ddl }),
     setTableData: (data) => set({ tableData: data }),
 
     // UI
@@ -104,6 +109,7 @@ export const useDbViewerStore = create<DbViewerState>()((set, get) => ({
         tableSearch: '',
         columns: [],
         tableData: [],
+        ddl: '',
     }),
 
     selectTableAndLoad: (table) => {

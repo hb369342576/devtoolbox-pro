@@ -13,12 +13,12 @@ DevToolbox Pro 是一个基于 **Tauri 2.0** + **React 19** + **Rust** 构建的
 ## 🏗️ 架构特性
 
 *   **Feature-Based**: 功能模块化，易于扩展
-*   **Zustand Stores**: 8个专用Store统一管理状态
+*   **Zustand Stores**: 9个专用Store统一管理状态（1个全局Store + 8个功能Store）
 *   **TypeScript**: 完整类型安全
 *   **组件原子化**: 高复用性组件设计
 *   **性能优化**: Selector细粒度更新
-
-> 📚 查看 [STORES.md](./STORES.md) 了解所有Store的详细信息
+*   **响应式设计**: 适配不同屏幕尺寸
+*   **热更新支持**: 前端和后端代码修改后自动刷新
 
 ## ✨ 核心功能
 
@@ -27,6 +27,12 @@ DevToolbox Pro 是一个基于 **Tauri 2.0** + **React 19** + **Rust** 构建的
 3.  **Seatunnel 脚本生成**: 可视化配置 Source/Sink，支持任务管理，一键生成 Seatunnel/DataX 同步任务脚本。
 4.  **PDF 工具箱**: 提供 PDF 合并、拆分、压缩及元数据编辑功能。
 5.  **系统工具**: 实时系统资源监控 (CPU/内存/网络) 及时间戳转换工具（支持多种格式和时区）。
+6.  **数据比较工具**: 支持多数据源表结构和数据比较，可视化展示差异，生成同步脚本。
+7.  **字段映射工具**: 可视化配置不同数据源之间的字段映射关系，支持类型兼容性检查。
+8.  **面试题库**: 开发者面试题集合，支持分类浏览和搜索。
+9.  **笔记功能**: 开发者专用笔记工具，支持 Markdown 编辑和分类管理。
+10. **用户管理**: 支持登录认证和用户资料管理。
+11. **数据源管理器**: 集中管理所有数据库连接配置，支持导入导出。
 
 ---
 
@@ -56,16 +62,29 @@ Windows 必须安装 **Microsoft Visual Studio C++ 生成工具** 才能编译 R
 ### 1. 安装依赖
 在项目根目录下运行：
 ```bash
-npmstall
+npm install
 ```
 
-### 2. 配置后端代码 (关键步骤)
-由于 Web 编辑器限制，如果您下载的是 `.txt` 后缀的 Rust 文件，请务必在本地重命名：
-*   将 `src-tauri/src/main.rs.txt` 重命名为 `src-tauri/src/main.rs`
-*   将 `src-tauri/Cargo.toml.txt` 重命名为 `src-tauri/Cargo.toml`
+### 2. 配置后端代码 (可选)
+如果您需要修改后端功能，可以编辑以下文件：
+*   `src-tauri/src/main.rs` - Tauri 应用入口文件
+*   `src-tauri/Cargo.toml` - Rust 依赖配置文件
+*   `src-tauri/tauri.conf.json` - Tauri 应用配置文件
 
 ### 3. 启动开发服务器
-此命令将同时启动 React 前端服务器和 Tauri Rust 后端进程，并弹出一个桌面窗口。
+
+项目支持两种开发模式：
+
+#### Web 开发模式
+仅启动 React 前端服务器，通过浏览器访问：
+```bash
+npm run dev
+```
+*   **访问地址**：http://localhost:3000/
+*   **热更新**：修改 `.tsx` 文件，界面会自动刷新。
+
+#### 桌面开发模式
+同时启动 React 前端服务器和 Tauri Rust 后端进程，并弹出桌面窗口：
 ```bash
 npm run tauri dev
 ```

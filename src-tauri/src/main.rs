@@ -2,7 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use serde::{Deserialize, Serialize};
-use std::net::TcpStream;
+
 use std::time::Duration;
 use sysinfo::System;
 use std::sync::Mutex;
@@ -22,7 +22,8 @@ struct DbConfig {
     user: String,
     password: Option<String>,
     database: Option<String>,
-    defaultDatabase: Option<String>,
+    #[serde(rename = "defaultDatabase")]
+    default_database: Option<String>,
 }
 
 // Seatunnel 任务配置
@@ -56,20 +57,7 @@ struct SystemStats {
     mem: u64, // percentage
 }
 
-// Excel SQL 生成请求
-#[derive(Debug, Deserialize)]
-struct ExcelSqlRequest {
-    sheetName: String,
-    dbType: String,
-}
 
-// PDF 处理请求
-#[derive(Debug, Deserialize)]
-struct PdfRequest {
-    mode: String,
-    files: Vec<String>,
-    meta: Option<serde_json::Value>,
-}
 
 // 表信息结构
 #[derive(Debug, Serialize)]
@@ -89,8 +77,10 @@ struct ColumnInfo {
     length: Option<u32>,
     scale: Option<u32>,
     nullable: bool,
-    isPrimaryKey: bool,
-    defaultValue: Option<String>,
+    #[serde(rename = "isPrimaryKey")]
+    is_primary_key: bool,
+    #[serde(rename = "defaultValue")]
+    default_value: Option<String>,
     comment: Option<String>,
 }
 
@@ -225,8 +215,8 @@ async fn db_get_table_schema(id: String, db: String, table: String) -> Result<Ta
                     length: length.map(|l| l as u32),
                     scale,
                     nullable: nullable == "YES",
-                    isPrimaryKey: key == "PRI",
-                    defaultValue: default_val,
+                    is_primary_key: key == "PRI",
+                    default_value: default_val,
                     comment,
                 }
             }).map_err(|e| format!("Failed to fetch columns: {}", e))?;
@@ -245,8 +235,9 @@ async fn db_get_table_schema(id: String, db: String, table: String) -> Result<Ta
             let (rows, size_bytes, engine, collation, comment) = table_info.unwrap_or((None, None, None, None, None));
             
             // 获取建表语句
-            let ddl_query = format!("SHOW CREATE TABLE `{}`", table);
-            let ddl: Option<(String, String)> = conn.query_first(ddl_query).map_err(|e| format!("Failed to fetch DDL: {}", e))?;
+            let ddl_query = format!("SHOW CREATE TABLE `{}`.`{}`", db, table);
+            println!("Executing DDL Query: {}", ddl_query);
+            let ddl: Option<(String, String)> = conn.query_first(&ddl_query).map_err(|e| format!("Failed to fetch DDL (Query: {}): {}", ddl_query, e))?;
             let ddl_statement = ddl.map(|(_, create_sql)| create_sql).unwrap_or_default();
             
             Ok(TableDetail {

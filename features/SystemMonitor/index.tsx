@@ -199,7 +199,7 @@ export const SystemMonitor: React.FC<{ lang: Language }> = ({ lang }) => {
          <div className="flex-1 bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
             <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-6 flex items-center"><Activity className="mr-2 text-red-500" />{lang === 'zh' ? '实时性能' : 'Real-time Performance'}</h3>
             <div className="h-64 w-full">
-               <ResponsiveContainer width="100%" height="100%">
+               <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
                   <AreaChart data={data}>
                      <defs>
                         <linearGradient id="colorCpu" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8} /><stop offset="95%" stopColor="#3b82f6" stopOpacity={0} /></linearGradient>

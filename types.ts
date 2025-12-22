@@ -85,6 +85,7 @@ export interface JobConfig {
   password?: string;
   database: string;
   table: string;
+  name?: string; // Connection name
 }
 
 export interface ScriptJob {
@@ -107,6 +108,7 @@ export interface ExcelTemplate {
   nameCol: string;      // Column for Field Name (e.g., "A")
   typeCol: string;      // Column for Field Type (e.g., "B")
   commentCol: string;   // Column for Comment (e.g., "C")
+  pkCol?: string;       // Column for Primary Key (e.g., "D")
 }
 
 // --- Field Mapping Tool Types ---
@@ -147,7 +149,13 @@ export interface MappingProfile {
   targetConn?: DbConnection;
   nodes: CanvasNode[];
   links: CanvasLink[];
-  viewport?: { x: number; y: number; zoom: number }; // Added Viewport state
+  viewport?: { x: number; y: number; zoom: number };
+
+  // Persisted Selection State
+  sideConfig?: {
+    source: { connId: string; db: string };
+    target: { connId: string; db: string };
+  };
 }
 
 // --- Interview Questions Types ---

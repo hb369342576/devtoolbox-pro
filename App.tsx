@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Layout } from './components/ui/Layout';
+import { ToastProvider } from './components/ui/Toast';
 import { Login } from './features/Login';
 import { UserProfile } from './features/UserProfile';
 import { DbViewer } from './features/DbViewer';
@@ -291,26 +292,28 @@ export default function App() {
   };
 
   return (
-    <Layout
-      activeTab={activeTab}
-      onTabChange={handleNavigate}
-      openTabs={openTabs}
-      onCloseTab={handleCloseTab}
-      lang={lang}
-      onLangChange={setLang}
-      theme={theme}
-      onThemeChange={setTheme}
-      user={user}
-      onLogout={handleLogout}
-    >
-      {visitedTabs.map(tabId => (
-        <div
-          key={tabId}
-          className={activeTab === tabId ? 'h-full flex flex-col' : 'hidden'}
-        >
-          {renderView(tabId)}
-        </div>
-      ))}
-    </Layout>
+    <ToastProvider>
+      <Layout
+        activeTab={activeTab}
+        onTabChange={handleNavigate}
+        openTabs={openTabs}
+        onCloseTab={handleCloseTab}
+        lang={lang}
+        onLangChange={setLang}
+        theme={theme}
+        onThemeChange={setTheme}
+        user={user}
+        onLogout={handleLogout}
+      >
+        {visitedTabs.map(tabId => (
+          <div
+            key={tabId}
+            className={activeTab === tabId ? 'h-full flex flex-col' : 'hidden'}
+          >
+            {renderView(tabId)}
+          </div>
+        ))}
+      </Layout>
+    </ToastProvider>
   );
 }
