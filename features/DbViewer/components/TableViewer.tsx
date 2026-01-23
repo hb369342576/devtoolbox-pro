@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Table as TableIcon, Code, Copy, Loader2, Columns, Key, RefreshCw } from 'lucide-react';
+import { detectDbTypeFromDdl, convertMysqlToDoris, convertDorisToMysql } from '../utils/ddlConverter';
 import { Language } from '../../../types';
 import { useDbViewerStore } from '../store';
 import { getTexts } from '../../../locales';
@@ -29,23 +30,6 @@ export const TableViewer: React.FC<{ lang: Language }> = ({ lang }) => {
     const [convertedDdl, setConvertedDdl] = useState('');
 
     // 根据 DDL 内容检测实际的数据库类型（MySQL 还是 Doris）
-    const detectDbTypeFromDdl = (ddlContent: string): 'mysql' | 'doris' => {
-        if (!ddlContent) return 'mysql';
-        const upperDdl = ddlContent.toUpperCase();
-        if (
-            upperDdl.includes('ENGINE=OLAP') ||
-            upperDdl.includes('ENGINE = OLAP') ||
-            upperDdl.includes('DISTRIBUTED BY HASH') ||
-            (upperDdl.includes('UNIQUE KEY') && !upperDdl.includes('ENGINE=INNODB')) ||
-            upperDdl.includes('DUPLICATE KEY') ||
-            upperDdl.includes('AGGREGATE KEY') ||
-            upperDdl.includes('BUCKETS')
-        ) {
-            return 'doris';
-        }
-        return 'mysql';
-    };
-
     const detectedDbType = detectDbTypeFromDdl(ddl);
 
     const handleMouseDown = (e: React.MouseEvent) => {
@@ -82,6 +66,12 @@ export const TableViewer: React.FC<{ lang: Language }> = ({ lang }) => {
             document.removeEventListener('mouseup', handleGlobalMouseUp);
         };
     }, [isResizing]);
+
+    // Switch table: Reset conversion state
+    React.useEffect(() => {
+        setIsConvertedDdl(false);
+        setConvertedDdl('');
+    }, [selectedTable]);
 
 
 

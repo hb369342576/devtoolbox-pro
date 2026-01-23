@@ -42,7 +42,10 @@ export const ConfigList: React.FC<ConfigListProps> = ({
                 message={lang === 'zh' ? '确定要删除这个对比配置吗？' : 'Are you sure you want to delete this config?'}
                 confirmText={lang === 'zh' ? '删除' : 'Delete'}
                 cancelText={lang === 'zh' ? '取消' : 'Cancel'}
-                onConfirm={() => onDelete(confirmDelete.id)}
+                onConfirm={() => {
+                    onDelete(confirmDelete.id);
+                    setConfirmDelete({ isOpen: false, id: '' });
+                }}
                 onCancel={() => setConfirmDelete({ isOpen: false, id: '' })}
                 type="danger"
             />

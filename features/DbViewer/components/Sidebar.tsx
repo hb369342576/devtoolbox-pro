@@ -12,6 +12,9 @@ import { useToast } from '../../../components/ui/Toast';
 import { invoke } from '@tauri-apps/api/core';
 import { writeTextFile } from '@tauri-apps/plugin-fs';
 import { ExportProgressModal } from './ExportProgressModal';
+import { ConvertDdlModal } from './ConvertDdlModal';
+import { detectDbTypeFromDdl, convertMysqlToDoris, convertDorisToMysql } from '../utils/ddlConverter';
+import { RefreshCw } from 'lucide-react';
 
 export const Sidebar: React.FC<{ lang: Language }> = ({ lang }) => {
     const t = getTexts(lang);
@@ -49,7 +52,22 @@ export const Sidebar: React.FC<{ lang: Language }> = ({ lang }) => {
         tableName?: string;
     }>({ isOpen: false, type: null });
 
-    const { showToast } = useToast();
+    // DDL 转换模态框状态
+    const [convertModal, setConvertModal] = useState<{
+        isOpen: boolean;
+        sourceType: 'mysql' | 'doris' | null;
+        progress: string;
+        isConverting: boolean;
+    }>({ isOpen: false, sourceType: null, progress: '', isConverting: false });
+
+    const { toast } = useToast();
+    const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+        toast({
+            title: type === 'error' ? (lang === 'zh' ? '错误' : 'Error') : (lang === 'zh' ? '提示' : 'Info'),
+            description: message,
+            variant: type === 'error' ? 'destructive' : type === 'success' ? 'success' : 'default'
+        });
+    };
 
     const isTauri = typeof window !== 'undefined' && !!(window as any).__TAURI_INTERNALS__;
 
@@ -202,6 +220,126 @@ export const Sidebar: React.FC<{ lang: Language }> = ({ lang }) => {
         }
     };
 
+
+
+    // 打开转换模态框
+    const openConvertModal = () => {
+        setConvertModal({
+            isOpen: true,
+            sourceType: 'mysql', // 默认，后面逻辑会自适应
+            progress: '',
+            isConverting: false
+        });
+        setContextMenu(null);
+    };
+
+    // 执行批量转换
+    const executeBatchConvert = async (filePath: string) => {
+        if (!selectedConnection || !selectedDatabase) return;
+
+        setConvertModal(prev => ({ ...prev, isConverting: true, progress: lang === 'zh' ? '正在初始化...' : 'Initializing...' }));
+
+        try {
+            // 1. 获取所有表
+            const dbId = `${selectedConnection.type}://${selectedConnection.user}:${selectedConnection.password || ''}@${selectedConnection.host}:${selectedConnection.port}`;
+
+            // 使用当前的 tables 状态，如果为空则常识重新获取（但通常应该有数据）
+            let targetTables = tables;
+            if (targetTables.length === 0) {
+                // 尝试 fetch，或者直接报错
+                // 这里简单处理：如果当前视图没有表，抛出错误
+                throw new Error(lang === 'zh' ? '当前数据库没有表' : 'No tables found in current database');
+            }
+
+            const tableNames = targetTables.map(t => t.name);
+
+            let convertedContent = `-- Batch DDL Conversion\n-- Database: ${selectedDatabase}\n-- Time: ${new Date().toLocaleString()}\n\n`;
+            let sourceType: 'mysql' | 'doris' = 'mysql';
+
+            setConvertModal(prev => ({ ...prev, progress: lang === 'zh' ? `找到 ${tableNames.length} 个表` : `Found ${tableNames.length} tables` }));
+
+            // 2. 遍历表
+            for (let i = 0; i < tableNames.length; i++) {
+                const tableName = tableNames[i];
+
+                // Update progress
+                const progressMsg = lang === 'zh'
+                    ? `正在处理 [${i + 1}/${tableNames.length}]: ${tableName}`
+                    : `Processing [${i + 1}/${tableNames.length}]: ${tableName}`;
+
+                setConvertModal(prev => ({ ...prev, progress: progressMsg }));
+
+                // 获取列信息
+                const schema: any = await invoke('db_get_table_schema', {
+                    id: dbId,
+                    db: selectedDatabase,
+                    table: tableName
+                });
+                const columns = schema.columns || [];
+
+                // 获取 DDL
+                const ddlQuery = `SHOW CREATE TABLE \`${selectedDatabase}\`.\`${tableName}\``;
+                const ddlResult = await invoke<any[]>('db_query', {
+                    id: dbId,
+                    sql: ddlQuery
+                });
+
+                let ddl = '';
+                if (ddlResult && ddlResult.length > 0) {
+                    const row = ddlResult[0];
+                    ddl = row['Create Table'] || row['Create View'] || '';
+                }
+
+                if (i === 0) {
+                    sourceType = detectDbTypeFromDdl(ddl);
+                    // Update source type in modal if needed, though mostly visual
+                    setConvertModal(prev => ({ ...prev, sourceType }));
+                }
+
+                let converted = '';
+                if (sourceType === 'mysql') {
+                    converted = convertMysqlToDoris(tableName, columns, ddl);
+                } else {
+                    converted = convertDorisToMysql(tableName, columns, ddl);
+                }
+
+                convertedContent += `-- Table: ${tableName}\n`;
+                convertedContent += converted;
+                convertedContent += '\n\n';
+
+                // Small delay to allow UI update if needed (optional)
+                await new Promise(r => setTimeout(r, 10));
+            }
+
+            // 3. 保存文件
+            setConvertModal(prev => ({ ...prev, progress: lang === 'zh' ? '正在保存文件...' : 'Saving file...' }));
+            await writeTextFile(filePath, convertedContent);
+
+            setConvertModal(prev => ({
+                ...prev,
+                isConverting: false,
+                progress: lang === 'zh' ? '转换完成！文件已保存。' : 'Conversion completed! File saved.'
+            }));
+
+            showToast(lang === 'zh' ? '转换成功' : 'Conversion successful', 'success');
+
+            // 延迟关闭，让用户看到完成状态
+            setTimeout(() => {
+                setConvertModal(prev => ({ ...prev, isOpen: false }));
+            }, 1000);
+
+        } catch (err: any) {
+            console.error('Batch convert failed:', err);
+            setConvertModal(prev => ({
+                ...prev,
+                isConverting: false,
+                progress: lang === 'zh' ? `错误: ${err.message || err}` : `Error: ${err.message || err}`
+            }));
+            showToast(err.toString(), 'error');
+            // Do NOT close modal on error, let user see the error
+        }
+    };
+
     // 数据库右键菜单
     const handleDatabaseContextMenu = (e: React.MouseEvent) => {
         if (!selectedDatabase || !isTauri) return;
@@ -221,6 +359,11 @@ export const Sidebar: React.FC<{ lang: Language }> = ({ lang }) => {
                     label: lang === 'zh' ? '导出库数据' : 'Export Database Data',
                     icon: <Download size={14} />,
                     onClick: () => openExportModal('db-data')
+                },
+                {
+                    label: lang === 'zh' ? '一键 DDL 转换' : 'Batch DDL Conversion',
+                    icon: <RefreshCw size={14} />,
+                    onClick: () => openConvertModal()
                 }
             ]
         });
@@ -449,6 +592,28 @@ export const Sidebar: React.FC<{ lang: Language }> = ({ lang }) => {
                     })()
                 }
                 lang={lang}
+            />
+
+            {/* 批量转换模态框 */}
+            {/* 批量转换模态框 */}
+            <ConvertDdlModal
+                isOpen={convertModal.isOpen}
+                onClose={() => setConvertModal(prev => ({ ...prev, isOpen: false }))}
+                onConfirm={executeBatchConvert}
+                sourceType={convertModal.sourceType}
+                defaultFileName={`${selectedDatabase}_converted_${(() => {
+                    const now = new Date();
+                    const year = now.getFullYear();
+                    const month = String(now.getMonth() + 1).padStart(2, '0');
+                    const day = String(now.getDate()).padStart(2, '0');
+                    const hour = String(now.getHours()).padStart(2, '0');
+                    const minute = String(now.getMinutes()).padStart(2, '0');
+                    const second = String(now.getSeconds()).padStart(2, '0');
+                    return `${year}-${month}-${day}_${hour}-${minute}-${second}`;
+                })()}.sql`}
+                lang={lang}
+                isConverting={convertModal.isConverting}
+                progress={convertModal.progress}
             />
         </div>
     );
