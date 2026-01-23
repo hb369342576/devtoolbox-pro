@@ -8,8 +8,7 @@ import {
   Workflow,
   UserCircle,
   ArrowRightLeft,
-  BookOpen,
-  StickyNote,
+
   DatabaseZap,
   GitCompare
 } from 'lucide-react';
@@ -25,38 +24,12 @@ export const NAV_ITEMS: NavItem[] = [
     visible: true
   },
   {
-    id: 'text-docs',
-    label: { en: 'Text Documents', zh: '文本文档' },
-    icon: BookOpen,
+    id: 'pdf-tools',
+    label: { en: 'PDF Tools', zh: 'PDF 工具箱' },
+    icon: FileText,
     category: 'office',
-    order: 3, // Adjusted order (moved up)
-    visible: true,
-    children: [
-      {
-        id: 'notes',
-        label: { en: 'Dev Notes', zh: '开发笔记' },
-        icon: StickyNote,
-        category: 'knowledge',
-        order: 1,
-        visible: true
-      },
-      {
-        id: 'interview-questions',
-        label: { en: 'Interview Q&A', zh: '问题锦集' },
-        icon: BookOpen,
-        category: 'knowledge',
-        order: 2,
-        visible: true
-      },
-      {
-        id: 'pdf-tools',
-        label: { en: 'PDF Tools', zh: '文档编辑' },
-        icon: FileText,
-        category: 'office',
-        order: 3,
-        visible: true
-      }
-    ]
+    order: 3,
+    visible: true
   },
   {
     id: 'data-source-manager',
@@ -78,6 +51,14 @@ export const NAV_ITEMS: NavItem[] = [
         id: 'db-viewer',
         label: { en: 'Table Viewer', zh: '表结构器' },
         icon: Database,
+        category: 'db',
+        order: 1,
+        visible: true
+      },
+      {
+        id: 'excel-import',
+        label: { en: 'Excel Import', zh: '表格导入' },
+        icon: FileSpreadsheet,
         category: 'db',
         order: 1,
         visible: true
@@ -170,7 +151,3 @@ PROPERTIES (
   "comment" = "Generated from Excel ({sheetName})"
 );`
 };
-
-export const INTERVIEW_CATEGORIES = [
-  'Flink', 'Spark', 'Scala', 'Doris', 'Java', 'Hive', 'Hadoop', 'Other'
-] as const;

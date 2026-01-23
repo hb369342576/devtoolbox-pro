@@ -44,8 +44,7 @@ export const TRANSLATIONS = {
       seatunnel: '任务脚本生成',
       fieldMapping: '数据映射工具',
       dataCompare: '数据对比工具', // New
-      interview: '问题锦集',
-      notes: '开发笔记',
+
       pdfTools: 'PDF 工具箱',
       timeTools: '时间工具',
       monitor: '系统监控',
@@ -124,6 +123,19 @@ export const TRANSLATIONS = {
       statDiff: '存在差异',
       statSourceOnly: '仅源端',
       statTargetOnly: '仅目标端'
+    },
+    excelImport: {
+      title: '表格数据导入',
+      newImport: '新建导入任务',
+      homeDesc: '将 Excel/CSV 数据快速映射并导入到数据库表，支持存为模板。',
+      targetCol: '目标字段 (DB)',
+      arrow: '映射',
+      sourceHeader: '源表头 (Excel)',
+      defaultValue: '固定默认值',
+      exit: '退出编辑器',
+      saveProfile: '保存配置',
+      profileName: '配置名称',
+      deleteConfirm: '确定要删除此导入配置吗？'
     }
   },
   en: {
@@ -169,8 +181,7 @@ export const TRANSLATIONS = {
       seatunnel: 'Script Gen',
       fieldMapping: 'Field Mapping',
       dataCompare: 'Data Compare', // New
-      interview: 'Interview Q&A',
-      notes: 'Dev Notes',
+
       pdfTools: 'PDF Tools',
       timeTools: 'Time Utils',
       monitor: 'Sys Monitor',
@@ -249,6 +260,19 @@ export const TRANSLATIONS = {
       statDiff: 'Mismatch',
       statSourceOnly: 'Source Only',
       statTargetOnly: 'Target Only'
+    },
+    excelImport: {
+      title: 'Excel Data Import',
+      newImport: 'New Import Task',
+      homeDesc: 'Map and import Excel/CSV data to DB tables with saved profiles.',
+      targetCol: 'Target Column (DB)',
+      arrow: 'Mapping',
+      sourceHeader: 'Source Header (Excel)',
+      defaultValue: 'Fixed/Default',
+      exit: 'Exit Editor',
+      saveProfile: 'Save Profile',
+      profileName: 'Profile Name',
+      deleteConfirm: 'Are you sure you want to delete this import profile?'
     }
   }
 };

@@ -98,11 +98,7 @@ export const Layout: React.FC<LayoutProps> = ({
     };
   };
 
-  const toggleMenu = (id: string) => {
-    setExpandedMenus(prev =>
-      prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]
-    );
-  };
+
 
   const renderNavItem = (item: typeof NAV_ITEMS[0], level = 0) => {
     const isParent = !!item.children;

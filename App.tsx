@@ -4,6 +4,7 @@ import { ToastProvider } from './components/ui/Toast';
 import { Login } from './features/Login';
 import { UserProfile } from './features/UserProfile';
 import { DbViewer } from './features/DbViewer';
+import { ExcelImport } from './features/ExcelImport';
 import { ExcelToSql } from './features/ExcelToSql';
 import { SeatunnelGen } from './features/SeatunnelGen';
 import { PdfTools } from './features/PdfTools';
@@ -11,8 +12,7 @@ import { TimeUtility } from './features/TimeUtility';
 import { SystemMonitor } from './features/SystemMonitor';
 import { Settings } from './features/Settings';
 import { FieldMappingTool } from './features/FieldMappingTool';
-import { InterviewQuestions } from './features/InterviewQuestions';
-import { Notes } from './features/Notes';
+
 import { DataSourceManager } from './features/DataSourceManager';
 import { DataCompareTool } from './features/DataCompareTool';
 import { Language, Theme, User, DbConnection } from './types';
@@ -39,6 +39,10 @@ const Dashboard: React.FC<{ onNavigate: (id: string) => void, lang: Language }> 
         en: 'View database table structures and generate create table statements.',
         zh: '查看数据库表结构并生成建表语句'
       },
+      'excel-import': {
+        en: 'Import data from Excel to target database with column mapping.',
+        zh: '将 Excel 数据导入指定表，支持灵活的字段映射'
+      },
       'data-compare': {
         en: 'Compare data between two tables with custom keys.',
         zh: '对比两张表的数据差异，支持自定义主键和过滤条件'
@@ -55,14 +59,7 @@ const Dashboard: React.FC<{ onNavigate: (id: string) => void, lang: Language }> 
         en: 'Map source and target fields for data synchronization.',
         zh: '配置数据同步的源表和目标表字段映射关系'
       },
-      'interview-questions': {
-        en: 'Collection of Big Data interview questions (Flink, Spark, etc.).',
-        zh: '大数据面试问题锦集 (Flink, Spark, Doris 等)'
-      },
-      'notes': {
-        en: 'Developer notes with code block support.',
-        zh: '支持代码格式的开发者笔记'
-      },
+
       'pdf-tools': {
         en: 'Merge, split, and compress PDF files.',
         zh: '提供PDF合并、分割、压缩等功能'
@@ -114,11 +111,11 @@ const Dashboard: React.FC<{ onNavigate: (id: string) => void, lang: Language }> 
             </div>
 
             <div className="relative z-10">
-              <div className={`w-14 h-14 rounded-xl flex items-center justify-center mb-6 shadow-sm transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg ${tool.category === 'db' ? 'bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-300 group-hover:bg-blue-200 dark:group-hover:bg-blue-500/30' :
-                tool.category === 'office' ? 'bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-300 group-hover:bg-red-200 dark:group-hover:bg-red-500/30' :
-                  tool.category === 'knowledge' ? 'bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-300 group-hover:bg-orange-200 dark:group-hover:bg-orange-500/30' :
-                    tool.category === 'user' ? 'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 group-hover:bg-indigo-200 dark:group-hover:bg-indigo-500/30' :
-                      'bg-purple-100 dark:bg-purple-500/20 text-purple-600 dark:text-purple-300 group-hover:bg-purple-200 dark:group-hover:bg-purple-500/30'
+              <div className={`w-14 h-14 rounded-xl flex items-center justify-center mb-6 shadow-sm transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg ${tool.category === 'db' ? 'bg-gradient-to-br from-cyan-50 to-sky-100 dark:from-cyan-500/10 dark:to-sky-500/20 text-cyan-600 dark:text-cyan-400 group-hover:from-cyan-100 group-hover:to-sky-200 dark:group-hover:from-cyan-500/20 dark:group-hover:to-sky-500/30' :
+                tool.category === 'office' ? 'bg-gradient-to-br from-rose-50 to-pink-100 dark:from-rose-500/10 dark:to-pink-500/20 text-rose-600 dark:text-rose-400 group-hover:from-rose-100 group-hover:to-pink-200 dark:group-hover:from-rose-500/20 dark:group-hover:to-pink-500/30' :
+                  tool.category === 'knowledge' ? 'bg-gradient-to-br from-amber-50 to-orange-100 dark:from-amber-500/10 dark:to-orange-500/20 text-amber-600 dark:text-amber-400 group-hover:from-amber-100 group-hover:to-orange-200 dark:group-hover:from-amber-500/20 dark:group-hover:to-orange-500/30' :
+                    tool.category === 'user' ? 'bg-gradient-to-br from-violet-50 to-purple-100 dark:from-violet-500/10 dark:to-purple-500/20 text-violet-600 dark:text-violet-400 group-hover:from-violet-100 group-hover:to-purple-200 dark:group-hover:from-violet-500/20 dark:group-hover:to-purple-500/30' :
+                      'bg-gradient-to-br from-emerald-50 to-teal-100 dark:from-emerald-500/10 dark:to-teal-500/20 text-emerald-600 dark:text-emerald-400 group-hover:from-emerald-100 group-hover:to-teal-200 dark:group-hover:from-emerald-500/20 dark:group-hover:to-teal-500/30'
                 }`}>
                 <tool.icon size={28} className="group-hover:scale-110 transition-transform duration-300" />
               </div>
@@ -316,12 +313,12 @@ export default function App() {
       case 'dashboard': return <Dashboard onNavigate={handleNavigate} lang={lang} />;
       case 'data-source-manager': return <DataSourceManager lang={lang} connections={connections} onAdd={handleAddConnection} onUpdate={handleUpdateConnection} onDelete={handleDeleteConnection} />;
       case 'db-viewer': return <DbViewer lang={lang} connections={connections} onNavigate={handleNavigate} />;
+      case 'excel-import': return <ExcelImport lang={lang} connections={connections} />; // New Tool
       case 'data-compare': return <DataCompareTool lang={lang} connections={connections} />; // New Route
       case 'excel-sql': return <ExcelToSql lang={lang} />;
       case 'seatunnel': return <SeatunnelGen lang={lang} connections={connections} onNavigate={handleNavigate} />;
       case 'field-mapping': return <FieldMappingTool lang={lang} connections={connections} onNavigate={handleNavigate} />;
-      case 'interview-questions': return <InterviewQuestions lang={lang} />;
-      case 'notes': return <Notes lang={lang} />;
+
       case 'pdf-tools': return <PdfTools lang={lang} />;
       case 'time-tools': return <TimeUtility lang={lang} />;
       case 'monitor': return <SystemMonitor lang={lang} />;
