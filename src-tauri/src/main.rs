@@ -236,7 +236,6 @@ async fn db_get_table_schema(id: String, db: String, table: String) -> Result<Ta
             
             // 获取建表语句
             let ddl_query = format!("SHOW CREATE TABLE `{}`.`{}`", db, table);
-            println!("Executing DDL Query: {}", ddl_query);
             let ddl: Option<(String, String)> = conn.query_first(&ddl_query).map_err(|e| format!("Failed to fetch DDL (Query: {}): {}", ddl_query, e))?;
             let ddl_statement = ddl.map(|(_, create_sql)| create_sql).unwrap_or_default();
             
@@ -250,6 +249,61 @@ async fn db_get_table_schema(id: String, db: String, table: String) -> Result<Ta
                 columns,
                 ddl: ddl_statement,
             })
+        },
+        Err(e) => Err(format!("Failed to connect: {}", e)),
+    }
+}
+
+// 执行数据库查询 (用于数据导出)
+#[tauri::command]
+async fn db_query(id: String, sql: String) -> Result<Vec<serde_json::Value>, String> {
+    let parts: Vec<&str> = id.split("://").collect();
+    if parts.len() != 2 {
+        return Err("Invalid connection ID format".to_string());
+    }
+    
+    let conn_str = format!("mysql://{}", parts[1]);
+    
+    match mysql::Conn::new(conn_str.as_str()) {
+        Ok(mut conn) => {
+            match conn.query_map(&sql, |row: mysql::Row| {
+                // 将 MySQL Row 转换为 JSON Value
+                let mut map = serde_json::Map::new();
+                for (idx, col) in row.columns_ref().iter().enumerate() {
+                    let col_name = col.name_str().to_string();
+                    let value: serde_json::Value = match row.get_opt(idx) {
+                        Some(Ok(mysql::Value::NULL)) => serde_json::Value::Null,
+                        Some(Ok(mysql::Value::Bytes(bytes))) => {
+                            serde_json::Value::String(String::from_utf8_lossy(&bytes).to_string())
+                        },
+                        Some(Ok(mysql::Value::Int(i))) => serde_json::Value::Number(i.into()),
+                        Some(Ok(mysql::Value::UInt(u))) => serde_json::Value::Number(u.into()),
+                        Some(Ok(mysql::Value::Float(f))) => {
+                            serde_json::Number::from_f64(f as f64)
+                                .map(serde_json::Value::Number)
+                                .unwrap_or(serde_json::Value::Null)
+                        },
+                        Some(Ok(mysql::Value::Double(d))) => {
+                            serde_json::Number::from_f64(d)
+                                .map(serde_json::Value::Number)
+                                .unwrap_or(serde_json::Value::Null)
+                        },
+                        Some(Ok(mysql::Value::Date(year, month, day, hour, min, sec, _))) => {
+                            serde_json::Value::String(format!("{:04}-{:02}-{:02} {:02}:{:02}:{:02}", 
+                                year, month, day, hour, min, sec))
+                        },
+                        Some(Ok(mysql::Value::Time(_, _, _, _, _, _))) => {
+                            serde_json::Value::String("TIME_VALUE".to_string())
+                        },
+                        _ => serde_json::Value::Null,
+                    };
+                    map.insert(col_name, value);
+                }
+                serde_json::Value::Object(map)
+            }) {
+                Ok(results) => Ok(results),
+                Err(e) => Err(format!("Query failed: {}", e)),
+            }
         },
         Err(e) => Err(format!("Failed to connect: {}", e)),
     }
@@ -438,6 +492,7 @@ fn main() {
             db_get_databases,
             db_get_tables,
             db_get_table_schema,
+            db_query,
             parse_excel_sheets,
             generate_excel_sql,
             generate_seatunnel_config,

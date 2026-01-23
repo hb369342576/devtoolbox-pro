@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Database, LogOut, Loader2, Search, Table, ChevronDown, FileCode, Check } from 'lucide-react';
+import { Database, LogOut, Loader2, Search, Table, ChevronDown, FileCode, Check, Download } from 'lucide-react';
 import { Language } from '../../../types';
 import { useDbViewerStore } from '../store';
 import { getTexts } from '../../../locales';
@@ -9,6 +9,9 @@ import { ContextMenu } from '../../../components/ui/ContextMenu';
 import { DatabaseService } from '../../../services/database.service';
 import { generateSelectSql, generateInsertSql, generateUpdateSql, generateDeleteSql } from '../utils/sqlGenerator';
 import { useToast } from '../../../components/ui/Toast';
+import { invoke } from '@tauri-apps/api/core';
+import { writeTextFile } from '@tauri-apps/plugin-fs';
+import { ExportProgressModal } from './ExportProgressModal';
 
 export const Sidebar: React.FC<{ lang: Language }> = ({ lang }) => {
     const t = getTexts(lang);
@@ -39,14 +42,31 @@ export const Sidebar: React.FC<{ lang: Language }> = ({ lang }) => {
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number; items: any[] } | null>(null);
     const [generatingSql, setGeneratingSql] = useState(false);
 
+    // 导出模态框状态
+    const [exportModal, setExportModal] = useState<{
+        isOpen: boolean;
+        type: 'db-structure' | 'db-data' | 'table-structure' | 'table-data' | null;
+        tableName?: string;
+    }>({ isOpen: false, type: null });
+
     const { showToast } = useToast();
+
+    const isTauri = typeof window !== 'undefined' && !!(window as any).__TAURI_INTERNALS__;
 
     // 当数据库列表加载完成后，同步到 Zustand store
     useEffect(() => {
         if (fetchedDbs.length > 0) {
             setDatabases(fetchedDbs);
+
+            // 如果连接有默认数据库且没有已选中的数据库，自动选中默认数据库
+            if (selectedConnection?.defaultDatabase && !selectedDatabase) {
+                const defaultDb = selectedConnection.defaultDatabase;
+                if (fetchedDbs.includes(defaultDb)) {
+                    setSelectedDatabase(defaultDb);
+                }
+            }
         }
-    }, [fetchedDbs, setDatabases]);
+    }, [fetchedDbs, setDatabases, selectedConnection, selectedDatabase, setSelectedDatabase]);
 
     // 当表列表加载完成后，同步到 Zustand store
     useEffect(() => {
@@ -86,6 +106,126 @@ export const Sidebar: React.FC<{ lang: Language }> = ({ lang }) => {
         }
     };
 
+    // 打开导出模态框
+    const openExportModal = (type: 'db-structure' | 'db-data' | 'table-structure' | 'table-data', tableName?: string) => {
+        setExportModal({ isOpen: true, type, tableName });
+    };
+
+    // 执行导出（由模态框调用）
+    const handleExport = async (filePath: string, onProgress: (message: string) => void) => {
+        if (!selectedConnection || !selectedDatabase || !exportModal.type) return;
+
+        const { type, tableName } = exportModal;
+
+        if (type === 'db-structure') {
+            // 导出数据库结构
+            onProgress(lang === 'zh' ? `📊 数据库: ${selectedDatabase}` : `📊 Database: ${selectedDatabase}`);
+            onProgress(lang === 'zh' ? `📋 共 ${tables.length} 个表` : `📋 Total ${tables.length} tables`);
+
+            let allDdl = `-- Database: ${selectedDatabase}\n-- Export Time: ${new Date().toLocaleString()}\n\n`;
+
+            for (let i = 0; i < tables.length; i++) {
+                const table = tables[i];
+                onProgress(lang === 'zh' ? `⏳ [${i + 1}/${tables.length}] 导出表结构: ${table.name}` : `⏳ [${i + 1}/${tables.length}] Exporting table: ${table.name}`);
+                const detail = await DatabaseService.getTableSchema(selectedConnection, selectedDatabase, table.name);
+                allDdl += `-- Table: ${table.name}\n`;
+                allDdl += detail.ddl + '\n\n';
+            }
+
+            await writeTextFile(filePath, allDdl);
+        }
+        else if (type === 'db-data') {
+            // 导出数据库数据
+            onProgress(lang === 'zh' ? `📊 数据库: ${selectedDatabase}` : `📊 Database: ${selectedDatabase}`);
+            onProgress(lang === 'zh' ? `📋 共 ${tables.length} 个表` : `📋 Total ${tables.length} tables`);
+
+            const connStr = `mysql://${selectedConnection.user}:${selectedConnection.password || ''}@${selectedConnection.host}:${selectedConnection.port}`;
+            let allData = `-- Database: ${selectedDatabase}\n-- Data Export Time: ${new Date().toLocaleString()}\n\n`;
+
+            for (let i = 0; i < tables.length; i++) {
+                const table = tables[i];
+                onProgress(lang === 'zh' ? `⏳ [${i + 1}/${tables.length}] 导出表数据: ${table.name}` : `⏳ [${i + 1}/${tables.length}] Exporting data: ${table.name}`);
+
+                const rows: any[] = await invoke('db_query', {
+                    id: connStr,
+                    sql: `SELECT * FROM \`${selectedDatabase}\`.\`${table.name}\` LIMIT 10000`
+                });
+
+                if (rows.length > 0) {
+                    allData += `-- Table: ${table.name} (${rows.length} rows)\n`;
+                    onProgress(lang === 'zh' ? `  💾 ${table.name}: ${rows.length} 行数据` : `  💾 ${table.name}: ${rows.length} rows`);
+                    for (const row of rows) {
+                        const cols = Object.keys(row).map(k => `\`${k}\``).join(', ');
+                        const vals = Object.values(row).map(v => v === null ? 'NULL' : `'${String(v).replace(/'/g, "''")}'`).join(', ');
+                        allData += `INSERT INTO \`${table.name}\` (${cols}) VALUES (${vals});\n`;
+                    }
+                    allData += '\n';
+                } else {
+                    onProgress(lang === 'zh' ? `  ⚠️ ${table.name}: 无数据` : `  ⚠️ ${table.name}: No data`);
+                }
+            }
+
+            await writeTextFile(filePath, allData);
+        }
+        else if (type === 'table-structure' && tableName) {
+            // 导出表结构
+            onProgress(lang === 'zh' ? `📋 表: ${tableName}` : `📋 Table: ${tableName}`);
+            onProgress(lang === 'zh' ? `⏳ 正在获取表结构...` : `⏳ Fetching table structure...`);
+
+            const detail = await DatabaseService.getTableSchema(selectedConnection, selectedDatabase, tableName);
+            const content = `-- Table: ${tableName}\n-- Export Time: ${new Date().toLocaleString()}\n\n${detail.ddl}`;
+
+            await writeTextFile(filePath, content);
+        }
+        else if (type === 'table-data' && tableName) {
+            // 导出表数据
+            onProgress(lang === 'zh' ? `📋 表: ${tableName}` : `📋 Table: ${tableName}`);
+            onProgress(lang === 'zh' ? `⏳ 正在查询数据...` : `⏳ Querying data...`);
+
+            const connStr = `mysql://${selectedConnection.user}:${selectedConnection.password || ''}@${selectedConnection.host}:${selectedConnection.port}`;
+            const rows: any[] = await invoke('db_query', {
+                id: connStr,
+                sql: `SELECT * FROM \`${selectedDatabase}\`.\`${tableName}\` LIMIT 10000`
+            });
+
+            onProgress(lang === 'zh' ? `💾 共 ${rows.length} 行数据` : `💾 Total ${rows.length} rows`);
+
+            let content = `-- Table: ${tableName}\n-- Data Export Time: ${new Date().toLocaleString()}\n-- Rows: ${rows.length}\n\n`;
+
+            for (const row of rows) {
+                const cols = Object.keys(row).map(k => `\`${k}\``).join(', ');
+                const vals = Object.values(row).map(v => v === null ? 'NULL' : `'${String(v).replace(/'/g, "''")}'`).join(', ');
+                content += `INSERT INTO \`${tableName}\` (${cols}) VALUES (${vals});\n`;
+            }
+
+            await writeTextFile(filePath, content);
+        }
+    };
+
+    // 数据库右键菜单
+    const handleDatabaseContextMenu = (e: React.MouseEvent) => {
+        if (!selectedDatabase || !isTauri) return;
+        e.preventDefault();
+        e.stopPropagation();
+
+        setContextMenu({
+            x: e.clientX,
+            y: e.clientY,
+            items: [
+                {
+                    label: lang === 'zh' ? '导出库结构' : 'Export Database Structure',
+                    icon: <Download size={14} />,
+                    onClick: () => openExportModal('db-structure')
+                },
+                {
+                    label: lang === 'zh' ? '导出库数据' : 'Export Database Data',
+                    icon: <Download size={14} />,
+                    onClick: () => openExportModal('db-data')
+                }
+            ]
+        });
+    };
+
     const handleContextMenu = (e: React.MouseEvent, tableName: string) => {
         e.preventDefault();
         e.stopPropagation();
@@ -113,6 +253,17 @@ export const Sidebar: React.FC<{ lang: Language }> = ({ lang }) => {
                     label: lang === 'zh' ? '生成 DELETE 语句' : 'Generate DELETE',
                     icon: <FileCode size={14} />,
                     onClick: () => handleGenerateSql(tableName, 'DELETE')
+                },
+                { divider: true },
+                {
+                    label: lang === 'zh' ? '导出表结构' : 'Export Table Structure',
+                    icon: <Download size={14} />,
+                    onClick: () => openExportModal('table-structure', tableName)
+                },
+                {
+                    label: lang === 'zh' ? '导出表数据' : 'Export Table Data',
+                    icon: <Download size={14} />,
+                    onClick: () => openExportModal('table-data', tableName)
                 }
             ]
         });
@@ -137,7 +288,7 @@ export const Sidebar: React.FC<{ lang: Language }> = ({ lang }) => {
                 </div>
 
                 {/* 数据库下拉选择框 */}
-                <div className="mb-4">
+                <div className="mb-4" onContextMenu={handleDatabaseContextMenu}>
                     <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2">
                         {lang === 'zh' ? '选择数据库' : 'Select Database'}
                     </label>
@@ -260,6 +411,45 @@ export const Sidebar: React.FC<{ lang: Language }> = ({ lang }) => {
                     onClose={() => setContextMenu(null)}
                 />
             )}
+
+            {/* 导出进度模态框 */}
+            <ExportProgressModal
+                isOpen={exportModal.isOpen}
+                onClose={() => setExportModal({ isOpen: false, type: null })}
+                onConfirm={handleExport}
+                title={
+                    exportModal.type === 'db-structure' ? (lang === 'zh' ? '导出数据库结构' : 'Export Database Structure') :
+                        exportModal.type === 'db-data' ? (lang === 'zh' ? '导出数据库数据' : 'Export Database Data') :
+                            exportModal.type === 'table-structure' ? (lang === 'zh' ? '导出表结构' : 'Export Table Structure') :
+                                exportModal.type === 'table-data' ? (lang === 'zh' ? '导出表数据' : 'Export Table Data') :
+                                    ''
+                }
+                defaultFileName={
+                    (() => {
+                        // 生成本地时间戳（UTC+8），格式：2026-01-23_16-32-45
+                        const now = new Date();
+                        const year = now.getFullYear();
+                        const month = String(now.getMonth() + 1).padStart(2, '0');
+                        const day = String(now.getDate()).padStart(2, '0');
+                        const hour = String(now.getHours()).padStart(2, '0');
+                        const minute = String(now.getMinutes()).padStart(2, '0');
+                        const second = String(now.getSeconds()).padStart(2, '0');
+                        const timestamp = `${year}-${month}-${day}_${hour}-${minute}-${second}`;
+
+                        if (exportModal.type === 'db-structure') {
+                            return `${selectedDatabase}_ddl_${timestamp}.sql`;
+                        } else if (exportModal.type === 'db-data') {
+                            return `${selectedDatabase}_data_${timestamp}.sql`;
+                        } else if (exportModal.type === 'table-structure' && exportModal.tableName) {
+                            return `${exportModal.tableName}_ddl_${timestamp}.sql`;
+                        } else if (exportModal.type === 'table-data' && exportModal.tableName) {
+                            return `${exportModal.tableName}_data_${timestamp}.sql`;
+                        }
+                        return 'export.sql';
+                    })()
+                }
+                lang={lang}
+            />
         </div>
     );
 };

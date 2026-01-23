@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Table as TableIcon, Code, Copy, Loader2, Columns, Key } from 'lucide-react';
+import { Table as TableIcon, Code, Copy, Loader2, Columns, Key, RefreshCw } from 'lucide-react';
 import { Language } from '../../../types';
 import { useDbViewerStore } from '../store';
 import { getTexts } from '../../../locales';
@@ -23,6 +23,30 @@ export const TableViewer: React.FC<{ lang: Language }> = ({ lang }) => {
     // Resize Logic
     const [ddlHeight, setDdlHeight] = useState(250);
     const [isResizing, setIsResizing] = useState(false);
+
+    // DDL 转换状态
+    const [isConvertedDdl, setIsConvertedDdl] = useState(false);
+    const [convertedDdl, setConvertedDdl] = useState('');
+
+    // 根据 DDL 内容检测实际的数据库类型（MySQL 还是 Doris）
+    const detectDbTypeFromDdl = (ddlContent: string): 'mysql' | 'doris' => {
+        if (!ddlContent) return 'mysql';
+        const upperDdl = ddlContent.toUpperCase();
+        if (
+            upperDdl.includes('ENGINE=OLAP') ||
+            upperDdl.includes('ENGINE = OLAP') ||
+            upperDdl.includes('DISTRIBUTED BY HASH') ||
+            (upperDdl.includes('UNIQUE KEY') && !upperDdl.includes('ENGINE=INNODB')) ||
+            upperDdl.includes('DUPLICATE KEY') ||
+            upperDdl.includes('AGGREGATE KEY') ||
+            upperDdl.includes('BUCKETS')
+        ) {
+            return 'doris';
+        }
+        return 'mysql';
+    };
+
+    const detectedDbType = detectDbTypeFromDdl(ddl);
 
     const handleMouseDown = (e: React.MouseEvent) => {
         setIsResizing(true);
@@ -60,6 +84,78 @@ export const TableViewer: React.FC<{ lang: Language }> = ({ lang }) => {
     }, [isResizing]);
 
 
+
+    // DDL 转换函数：MySQL <-> Doris
+    const handleConvertDdl = () => {
+        if (isConvertedDdl) {
+            setIsConvertedDdl(false);
+            setConvertedDdl('');
+            return;
+        }
+
+        if (!ddl || columns.length === 0) return;
+
+        const isMySQL = detectedDbType === 'mysql';
+
+        let result = '';
+
+        if (isMySQL) {
+            // MySQL -> Doris
+            const tableName = selectedTable || 'unknown_table';
+            const primaryKeys = columns.filter(c => c.isPrimaryKey).map(c => c.name);
+            const pkList = primaryKeys.length > 0 ? primaryKeys.join(', ') : 'id';
+
+            // 简单提取注释
+            const commentMatch = ddl.match(/COMMENT\s*=\s*'([^']*)'/i);
+            const tableComment = commentMatch ? commentMatch[1] : tableName;
+
+            const fieldLines = columns.map(col => {
+                const upperType = col.type.toUpperCase();
+                let dorisType = upperType;
+
+                // 类型映射逻辑
+                if (/^TINYINT\s*\(1\)$/i.test(upperType)) dorisType = 'BOOLEAN';
+                else if (/^(BIGINT|INT|TINYINT|SMALLINT|MEDIUMINT)\s*\(\d+\)/i.test(upperType)) dorisType = upperType.replace(/\s*\(\d+\)/, '');
+                else if (/^(DOUBLE|FLOAT)\s*\(\d+,\d+\)/i.test(upperType)) dorisType = upperType.replace(/\s*\(\d+,\d+\)/, '');
+                else if (/TEXT/i.test(upperType)) dorisType = 'STRING';
+                else if (/^DATETIME|TIMESTAMP/i.test(upperType)) dorisType = 'DATETIME';
+
+                const comment = col.comment ? ` COMMENT '${col.comment}'` : '';
+                return `    \`${col.name}\` ${dorisType}${comment}`;
+            });
+
+            result = `CREATE TABLE \`${tableName}\` (
+${fieldLines.join(',\n')}
+) ENGINE = OLAP
+UNIQUE KEY(${pkList}) COMMENT '${tableComment}'
+DISTRIBUTED BY HASH(${pkList}) BUCKETS 10
+PROPERTIES (
+    "replication_num" = "1",
+    "enable_unique_key_merge_on_write" = "true"
+);`;
+        } else {
+            // Doris -> MySQL
+            const tableName = selectedTable || 'unknown_table';
+            const fieldLines = columns.map(col => {
+                let type = col.type.toUpperCase();
+                if (type === 'STRING') type = 'TEXT';
+                if (type === 'BOOLEAN') type = 'TINYINT(1)';
+                const nullStr = col.nullable ? 'NULL' : 'NOT NULL';
+                const comment = col.comment ? ` COMMENT '${col.comment}'` : '';
+                return `    \`${col.name}\` ${type} ${nullStr}${comment}`;
+            });
+
+            const primaryKeys = columns.filter(c => c.isPrimaryKey).map(c => c.name);
+            const pkStr = primaryKeys.length > 0 ? `,\n    PRIMARY KEY (${primaryKeys.map(k => `\`${k}\``).join(', ')})` : '';
+
+            result = `CREATE TABLE \`${tableName}\` (
+${fieldLines.join(',\n')}${pkStr}
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`;
+        }
+
+        setConvertedDdl(result);
+        setIsConvertedDdl(true);
+    };
 
     const handleCopy = async (text: string) => {
         try {
@@ -100,9 +196,20 @@ export const TableViewer: React.FC<{ lang: Language }> = ({ lang }) => {
                 {
                     label: lang === 'zh' ? '复制 DDL' : 'Copy DDL',
                     icon: <Copy size={14} />,
-                    onClick: () => handleCopy(ddl)
+                    onClick: () => handleCopy(isConvertedDdl ? convertedDdl : ddl)
                 }
             ];
+
+            // 添加转换选项
+            if (detectedDbType === 'mysql' || detectedDbType === 'doris') {
+                items.push({
+                    label: isConvertedDdl
+                        ? (lang === 'zh' ? '恢复原始 DDL' : 'Restore Original DDL')
+                        : (lang === 'zh' ? `转换为 ${detectedDbType === 'mysql' ? 'Doris' : 'MySQL'}` : `Convert to ${detectedDbType === 'mysql' ? 'Doris' : 'MySQL'}`),
+                    icon: <RefreshCw size={14} />,
+                    onClick: handleConvertDdl
+                });
+            }
         }
 
         setContextMenu({
@@ -219,20 +326,42 @@ export const TableViewer: React.FC<{ lang: Language }> = ({ lang }) => {
                         <span className="text-xs font-bold text-slate-500 uppercase flex items-center">
                             <Code size={14} className="mr-2" />
                             DDL Statement
+                            {isConvertedDdl && (
+                                <span className="ml-2 px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 rounded text-[10px] font-medium">
+                                    {detectedDbType === 'mysql' ? 'Doris' : 'MySQL'}
+                                </span>
+                            )}
                         </span>
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                handleCopy(ddl);
-                            }}
-                            className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-colors text-slate-500"
-                            title={lang === 'zh' ? '复制' : 'Copy'}
-                        >
-                            <Copy size={14} />
-                        </button>
+                        <div className="flex items-center space-x-1">
+                            {(detectedDbType === 'mysql' || detectedDbType === 'doris') && ddl && (
+                                <button
+                                    onClick={handleConvertDdl}
+                                    className={`p-1 rounded transition-colors flex items-center text-xs ${isConvertedDdl
+                                        ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900'
+                                        : 'hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500'
+                                        }`}
+                                    title={isConvertedDdl
+                                        ? (lang === 'zh' ? '恢复原始 DDL' : 'Restore Original')
+                                        : (lang === 'zh' ? `转换为 ${detectedDbType === 'mysql' ? 'Doris' : 'MySQL'}` : `Convert to ${detectedDbType === 'mysql' ? 'Doris' : 'MySQL'}`)}
+                                >
+                                    <RefreshCw size={14} className={isConvertedDdl ? 'mr-1' : ''} />
+                                    {isConvertedDdl && (lang === 'zh' ? '恢复' : 'Restore')}
+                                </button>
+                            )}
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleCopy(isConvertedDdl ? convertedDdl : ddl);
+                                }}
+                                className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-colors text-slate-500"
+                                title={lang === 'zh' ? '复制' : 'Copy'}
+                            >
+                                <Copy size={14} />
+                            </button>
+                        </div>
                     </div>
                     <div className="flex-1 overflow-auto p-4 font-mono text-xs text-slate-700 dark:text-slate-300 whitespace-pre">
-                        {ddl || (loading ? (lang === 'zh' ? '加载中...' : 'Loading...') : (lang === 'zh' ? '无 DDL 信息' : 'No DDL available'))}
+                        {isConvertedDdl ? convertedDdl : (ddl || (loading ? (lang === 'zh' ? '加载中...' : 'Loading...') : (lang === 'zh' ? '无 DDL 信息' : 'No DDL available')))}
                     </div>
                 </div>
             </div>

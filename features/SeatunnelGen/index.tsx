@@ -203,6 +203,11 @@ export const SeatunnelGen: React.FC<{
 
       // 加载数据库列表
       await loadDatabases(conn, targetSide);
+
+      // 如果有默认数据库，自动加载对应的表列表
+      if (conn.defaultDatabase) {
+        await loadTables(jobConfig, conn.defaultDatabase, targetSide);
+      }
     }
     setShowSelector(false);
     setSelectingFor(null);
