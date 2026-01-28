@@ -11,6 +11,7 @@ import { ViewModeToggle } from '../../components/shared/ViewModeToggle';
 import { useViewMode } from '../../store/globalStore';
 import { generateConfig } from './utils/configGenerator';
 import { useToast } from '../../components/ui/Toast';
+import { Tooltip } from '../../components/ui/Tooltip';
 
 // 数据源选择弹窗
 const DataSourceSelectorModal: React.FC<{
@@ -391,36 +392,37 @@ export const SeatunnelGen: React.FC<{
 
         <div className="flex-1 overflow-y-auto pb-4 custom-scrollbar">
           {viewMode === 'grid' ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-2">
               {jobs.map(job => (
-                <div
-                  key={job.id}
-                  onClick={() => setActiveJob(job)}
-                  className="group relative bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border-2 border-slate-200 dark:border-slate-700 hover:border-purple-400 dark:hover:border-purple-500 hover:shadow-2xl hover:shadow-purple-500/20 hover:-translate-y-2 transition-all duration-300 cursor-pointer overflow-hidden"
-                >
-                  {/* Gradient */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-purple-50 via-pink-50/30 to-transparent dark:from-purple-900/20 dark:via-pink-900/10 dark:to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <Tooltip key={job.id} content={job.name} position="top">
+                  <div
+                    onClick={() => setActiveJob(job)}
+                    className="group relative bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border-2 border-slate-200 dark:border-slate-700 hover:border-purple-400 dark:hover:border-purple-500 hover:shadow-2xl hover:shadow-purple-500/20 hover:-translate-y-2 transition-all duration-300 cursor-pointer overflow-hidden min-h-[200px]"
+                  >
+                    {/* Gradient */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-purple-50 via-pink-50/30 to-transparent dark:from-purple-900/20 dark:via-pink-900/10 dark:to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-                  <div className="relative z-10">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="p-3 rounded-lg bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform duration-300">
-                        <Workflow size={24} />
+                    <div className="relative z-10">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="p-3 rounded-lg bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform duration-300">
+                          <Workflow size={24} />
+                        </div>
+                        <button onClick={(e) => handleDeleteJob(job.id, e)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors relative z-10 opacity-0 group-hover:opacity-100">
+                          <Trash2 size={18} />
+                        </button>
                       </div>
-                      <button onClick={(e) => handleDeleteJob(job.id, e)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors relative z-10 opacity-0 group-hover:opacity-100">
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
-                    <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2 truncate group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">{job.name}</h3>
-                    <div className="flex items-center justify-between text-xs text-slate-500 bg-slate-50 dark:bg-slate-700/50 p-3 rounded-lg border border-slate-100 dark:border-slate-700">
-                      <span className="font-bold uppercase truncate max-w-[45%]">{job.source.type || '?'}</span>
-                      <ArrowRight size={12} className="text-slate-300" />
-                      <span className="font-bold uppercase truncate max-w-[45%]">{job.sink.type || '?'}</span>
-                    </div>
-                    <div className="mt-3 text-[10px] text-slate-400 text-right">
-                      {new Date(job.createdAt).toLocaleDateString()}
+                      <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2 truncate group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">{job.name}</h3>
+                      <div className="flex items-center justify-between text-xs text-slate-500 bg-slate-50 dark:bg-slate-700/50 p-3 rounded-lg border border-slate-100 dark:border-slate-700">
+                        <span className="font-bold uppercase truncate max-w-[45%]">{job.source.type || '?'}</span>
+                        <ArrowRight size={12} className="text-slate-300" />
+                        <span className="font-bold uppercase truncate max-w-[45%]">{job.sink.type || '?'}</span>
+                      </div>
+                      <div className="mt-3 text-[10px] text-slate-400 text-right">
+                        {new Date(job.createdAt).toLocaleDateString()}
+                      </div>
                     </div>
                   </div>
-                </div>
+                </Tooltip>
               ))}
 
               <button onClick={handleCreateJob} className="flex flex-col items-center justify-center p-6 rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 text-slate-400 hover:text-purple-500 hover:border-purple-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all min-h-[180px]">

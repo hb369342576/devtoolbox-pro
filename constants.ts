@@ -18,6 +18,7 @@ export const NAV_ITEMS: NavItem[] = [
   {
     id: 'dashboard',
     label: { en: 'Dashboard', zh: '首页' },
+    tooltip: { en: 'View overview and quick access to tools', zh: '查看概览和快速访问工具' },
     icon: LayoutDashboard,
     category: 'core',
     order: 1,
@@ -26,6 +27,7 @@ export const NAV_ITEMS: NavItem[] = [
   {
     id: 'pdf-tools',
     label: { en: 'PDF Tools', zh: 'PDF 工具箱' },
+    tooltip: { en: 'PDF merge, split and conversion tools', zh: 'PDF 合并、拆分和转换工具' },
     icon: FileText,
     category: 'office',
     order: 3,
@@ -34,6 +36,7 @@ export const NAV_ITEMS: NavItem[] = [
   {
     id: 'data-source-manager',
     label: { en: 'Data Sources', zh: '数据中心' },
+    tooltip: { en: 'Manage database connections', zh: '管理数据库连接' },
     icon: DatabaseZap,
     category: 'db',
     order: 4,
@@ -42,7 +45,8 @@ export const NAV_ITEMS: NavItem[] = [
   {
     id: 'data-dev',
     label: { en: 'Data Development', zh: '数据开发' },
-    icon: Database, // Using Database icon for the group
+    tooltip: { en: 'Database development and ETL tools', zh: '数据库开发和 ETL 工具集' },
+    icon: Database,
     category: 'db',
     order: 5,
     visible: true,
@@ -50,6 +54,7 @@ export const NAV_ITEMS: NavItem[] = [
       {
         id: 'db-viewer',
         label: { en: 'Table Viewer', zh: '表结构器' },
+        tooltip: { en: 'View and manage table schemas and DDL', zh: '查看和管理表结构与 DDL' },
         icon: Database,
         category: 'db',
         order: 1,
@@ -58,6 +63,7 @@ export const NAV_ITEMS: NavItem[] = [
       {
         id: 'excel-import',
         label: { en: 'Excel Import', zh: '表格导入' },
+        tooltip: { en: 'Import Excel data to database tables', zh: '将 Excel 数据导入数据库表' },
         icon: FileSpreadsheet,
         category: 'db',
         order: 1,
@@ -66,6 +72,7 @@ export const NAV_ITEMS: NavItem[] = [
       {
         id: 'data-compare',
         label: { en: 'Data Compare', zh: '数据对比' },
+        tooltip: { en: 'Compare data between two tables', zh: '对比两个表的数据差异' },
         icon: GitCompare,
         category: 'db',
         order: 2,
@@ -74,6 +81,7 @@ export const NAV_ITEMS: NavItem[] = [
       {
         id: 'excel-sql',
         label: { en: 'Excel Builder', zh: '表格建表' },
+        tooltip: { en: 'Generate CREATE TABLE from Excel', zh: '从 Excel 生成建表语句' },
         icon: FileSpreadsheet,
         category: 'db',
         order: 3,
@@ -82,6 +90,7 @@ export const NAV_ITEMS: NavItem[] = [
       {
         id: 'seatunnel',
         label: { en: 'Seatunnel Gen', zh: '任务脚本' },
+        tooltip: { en: 'Generate SeaTunnel sync configurations', zh: '生成 SeaTunnel 同步配置' },
         icon: Workflow,
         category: 'db',
         order: 4,
@@ -90,6 +99,7 @@ export const NAV_ITEMS: NavItem[] = [
       {
         id: 'field-mapping',
         label: { en: 'Field Mapping', zh: '数据映射' },
+        tooltip: { en: 'Configure field mappings between tables', zh: '配置表字段映射关系' },
         icon: ArrowRightLeft,
         category: 'db',
         order: 5,
@@ -101,6 +111,7 @@ export const NAV_ITEMS: NavItem[] = [
   {
     id: 'time-tools',
     label: { en: 'Time Utilities', zh: '时间工具' },
+    tooltip: { en: 'Timestamp conversion and timezone tools', zh: '时间戳转换和时区工具' },
     icon: Clock,
     category: 'system',
     order: 11,
@@ -109,6 +120,7 @@ export const NAV_ITEMS: NavItem[] = [
   {
     id: 'monitor',
     label: { en: 'System Monitor', zh: '系统监控' },
+    tooltip: { en: 'Monitor system performance and resources', zh: '监控系统性能和资源' },
     icon: Cpu,
     category: 'system',
     order: 12,
@@ -117,6 +129,7 @@ export const NAV_ITEMS: NavItem[] = [
   {
     id: 'profile',
     label: { en: 'User Profile', zh: '用户中心' },
+    tooltip: { en: 'Manage your profile and preferences', zh: '管理个人资料和偏好设置' },
     icon: UserCircle,
     category: 'user',
     order: 13,

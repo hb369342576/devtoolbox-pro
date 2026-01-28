@@ -6,6 +6,7 @@ import { getTexts } from '../../../locales';
 import { ConfirmModal } from '../../../components/ui/ConfirmModal';
 import { ViewModeToggle } from '../../../components/shared/ViewModeToggle';
 import { useViewMode } from '../../../store/globalStore';
+import { Tooltip } from '../../../components/ui/Tooltip';
 
 interface ConfigListProps {
     lang: Language;
@@ -73,50 +74,51 @@ export const ConfigList: React.FC<ConfigListProps> = ({
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {/* Existing Configs */}
                     {configs.map(config => (
-                        <div
-                            key={config.id}
-                            className="group relative bg-white dark:bg-slate-800 p-6 rounded-2xl border-2 border-slate-200 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-500 hover:shadow-2xl hover:shadow-indigo-500/20 hover:-translate-y-2 transition-all duration-300 cursor-pointer overflow-hidden"
-                            onDoubleClick={() => onEdit(config)}
-                        >
-                            {/* Gradient */}
-                            <div className="absolute inset-0 bg-gradient-to-br from-indigo-50 via-purple-50/30 to-transparent dark:from-indigo-900/20 dark:via-purple-900/10 dark:to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                        <Tooltip key={config.id} content={config.name} position="top">
+                            <div
+                                className="group relative bg-white dark:bg-slate-800 p-6 rounded-2xl border-2 border-slate-200 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-500 hover:shadow-2xl hover:shadow-indigo-500/20 hover:-translate-y-2 transition-all duration-300 cursor-pointer overflow-hidden min-h-[200px]"
+                                onDoubleClick={() => onEdit(config)}
+                            >
+                                {/* Gradient */}
+                                <div className="absolute inset-0 bg-gradient-to-br from-indigo-50 via-purple-50/30 to-transparent dark:from-indigo-900/20 dark:via-purple-900/10 dark:to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-                            <div className="relative z-10">
-                                <div className="flex justify-between items-start mb-4">
-                                    <h3 className="font-bold text-lg text-slate-800 dark:text-white truncate flex-1 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{config.name}</h3>
-                                    <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                onEdit(config);
-                                            }}
-                                            className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg"
-                                        >
-                                            <Edit size={16} />
-                                        </button>
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setConfirmDelete({ isOpen: true, id: config.id });
-                                            }}
-                                            className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
+                                <div className="relative z-10">
+                                    <div className="flex justify-between items-start mb-4">
+                                        <h3 className="font-bold text-lg text-slate-800 dark:text-white truncate flex-1 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{config.name}</h3>
+                                        <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    onEdit(config);
+                                                }}
+                                                className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg"
+                                            >
+                                                <Edit size={16} />
+                                            </button>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setConfirmDelete({ isOpen: true, id: config.id });
+                                                }}
+                                                className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </div>
                                     </div>
-                                </div>
-                                <div className="space-y-2 text-sm">
-                                    <div className="flex items-center text-slate-600 dark:text-slate-400">
-                                        <span className="font-medium mr-2">{lang === 'zh' ? '源端:' : 'Source:'}</span>
-                                        <span className="truncate">{config.sourceConfig.table || '-'}</span>
-                                    </div>
-                                    <div className="flex items-center text-slate-600 dark:text-slate-400">
-                                        <span className="font-medium mr-2">{lang === 'zh' ? '目标:' : 'Target:'}</span>
-                                        <span className="truncate">{config.targetConfig.table || '-'}</span>
+                                    <div className="space-y-2 text-sm">
+                                        <div className="flex items-center text-slate-600 dark:text-slate-400">
+                                            <span className="font-medium mr-2">{lang === 'zh' ? '源端:' : 'Source:'}</span>
+                                            <span className="truncate">{config.sourceConfig.table || '-'}</span>
+                                        </div>
+                                        <div className="flex items-center text-slate-600 dark:text-slate-400">
+                                            <span className="font-medium mr-2">{lang === 'zh' ? '目标:' : 'Target:'}</span>
+                                            <span className="truncate">{config.targetConfig.table || '-'}</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        </Tooltip>
                     ))}
 
                     {/* Add New Card */}

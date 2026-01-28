@@ -6,6 +6,7 @@ import {
 import * as XLSX from 'xlsx';
 import { Language, DbConnection, TableInfo, TableDetail } from '../../types';
 import { useToast } from '../../components/ui/Toast';
+import { Tooltip } from '../../components/ui/Tooltip';
 import { DatabaseService } from '../../services/database.service';
 import { invoke } from '@tauri-apps/api/core';
 import { getTexts } from '../../locales';
@@ -405,57 +406,60 @@ export const ExcelImport: React.FC<ExcelImportProps> = ({ lang, connections }) =
 
                 {/* Content */}
                 {viewMode === 'grid' ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {/* New Import Card (Always Visible) */}
-                        <div
-                            onClick={handleNewImport}
-                            className="group relative p-6 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border-2 border-dashed border-slate-300 dark:border-slate-600 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/10 transition-all duration-300 cursor-pointer flex flex-col items-center justify-center min-h-[200px]"
-                        >
-                            <div className="p-4 rounded-full bg-blue-50 dark:bg-slate-700/50 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/30 text-blue-500 group-hover:scale-110 transition-transform mb-4">
-                                <Plus size={32} />
-                            </div>
-                            <span className="font-bold text-lg text-slate-600 dark:text-slate-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                                {lang === 'zh' ? '新建导入任务' : 'New Import Task'}
-                            </span>
-                        </div>
-
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-2">
                         {profiles.map(p => (
-                            <div
-                                key={p.id}
-                                onClick={() => handleLoadProfile(p)}
-                                className="group relative p-6 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border-2 border-slate-200 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-2xl hover:shadow-blue-500/20 hover:-translate-y-2 transition-all duration-300 cursor-pointer overflow-hidden min-h-[200px] flex flex-col"
-                            >
-                                {/* Gradient Overlay */}
-                                <div className="absolute inset-0 bg-gradient-to-br from-green-50 via-emerald-50/30 to-transparent dark:from-green-900/20 dark:via-emerald-900/10 dark:to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                            <Tooltip key={p.id} content={p.title} position="top">
+                                <div
+                                    onClick={() => handleLoadProfile(p)}
+                                    className="group relative p-6 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border-2 border-slate-200 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-2xl hover:shadow-blue-500/20 hover:-translate-y-2 transition-all duration-300 cursor-pointer overflow-hidden min-h-[200px] flex flex-col"
+                                >
+                                    {/* Gradient Overlay */}
+                                    <div className="absolute inset-0 bg-gradient-to-br from-green-50 via-emerald-50/30 to-transparent dark:from-green-900/20 dark:via-emerald-900/10 dark:to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-                                <div className="absolute top-4 right-4 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button
-                                        onClick={(e) => handleDeleteProfile(e, p.id)}
-                                        className="p-1.5 text-slate-400 hover:text-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 bg-white/50 dark:bg-black/20 backdrop-blur-sm"
-                                    >
-                                        <X size={16} />
-                                    </button>
-                                </div>
+                                    <div className="absolute top-4 right-4 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button
+                                            onClick={(e) => handleDeleteProfile(e, p.id)}
+                                            className="p-1.5 text-slate-400 hover:text-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 bg-white/50 dark:bg-black/20 backdrop-blur-sm"
+                                        >
+                                            <X size={16} />
+                                        </button>
+                                    </div>
 
-                                <div className="relative z-10 flex-1 flex flex-col">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <div className="p-3 rounded-lg bg-green-100 dark:bg-green-900/30 text-green-600 group-hover:scale-110 transition-transform duration-300">
-                                            <FileSpreadsheet size={24} />
+                                    <div className="relative z-10 flex-1 flex flex-col">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <div className="p-3 rounded-lg bg-green-100 dark:bg-green-900/30 text-green-600 group-hover:scale-110 transition-transform duration-300">
+                                                <FileSpreadsheet size={24} />
+                                            </div>
+                                        </div>
+                                        <h3 className="font-bold text-lg text-slate-800 dark:text-white mb-1 truncate group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors">
+                                            {p.title}
+                                        </h3>
+                                        <div className="text-sm text-slate-500 font-mono mb-auto truncate">
+                                            {p.targetTable ? `-> ${p.targetTable}` : 'No target'}
+                                        </div>
+                                        <div className="flex items-center text-xs text-slate-400 pt-4 border-t border-slate-100 dark:border-slate-700/50 mt-4">
+                                            <Settings size={12} className="mr-1" />
+                                            {new Date(p.updatedAt).toLocaleDateString()}
                                         </div>
                                     </div>
-                                    <h3 className="font-bold text-lg text-slate-800 dark:text-white mb-1 truncate group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors">
-                                        {p.title}
-                                    </h3>
-                                    <div className="text-sm text-slate-500 font-mono mb-auto truncate">
-                                        {p.targetTable ? `-> ${p.targetTable}` : 'No target'}
-                                    </div>
-                                    <div className="flex items-center text-xs text-slate-400 pt-4 border-t border-slate-100 dark:border-slate-700/50 mt-4">
-                                        <Settings size={12} className="mr-1" />
-                                        {new Date(p.updatedAt).toLocaleDateString()}
-                                    </div>
                                 </div>
-                            </div>
+                            </Tooltip>
                         ))}
+
+                        {/* New Import Card - 放在最后 */}
+                        <div
+                            onClick={handleNewImport}
+                            className="group relative p-6 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border-2 border-dashed border-slate-300 dark:border-slate-600 hover:border-green-400 dark:hover:border-green-500 hover:bg-green-50/10 transition-all duration-300 cursor-pointer overflow-hidden min-h-[200px] flex flex-col"
+                        >
+                            <div className="flex-1 flex flex-col items-center justify-center">
+                                <div className="p-4 rounded-full bg-green-50 dark:bg-slate-700/50 group-hover:bg-green-100 dark:group-hover:bg-green-900/30 text-green-500 group-hover:scale-110 transition-transform mb-4">
+                                    <Plus size={32} />
+                                </div>
+                                <span className="font-bold text-lg text-slate-600 dark:text-slate-300 group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors">
+                                    {lang === 'zh' ? '新建导入任务' : 'New Import Task'}
+                                </span>
+                            </div>
+                        </div>
                     </div>
                 ) : (
                     <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">

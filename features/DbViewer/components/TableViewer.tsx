@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Table as TableIcon, Code, Copy, Loader2, Columns, Key, RefreshCw } from 'lucide-react';
-import { detectDbTypeFromDdl, convertMysqlToDoris, convertDorisToMysql } from '../utils/ddlConverter';
+import { detectDbTypeFromDdl, convertMysqlToDoris, convertDorisToMysql, formatColumnType } from '../utils/ddlConverter';
 import { Language } from '../../../types';
 import { useDbViewerStore } from '../store';
 import { getTexts } from '../../../locales';
@@ -85,62 +85,17 @@ export const TableViewer: React.FC<{ lang: Language }> = ({ lang }) => {
 
         if (!ddl || columns.length === 0) return;
 
+        const tableName = selectedTable || 'unknown_table';
         const isMySQL = detectedDbType === 'mysql';
 
         let result = '';
 
         if (isMySQL) {
-            // MySQL -> Doris
-            const tableName = selectedTable || 'unknown_table';
-            const primaryKeys = columns.filter(c => c.isPrimaryKey).map(c => c.name);
-            const pkList = primaryKeys.length > 0 ? primaryKeys.join(', ') : 'id';
-
-            // 简单提取注释
-            const commentMatch = ddl.match(/COMMENT\s*=\s*'([^']*)'/i);
-            const tableComment = commentMatch ? commentMatch[1] : tableName;
-
-            const fieldLines = columns.map(col => {
-                const upperType = col.type.toUpperCase();
-                let dorisType = upperType;
-
-                // 类型映射逻辑
-                if (/^TINYINT\s*\(1\)$/i.test(upperType)) dorisType = 'BOOLEAN';
-                else if (/^(BIGINT|INT|TINYINT|SMALLINT|MEDIUMINT)\s*\(\d+\)/i.test(upperType)) dorisType = upperType.replace(/\s*\(\d+\)/, '');
-                else if (/^(DOUBLE|FLOAT)\s*\(\d+,\d+\)/i.test(upperType)) dorisType = upperType.replace(/\s*\(\d+,\d+\)/, '');
-                else if (/TEXT/i.test(upperType)) dorisType = 'STRING';
-                else if (/^DATETIME|TIMESTAMP/i.test(upperType)) dorisType = 'DATETIME';
-
-                const comment = col.comment ? ` COMMENT '${col.comment}'` : '';
-                return `    \`${col.name}\` ${dorisType}${comment}`;
-            });
-
-            result = `CREATE TABLE \`${tableName}\` (
-${fieldLines.join(',\n')}
-) ENGINE = OLAP
-UNIQUE KEY(${pkList}) COMMENT '${tableComment}'
-DISTRIBUTED BY HASH(${pkList}) BUCKETS 10
-PROPERTIES (
-    "replication_num" = "1",
-    "enable_unique_key_merge_on_write" = "true"
-);`;
+            // MySQL -> Doris: 使用共享的转换函数
+            result = convertMysqlToDoris(tableName, columns, ddl);
         } else {
-            // Doris -> MySQL
-            const tableName = selectedTable || 'unknown_table';
-            const fieldLines = columns.map(col => {
-                let type = col.type.toUpperCase();
-                if (type === 'STRING') type = 'TEXT';
-                if (type === 'BOOLEAN') type = 'TINYINT(1)';
-                const nullStr = col.nullable ? 'NULL' : 'NOT NULL';
-                const comment = col.comment ? ` COMMENT '${col.comment}'` : '';
-                return `    \`${col.name}\` ${type} ${nullStr}${comment}`;
-            });
-
-            const primaryKeys = columns.filter(c => c.isPrimaryKey).map(c => c.name);
-            const pkStr = primaryKeys.length > 0 ? `,\n    PRIMARY KEY (${primaryKeys.map(k => `\`${k}\``).join(', ')})` : '';
-
-            result = `CREATE TABLE \`${tableName}\` (
-${fieldLines.join(',\n')}${pkStr}
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`;
+            // Doris -> MySQL: 使用共享的转换函数
+            result = convertDorisToMysql(tableName, columns, ddl);
         }
 
         setConvertedDdl(result);
@@ -277,7 +232,7 @@ ${fieldLines.join(',\n')}${pkStr}
                                         <td className="px-4 py-2 font-mono text-slate-800 dark:text-white font-medium">
                                             {col.name}
                                         </td>
-                                        <td className="px-4 py-2 text-blue-600 dark:text-blue-400 font-mono text-xs">{col.type}</td>
+                                        <td className="px-4 py-2 text-blue-600 dark:text-blue-400 font-mono text-xs">{formatColumnType(col)}</td>
                                         <td className="px-4 py-2 text-center text-xs">
                                             {col.nullable ? <span className="text-slate-400">Yes</span> : <span className="font-bold text-slate-600 dark:text-slate-300">No</span>}
                                         </td>

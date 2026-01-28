@@ -1,6 +1,7 @@
 import React from 'react';
 import { Database, Plus } from 'lucide-react';
 import { Language, DbConnection } from '../../../types';
+import { Tooltip } from '../../../components/ui/Tooltip';
 
 interface ConnectionGridProps {
     lang: Language;
@@ -41,26 +42,27 @@ export const ConnectionGrid: React.FC<ConnectionGridProps> = ({
             {viewMode === 'grid' ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {connections.map(conn => (
-                        <div
-                            key={conn.id}
-                            onClick={() => onConnect(conn)}
-                            className="group relative p-6 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border-2 border-slate-200 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-2xl hover:shadow-blue-500/20 hover:-translate-y-2 transition-all duration-300 cursor-pointer overflow-hidden"
-                        >
-                            {/* 渐变背景 */}
-                            <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-indigo-50/30 to-transparent dark:from-blue-900/20 dark:via-indigo-900/10 dark:to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                        <Tooltip key={conn.id} content={conn.name} position="top">
+                            <div
+                                onClick={() => onConnect(conn)}
+                                className="group relative p-6 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border-2 border-slate-200 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-2xl hover:shadow-blue-500/20 hover:-translate-y-2 transition-all duration-300 cursor-pointer overflow-hidden min-h-[200px]"
+                            >
+                                {/* 渐变背景 */}
+                                <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-indigo-50/30 to-transparent dark:from-blue-900/20 dark:via-indigo-900/10 dark:to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-                            <div className="relative z-10">
-                                <div className="flex items-center justify-between mb-4">
-                                    <div className="p-3 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-600 group-hover:scale-110 transition-transform duration-300">
-                                        <Database size={24} />
+                                <div className="relative z-10">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <div className="p-3 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-600 group-hover:scale-110 transition-transform duration-300">
+                                            <Database size={24} />
+                                        </div>
                                     </div>
+                                    <h3 className="font-bold text-lg text-slate-800 dark:text-white mb-1 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                                        {conn.name}
+                                    </h3>
+                                    <div className="text-sm text-slate-500 font-mono">{conn.host}:{conn.port}</div>
                                 </div>
-                                <h3 className="font-bold text-lg text-slate-800 dark:text-white mb-1 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                                    {conn.name}
-                                </h3>
-                                <div className="text-sm text-slate-500 font-mono">{conn.host}:{conn.port}</div>
                             </div>
-                        </div>
+                        </Tooltip>
                     ))}
                 </div>
             ) : (

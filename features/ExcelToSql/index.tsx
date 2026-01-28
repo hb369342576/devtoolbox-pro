@@ -7,6 +7,7 @@ import { Language, ExcelTemplate } from '../../types';
 import { ViewModeToggle } from '../../components/shared/ViewModeToggle';
 import { useViewMode } from '../../store/globalStore';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
+import { Tooltip } from '../../components/ui/Tooltip';
 import * as XLSX from 'xlsx';
 import { useToast, ToastProvider } from '../../components/ui/Toast';
 
@@ -365,48 +366,49 @@ const ExcelToSqlContent: React.FC<{ lang: Language }> = ({ lang }) => {
 
         <div className="flex-1 overflow-y-auto pb-4">
           {viewMode === 'grid' ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-2">
               {templates.map(tpl => (
-                <div
-                  key={tpl.id}
-                  onClick={() => handleSwitchTemplate(tpl)}
-                  className="group relative bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border-2 border-slate-200 dark:border-slate-700 hover:border-green-400 dark:hover:border-green-500 hover:shadow-2xl hover:shadow-green-500/20 hover:-translate-y-2 transition-all duration-300 cursor-pointer overflow-hidden"
-                >
-                  {/* Gradient */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-green-50 via-emerald-50/30 to-transparent dark:from-green-900/20 dark:via-emerald-900/10 dark:to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <Tooltip key={tpl.id} content={tpl.name} position="top">
+                  <div
+                    onClick={() => handleSwitchTemplate(tpl)}
+                    className="group relative bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border-2 border-slate-200 dark:border-slate-700 hover:border-green-400 dark:hover:border-green-500 hover:shadow-2xl hover:shadow-green-500/20 hover:-translate-y-2 transition-all duration-300 cursor-pointer overflow-hidden min-h-[200px]"
+                  >
+                    {/* Gradient */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-green-50 via-emerald-50/30 to-transparent dark:from-green-900/20 dark:via-emerald-900/10 dark:to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-                  <div className="relative z-10">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="p-3 rounded-lg bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 group-hover:scale-110 transition-transform duration-300">
-                        <Table size={24} />
+                    <div className="relative z-10">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="p-3 rounded-lg bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 group-hover:scale-110 transition-transform duration-300">
+                          <Table size={24} />
+                        </div>
+                        <div className="flex space-x-1">
+                          {/* Edit button is redundant now, clicking the card does the same, but could specific editing? No, same view. */}
+                          <button onClick={(e) => handleDeleteTemplate(tpl.id, e)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors relative z-10">
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
                       </div>
-                      <div className="flex space-x-1">
-                        {/* Edit button is redundant now, clicking the card does the same, but could specific editing? No, same view. */}
-                        <button onClick={(e) => handleDeleteTemplate(tpl.id, e)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors relative z-10">
-                          <Trash2 size={18} />
-                        </button>
-                      </div>
-                    </div>
-                    <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-1 truncate group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors">{tpl.name}</h3>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-4 line-clamp-2 h-10">{tpl.description || (lang === 'zh' ? '无描述' : 'No description')}</p>
+                      <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-1 truncate group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors">{tpl.name}</h3>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 mb-4 line-clamp-2 h-10">{tpl.description || (lang === 'zh' ? '无描述' : 'No description')}</p>
 
-                    <div className="flex items-center space-x-2 text-xs font-mono text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-700/50 p-2 rounded">
-                      <span title="Start Row">Row:{tpl.dataStartRow}</span>
-                      <span className="text-slate-300">|</span>
-                      <span title="Name Column">N:{tpl.nameCol}</span>
-                      <span className="text-slate-300">|</span>
-                      <span title="Type Column">T:{tpl.typeCol}</span>
-                      <span className="text-slate-300">|</span>
-                      <span title="Comment Column">C:{tpl.commentCol || '-'}</span>
-                      {tpl.pkCol && (
-                        <>
-                          <span className="text-slate-300">|</span>
-                          <span title="PK Column" className="text-blue-500 font-bold">PK:{tpl.pkCol}</span>
-                        </>
-                      )}
+                      <div className="flex items-center space-x-2 text-xs font-mono text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-700/50 p-2 rounded">
+                        <span title="Start Row">Row:{tpl.dataStartRow}</span>
+                        <span className="text-slate-300">|</span>
+                        <span title="Name Column">N:{tpl.nameCol}</span>
+                        <span className="text-slate-300">|</span>
+                        <span title="Type Column">T:{tpl.typeCol}</span>
+                        <span className="text-slate-300">|</span>
+                        <span title="Comment Column">C:{tpl.commentCol || '-'}</span>
+                        {tpl.pkCol && (
+                          <>
+                            <span className="text-slate-300">|</span>
+                            <span title="PK Column" className="text-blue-500 font-bold">PK:{tpl.pkCol}</span>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
+                </Tooltip>
               ))}
 
               <button onClick={handleAddNew} className="flex flex-col items-center justify-center p-6 rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 text-slate-400 hover:text-green-500 hover:border-green-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all min-h-[200px]">

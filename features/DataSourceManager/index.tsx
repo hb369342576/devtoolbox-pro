@@ -9,6 +9,7 @@ import { getTexts } from '../../locales';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import { ViewModeToggle } from '../../components/shared/ViewModeToggle';
 import { useViewMode } from '../../store/globalStore';
+import { Tooltip } from '../../components/ui/Tooltip';
 
 interface DataSourceManagerProps {
   lang: Language;
@@ -189,32 +190,33 @@ export const DataSourceManager: React.FC<{
             {connections.map(conn => {
               const style = getDbConfig(conn.type);
               return (
-                <div
-                  key={conn.id}
-                  className="group relative bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border-2 border-slate-200 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-2xl hover:shadow-blue-500/20 hover:-translate-y-2 transition-all duration-300 cursor-pointer overflow-hidden"
-                  onClick={() => handleEdit(conn)}
-                >
-                  <div className="flex items-start justify-between mb-4">
-                    <div className={`p-3 rounded-lg ${style.bg}`}>
-                      <style.icon size={24} className={style.color} />
+                <Tooltip key={conn.id} content={conn.name} position="top">
+                  <div
+                    className="group relative bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border-2 border-slate-200 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-2xl hover:shadow-blue-500/20 hover:-translate-y-2 transition-all duration-300 cursor-pointer overflow-hidden min-h-[200px]"
+                    onClick={() => handleEdit(conn)}
+                  >
+                    <div className="flex items-start justify-between mb-4">
+                      <div className={`p-3 rounded-lg ${style.bg}`}>
+                        <style.icon size={24} className={style.color} />
+                      </div>
+                      <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={(e) => handleEdit(conn, e)} className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"><Edit size={18} /></button>
+                        <button onClick={(e) => handleDeleteClick(conn.id, e)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"><Trash2 size={18} /></button>
+                      </div>
                     </div>
-                    <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={(e) => handleEdit(conn, e)} className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"><Edit size={18} /></button>
-                      <button onClick={(e) => handleDeleteClick(conn.id, e)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"><Trash2 size={18} /></button>
+                    <h3 className="font-bold text-lg text-slate-800 dark:text-white mb-1 truncate">{conn.name}</h3>
+                    <div className="space-y-1">
+                      <div className="flex items-center text-sm text-slate-500 dark:text-slate-400">
+                        <span className="w-16 text-xs font-bold uppercase opacity-70">{t.dataSource.type}</span>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-100 dark:bg-slate-700`}>{conn.type}</span>
+                      </div>
+                      <div className="flex items-center text-sm text-slate-500 dark:text-slate-400">
+                        <span className="w-16 text-xs font-bold uppercase opacity-70">{t.dataSource.host}</span>
+                        <span className="truncate font-mono">{conn.host}:{conn.port}</span>
+                      </div>
                     </div>
                   </div>
-                  <h3 className="font-bold text-lg text-slate-800 dark:text-white mb-1 truncate">{conn.name}</h3>
-                  <div className="space-y-1">
-                    <div className="flex items-center text-sm text-slate-500 dark:text-slate-400">
-                      <span className="w-16 text-xs font-bold uppercase opacity-70">{t.dataSource.type}</span>
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-100 dark:bg-slate-700`}>{conn.type}</span>
-                    </div>
-                    <div className="flex items-center text-sm text-slate-500 dark:text-slate-400">
-                      <span className="w-16 text-xs font-bold uppercase opacity-70">{t.dataSource.host}</span>
-                      <span className="truncate font-mono">{conn.host}:{conn.port}</span>
-                    </div>
-                  </div>
-                </div>
+                </Tooltip>
               );
             })}
             <button

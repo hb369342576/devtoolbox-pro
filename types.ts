@@ -11,6 +11,7 @@ export interface NavItem {
   category: 'core' | 'db' | 'office' | 'system' | 'user' | 'knowledge';
   order: number; // 排序编号
   visible: boolean; // 是否显示
+  tooltip?: Record<Language, string>; // 功能说明
   children?: NavItem[]; // 子菜单
 }
 

@@ -11,6 +11,7 @@ import { Sidebar } from './components/Sidebar';
 import { Canvas } from './components/Canvas';
 import { MappingModal } from './components/MappingModal';
 import { ToastProvider } from '../../components/ui/Toast';
+import { Tooltip } from '../../components/ui/Tooltip';
 
 /**
  * FieldMappingTool - 可视化字段映射工具
@@ -114,37 +115,38 @@ export const FieldMappingTool: React.FC<{
             {/* Profile Grid */}
             <div className="flex-1 overflow-y-auto pb-4 custom-scrollbar">
                {viewMode === 'grid' ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-2">
                      {profiles.map((profile) => (
-                        <div
-                           key={profile.id}
-                           onClick={() => setActiveProfile(profile)}
-                           className="group relative p-6 bg-white dark:bg-slate-800 rounded-2xl border-2 border-slate-200 dark:border-slate-700 hover:border-purple-400 dark:hover:border-purple-500 hover:shadow-2xl hover:shadow-purple-500/20 hover:-translate-y-2 transition-all duration-300 cursor-pointer overflow-hidden"
-                        >
-                           {/* Gradient */}
-                           <div className="absolute inset-0 bg-gradient-to-br from-purple-50 via-pink-50/30 to-transparent dark:from-purple-900/20 dark:via-pink-900/10 dark:to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                        <Tooltip key={profile.id} content={profile.name} position="top">
+                           <div
+                              onClick={() => setActiveProfile(profile)}
+                              className="group relative p-6 bg-white dark:bg-slate-800 rounded-2xl border-2 border-slate-200 dark:border-slate-700 hover:border-purple-400 dark:hover:border-purple-500 hover:shadow-2xl hover:shadow-purple-500/20 hover:-translate-y-2 transition-all duration-300 cursor-pointer overflow-hidden min-h-[200px]"
+                           >
+                              {/* Gradient */}
+                              <div className="absolute inset-0 bg-gradient-to-br from-purple-50 via-pink-50/30 to-transparent dark:from-purple-900/20 dark:via-pink-900/10 dark:to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-                           <div className="relative z-10">
-                              <div className="flex items-center justify-between mb-4">
-                                 <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg text-purple-600 group-hover:scale-110 transition-transform duration-300">
-                                    <ArrowRightLeft size={24} />
+                              <div className="relative z-10">
+                                 <div className="flex items-center justify-between mb-4">
+                                    <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg text-purple-600 group-hover:scale-110 transition-transform duration-300">
+                                       <ArrowRightLeft size={24} />
+                                    </div>
+                                    <button
+                                       onClick={(e) => handleDeleteProfile(profile.id, e)}
+                                       className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                                    >
+                                       <Trash2 size={16} />
+                                    </button>
                                  </div>
-                                 <button
-                                    onClick={(e) => handleDeleteProfile(profile.id, e)}
-                                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                                 >
-                                    <Trash2 size={16} />
-                                 </button>
-                              </div>
-                              <h3 className="font-bold text-lg text-slate-800 dark:text-white mb-2 truncate group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
-                                 {profile.name}
-                              </h3>
-                              <div className="flex items-center justify-between text-xs text-slate-500">
-                                 <span>{profile.nodes?.length || 0} {lang === 'zh' ? '个节点' : 'nodes'}</span>
-                                 <span>{new Date(profile.updatedAt).toLocaleString()}</span>
+                                 <h3 className="font-bold text-lg text-slate-800 dark:text-white mb-2 truncate group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
+                                    {profile.name}
+                                 </h3>
+                                 <div className="flex items-center justify-between text-xs text-slate-500">
+                                    <span>{profile.nodes?.length || 0} {lang === 'zh' ? '个节点' : 'nodes'}</span>
+                                    <span>{new Date(profile.updatedAt).toLocaleString()}</span>
+                                 </div>
                               </div>
                            </div>
-                        </div>
+                        </Tooltip>
                      ))}
 
                      {/* New Card */}

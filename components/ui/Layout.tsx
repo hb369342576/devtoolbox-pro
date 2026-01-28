@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Menu, Moon, Sun, ChevronLeft, ChevronRight, Settings, Globe, LogOut, User as UserIcon, MoreHorizontal, UserCog, X } from 'lucide-react';
 import { NAV_ITEMS } from '../../constants';
 import { Language, Theme, User } from '../../types';
+import { Tooltip } from './Tooltip';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -112,29 +113,30 @@ export const Layout: React.FC<LayoutProps> = ({
     if (isParent) {
       return (
         <div key={item.id} className="mb-1">
-          <button
-            onClick={() => {
-              if (collapsed) setCollapsed(false);
-              onToggleMenu(item.id);
-            }}
-            className={`
-              w-full flex items-center ${paddingLeft} py-3 rounded-lg transition-colors duration-200
-              ${isChildActive
-                ? 'text-blue-600 dark:text-blue-400 font-medium'
-                : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50'}
-            `}
-            title={collapsed ? item.label[lang] : ''}
-          >
-            <item.icon className={`w-5 h-5 flex-shrink-0 ${isChildActive ? 'text-blue-600 dark:text-blue-400' : ''}`} />
-            {!collapsed && (
-              <>
-                <span className="ml-3 text-sm font-medium whitespace-nowrap flex-1 text-left">
-                  {item.label[lang]}
-                </span>
-                <ChevronRight size={16} className={`transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} />
-              </>
-            )}
-          </button>
+          <Tooltip content={item.tooltip?.[lang] || ''} position="right">
+            <button
+              onClick={() => {
+                if (collapsed) setCollapsed(false);
+                onToggleMenu(item.id);
+              }}
+              className={`
+                w-full flex items-center ${paddingLeft} py-3 rounded-lg transition-colors duration-200
+                ${isChildActive
+                  ? 'text-blue-600 dark:text-blue-400 font-medium'
+                  : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50'}
+              `}
+            >
+              <item.icon className={`w-5 h-5 flex-shrink-0 ${isChildActive ? 'text-blue-600 dark:text-blue-400' : ''}`} />
+              {!collapsed && (
+                <>
+                  <span className="ml-3 text-sm font-medium whitespace-nowrap flex-1 text-left">
+                    {item.label[lang]}
+                  </span>
+                  <ChevronRight size={16} className={`transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} />
+                </>
+              )}
+            </button>
+          </Tooltip>
           {/* Render Children if Expanded */}
           <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isExpanded && !collapsed ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
             <div className="mt-1 space-y-1">
@@ -147,24 +149,24 @@ export const Layout: React.FC<LayoutProps> = ({
 
     // Leaf Node
     return (
-      <button
-        key={item.id}
-        onClick={() => onTabChange(item.id)}
-        className={`
-          w-full flex items-center ${paddingLeft} py-3 rounded-lg transition-colors duration-200
-          ${isActive
-            ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400'
-            : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50'}
-        `}
-        title={collapsed ? item.label[lang] : ''}
-      >
-        <item.icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-blue-600 dark:text-blue-400' : ''}`} />
-        {!collapsed && (
-          <span className="ml-3 text-sm font-medium whitespace-nowrap">
-            {item.label[lang]}
-          </span>
-        )}
-      </button>
+      <Tooltip key={item.id} content={item.tooltip?.[lang] || ''} position="right">
+        <button
+          onClick={() => onTabChange(item.id)}
+          className={`
+            w-full flex items-center ${paddingLeft} py-3 rounded-lg transition-colors duration-200
+            ${isActive
+              ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400'
+              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50'}
+          `}
+        >
+          <item.icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-blue-600 dark:text-blue-400' : ''}`} />
+          {!collapsed && (
+            <span className="ml-3 text-sm font-medium whitespace-nowrap">
+              {item.label[lang]}
+            </span>
+          )}
+        </button>
+      </Tooltip>
     );
   };
 
