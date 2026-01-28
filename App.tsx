@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Layout } from './components/ui/Layout';
 import { ToastProvider } from './components/ui/Toast';
+import { Tooltip } from './components/ui/Tooltip';
 import { Login } from './features/Login';
 import { UserProfile } from './features/UserProfile';
 import { DbViewer } from './features/DbViewer';
@@ -97,37 +98,38 @@ const Dashboard: React.FC<{ onNavigate: (id: string) => void, lang: Language }> 
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-7xl px-4">
         {tools.map((tool) => (
-          <button
-            key={tool.id}
-            onClick={() => onNavigate(tool.id)}
-            className="group relative p-6 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border-2 border-slate-200 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-2xl hover:shadow-blue-500/20 hover:-translate-y-2 transition-all duration-300 text-left overflow-hidden"
-          >
-            {/* Gradient overlay on hover */}
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-indigo-50/30 to-transparent dark:from-blue-900/20 dark:via-indigo-900/10 dark:to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          <Tooltip key={tool.id} content={tool.label[lang]} position="top">
+            <button
+              onClick={() => onNavigate(tool.id)}
+              className="group relative p-6 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border-2 border-slate-200 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-2xl hover:shadow-blue-500/20 hover:-translate-y-2 transition-all duration-300 text-left overflow-hidden w-full"
+            >
+              {/* Gradient overlay on hover */}
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-indigo-50/30 to-transparent dark:from-blue-900/20 dark:via-indigo-900/10 dark:to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-            {/* Shine effect on hover */}
-            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-            </div>
-
-            <div className="relative z-10">
-              <div className={`w-14 h-14 rounded-xl flex items-center justify-center mb-6 shadow-sm transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg ${tool.category === 'db' ? 'bg-gradient-to-br from-cyan-50 to-sky-100 dark:from-cyan-500/10 dark:to-sky-500/20 text-cyan-600 dark:text-cyan-400 group-hover:from-cyan-100 group-hover:to-sky-200 dark:group-hover:from-cyan-500/20 dark:group-hover:to-sky-500/30' :
-                tool.category === 'office' ? 'bg-gradient-to-br from-rose-50 to-pink-100 dark:from-rose-500/10 dark:to-pink-500/20 text-rose-600 dark:text-rose-400 group-hover:from-rose-100 group-hover:to-pink-200 dark:group-hover:from-rose-500/20 dark:group-hover:to-pink-500/30' :
-                  tool.category === 'knowledge' ? 'bg-gradient-to-br from-amber-50 to-orange-100 dark:from-amber-500/10 dark:to-orange-500/20 text-amber-600 dark:text-amber-400 group-hover:from-amber-100 group-hover:to-orange-200 dark:group-hover:from-amber-500/20 dark:group-hover:to-orange-500/30' :
-                    tool.category === 'user' ? 'bg-gradient-to-br from-violet-50 to-purple-100 dark:from-violet-500/10 dark:to-purple-500/20 text-violet-600 dark:text-violet-400 group-hover:from-violet-100 group-hover:to-purple-200 dark:group-hover:from-violet-500/20 dark:group-hover:to-purple-500/30' :
-                      'bg-gradient-to-br from-emerald-50 to-teal-100 dark:from-emerald-500/10 dark:to-teal-500/20 text-emerald-600 dark:text-emerald-400 group-hover:from-emerald-100 group-hover:to-teal-200 dark:group-hover:from-emerald-500/20 dark:group-hover:to-teal-500/30'
-                }`}>
-                <tool.icon size={28} className="group-hover:scale-110 transition-transform duration-300" />
+              {/* Shine effect on hover */}
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
               </div>
 
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-300">
-                {tool.label[lang]}
-              </h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed group-hover:text-slate-700 dark:group-hover:text-slate-300 transition-colors duration-300">
-                {getDescription(tool.id, lang)}
-              </p>
-            </div>
-          </button>
+              <div className="relative z-10">
+                <div className={`w-14 h-14 rounded-xl flex items-center justify-center mb-6 shadow-sm transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg ${tool.category === 'db' ? 'bg-gradient-to-br from-cyan-50 to-sky-100 dark:from-cyan-500/10 dark:to-sky-500/20 text-cyan-600 dark:text-cyan-400 group-hover:from-cyan-100 group-hover:to-sky-200 dark:group-hover:from-cyan-500/20 dark:group-hover:to-sky-500/30' :
+                  tool.category === 'office' ? 'bg-gradient-to-br from-rose-50 to-pink-100 dark:from-rose-500/10 dark:to-pink-500/20 text-rose-600 dark:text-rose-400 group-hover:from-rose-100 group-hover:to-pink-200 dark:group-hover:from-rose-500/20 dark:group-hover:to-pink-500/30' :
+                    tool.category === 'knowledge' ? 'bg-gradient-to-br from-amber-50 to-orange-100 dark:from-amber-500/10 dark:to-orange-500/20 text-amber-600 dark:text-amber-400 group-hover:from-amber-100 group-hover:to-orange-200 dark:group-hover:from-amber-500/20 dark:group-hover:to-orange-500/30' :
+                      tool.category === 'user' ? 'bg-gradient-to-br from-violet-50 to-purple-100 dark:from-violet-500/10 dark:to-purple-500/20 text-violet-600 dark:text-violet-400 group-hover:from-violet-100 group-hover:to-purple-200 dark:group-hover:from-violet-500/20 dark:group-hover:to-purple-500/30' :
+                        'bg-gradient-to-br from-emerald-50 to-teal-100 dark:from-emerald-500/10 dark:to-teal-500/20 text-emerald-600 dark:text-emerald-400 group-hover:from-emerald-100 group-hover:to-teal-200 dark:group-hover:from-emerald-500/20 dark:group-hover:to-teal-500/30'
+                  }`}>
+                  <tool.icon size={28} className="group-hover:scale-110 transition-transform duration-300" />
+                </div>
+
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-300">
+                  {tool.label[lang]}
+                </h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed group-hover:text-slate-700 dark:group-hover:text-slate-300 transition-colors duration-300">
+                  {getDescription(tool.id, lang)}
+                </p>
+              </div>
+            </button>
+          </Tooltip>
         ))}
       </div>
     </div>
