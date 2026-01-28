@@ -40,10 +40,10 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                     <div
                         key={t.id}
                         className={`pointer-events-auto flex items-start px-4 py-3 rounded-lg shadow-lg border animate-in slide-in-from-right-full fade-in duration-300 min-w-[300px] ${t.variant === 'success'
-                                ? 'bg-green-50 border-green-200 text-green-800 dark:bg-green-900/30 dark:border-green-800 dark:text-green-200'
-                                : t.variant === 'destructive'
-                                    ? 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900/30 dark:border-red-800 dark:text-red-200'
-                                    : 'bg-white border-slate-200 text-slate-800 dark:bg-slate-800 dark:border-slate-700 dark:text-white'
+                            ? 'bg-green-50 border-green-200 text-green-800 dark:bg-green-900/30 dark:border-green-800 dark:text-green-200'
+                            : t.variant === 'destructive'
+                                ? 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900/30 dark:border-red-800 dark:text-red-200'
+                                : 'bg-white border-slate-200 text-slate-800 dark:bg-slate-800 dark:border-slate-700 dark:text-white'
                             }`}
                     >
                         {t.variant === 'success' && <Check size={18} className="mr-3 mt-0.5" />}
@@ -70,5 +70,14 @@ export const useToast = () => {
     if (!context) {
         throw new Error('useToast must be used within a ToastProvider');
     }
-    return context;
+
+    // 辅助函数：简化调用方式
+    const showToast = (message: string, type: ToastType = 'info') => {
+        context.toast({
+            description: message,
+            variant: type === 'error' ? 'destructive' : type === 'success' ? 'success' : 'default'
+        });
+    };
+
+    return { ...context, showToast };
 };

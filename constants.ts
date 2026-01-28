@@ -10,7 +10,10 @@ import {
   ArrowRightLeft,
 
   DatabaseZap,
-  GitCompare
+  GitCompare,
+  CalendarClock,
+  FolderKanban,
+  ListTodo
 } from 'lucide-react';
 import { NavItem, Language } from './types';
 
@@ -103,6 +106,36 @@ export const NAV_ITEMS: NavItem[] = [
         icon: ArrowRightLeft,
         category: 'db',
         order: 5,
+        visible: true
+      }
+    ]
+  },
+
+  {
+    id: 'task-dev',
+    label: { en: 'Task Development', zh: '任务开发' },
+    tooltip: { en: 'DolphinScheduler workflow management', zh: 'DolphinScheduler 工作流管理' },
+    icon: CalendarClock,
+    category: 'db',
+    order: 6,
+    visible: true,
+    children: [
+      {
+        id: 'dolphin-project',
+        label: { en: 'Project Manager', zh: '项目管理' },
+        tooltip: { en: 'Manage DolphinScheduler projects', zh: '管理 DolphinScheduler 项目' },
+        icon: FolderKanban,
+        category: 'db',
+        order: 1,
+        visible: true
+      },
+      {
+        id: 'dolphin-task',
+        label: { en: 'Task Manager', zh: '任务管理' },
+        tooltip: { en: 'Manage DolphinScheduler tasks', zh: '管理 DolphinScheduler 任务' },
+        icon: ListTodo,
+        category: 'db',
+        order: 2,
         visible: true
       }
     ]

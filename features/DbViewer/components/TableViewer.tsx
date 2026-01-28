@@ -180,6 +180,13 @@ export const TableViewer: React.FC<{ lang: Language }> = ({ lang }) => {
                 <h2 className="text-lg font-bold text-slate-800 dark:text-white flex items-center">
                     <TableIcon className="mr-2 text-blue-600" size={20} />
                     {selectedTable}
+                    <button
+                        onClick={() => handleCopy(selectedTable)}
+                        className="ml-2 p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-colors text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                        title={lang === 'zh' ? '复制表名' : 'Copy Table Name'}
+                    >
+                        <Copy size={16} />
+                    </button>
                 </h2>
                 {loading && (
                     <div className="flex items-center text-slate-500 text-sm">

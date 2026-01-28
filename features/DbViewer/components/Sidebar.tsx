@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Database, LogOut, Loader2, Search, Table, ChevronDown, FileCode, Check, Download } from 'lucide-react';
+import { Database, LogOut, Loader2, Search, Table, ChevronDown, FileCode, Check, Download, Copy, Trash2 } from 'lucide-react';
 import { Language } from '../../../types';
 import { useDbViewerStore } from '../store';
 import { getTexts } from '../../../locales';
@@ -13,6 +13,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { writeTextFile } from '@tauri-apps/plugin-fs';
 import { ExportProgressModal } from './ExportProgressModal';
 import { ConvertDdlModal } from './ConvertDdlModal';
+import { TruncateModal } from './TruncateModal';
 import { detectDbTypeFromDdl, convertMysqlToDoris, convertDorisToMysql } from '../utils/ddlConverter';
 import { RefreshCw } from 'lucide-react';
 
@@ -59,6 +60,9 @@ export const Sidebar: React.FC<{ lang: Language }> = ({ lang }) => {
         progress: string;
         isConverting: boolean;
     }>({ isOpen: false, sourceType: null, progress: '', isConverting: false });
+
+    // 清理数据库模态框状态
+    const [truncateModal, setTruncateModal] = useState(false);
 
     const { toast } = useToast();
     const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
@@ -364,6 +368,15 @@ export const Sidebar: React.FC<{ lang: Language }> = ({ lang }) => {
                     label: lang === 'zh' ? '一键 DDL 转换' : 'Batch DDL Conversion',
                     icon: <RefreshCw size={14} />,
                     onClick: () => openConvertModal()
+                },
+                { divider: true },
+                {
+                    label: lang === 'zh' ? '清理数据库' : 'Truncate Database',
+                    icon: <Trash2 size={14} />,
+                    onClick: () => {
+                        setTruncateModal(true);
+                        setContextMenu(null);
+                    }
                 }
             ]
         });
@@ -396,6 +409,26 @@ export const Sidebar: React.FC<{ lang: Language }> = ({ lang }) => {
                     label: lang === 'zh' ? '生成 DELETE 语句' : 'Generate DELETE',
                     icon: <FileCode size={14} />,
                     onClick: () => handleGenerateSql(tableName, 'DELETE')
+                },
+                { divider: true },
+                {
+                    label: lang === 'zh' ? '复制表名' : 'Copy Table Name',
+                    icon: <Copy size={14} />,
+                    onClick: async () => {
+                        await navigator.clipboard.writeText(tableName);
+                        showToast(lang === 'zh' ? '复制成功' : 'Copied successfully', 'success');
+                        setContextMenu(null);
+                    }
+                },
+                {
+                    label: lang === 'zh' ? '复制 TRUNCATE 语句' : 'Copy TRUNCATE Statement',
+                    icon: <Trash2 size={14} />,
+                    onClick: async () => {
+                        const sql = `TRUNCATE TABLE \`${selectedDatabase}\`.\`${tableName}\`;`;
+                        await navigator.clipboard.writeText(sql);
+                        showToast(lang === 'zh' ? '复制成功' : 'Copied successfully', 'success');
+                        setContextMenu(null);
+                    }
                 },
                 { divider: true },
                 {
@@ -614,6 +647,15 @@ export const Sidebar: React.FC<{ lang: Language }> = ({ lang }) => {
                 lang={lang}
                 isConverting={convertModal.isConverting}
                 progress={convertModal.progress}
+            />
+
+            {/* 清理数据库模态框 */}
+            <TruncateModal
+                isOpen={truncateModal}
+                onClose={() => setTruncateModal(false)}
+                tables={tables.map(t => t.name)}
+                databaseName={selectedDatabase || ''}
+                lang={lang}
             />
         </div>
     );

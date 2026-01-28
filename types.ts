@@ -216,3 +216,14 @@ export interface CompareResultRow {
   targetData: Record<string, any> | null;
   diffFields: string[]; // List of field names that differ
 }
+
+// --- DolphinScheduler Types ---
+
+export interface DolphinSchedulerConfig {
+  id: string;
+  name: string;
+  baseUrl: string;    // API 地址，例如 http://localhost:12345/dolphinscheduler
+  token: string;      // API Token
+  projectCode?: string; // 项目编码
+  projectName?: string; // 项目名称
+}

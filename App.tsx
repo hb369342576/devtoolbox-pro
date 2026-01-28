@@ -16,7 +16,9 @@ import { FieldMappingTool } from './features/FieldMappingTool';
 
 import { DataSourceManager } from './features/DataSourceManager';
 import { DataCompareTool } from './features/DataCompareTool';
-import { Language, Theme, User, DbConnection } from './types';
+import { ProjectManager } from './features/DolphinScheduler/ProjectManager';
+import { TaskManager } from './features/DolphinScheduler/TaskManager';
+import { Language, Theme, User, DbConnection, DolphinSchedulerConfig } from './types';
 import { NAV_ITEMS } from './constants';
 
 /* --- Home Dashboard --- */
@@ -168,6 +170,13 @@ export default function App() {
     return saved ? JSON.parse(saved) : [];
   });
 
+  // DolphinScheduler State
+  const [dolphinConfigs, setDolphinConfigs] = useState<DolphinSchedulerConfig[]>(() => {
+    const saved = localStorage.getItem('dolphin_configs');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [currentProject, setCurrentProject] = useState<DolphinSchedulerConfig | null>(null);
+
   // Persist activeTab
   useEffect(() => {
     localStorage.setItem('activeTab', activeTab);
@@ -198,6 +207,11 @@ export default function App() {
     localStorage.setItem('db_connections', JSON.stringify(connections));
   }, [connections]);
 
+  // Persist dolphin configs
+  useEffect(() => {
+    localStorage.setItem('dolphin_configs', JSON.stringify(dolphinConfigs));
+  }, [dolphinConfigs]);
+
   const handleAddConnection = (conn: Omit<DbConnection, 'id'>) => {
     setConnections(prev => [...prev, { ...conn, id: Date.now().toString() }]);
   };
@@ -206,6 +220,21 @@ export default function App() {
   };
   const handleDeleteConnection = (id: string) => {
     setConnections(prev => prev.filter(c => c.id !== id));
+  };
+
+  // Dolphin Config Handlers
+  const handleAddDolphinConfig = (config: Omit<DolphinSchedulerConfig, 'id'>) => {
+    setDolphinConfigs(prev => [...prev, { ...config, id: Date.now().toString() }]);
+  };
+  const handleUpdateDolphinConfig = (config: DolphinSchedulerConfig) => {
+    setDolphinConfigs(prev => prev.map(c => c.id === config.id ? config : c));
+  };
+  const handleDeleteDolphinConfig = (id: string) => {
+    setDolphinConfigs(prev => prev.filter(c => c.id !== id));
+    if (currentProject?.id === id) setCurrentProject(null);
+  };
+  const handleSelectProject = (config: DolphinSchedulerConfig) => {
+    setCurrentProject(config);
   };
 
   useEffect(() => {
@@ -319,7 +348,12 @@ export default function App() {
       case 'data-compare': return <DataCompareTool lang={lang} connections={connections} />; // New Route
       case 'excel-sql': return <ExcelToSql lang={lang} />;
       case 'seatunnel': return <SeatunnelGen lang={lang} connections={connections} onNavigate={handleNavigate} />;
+
       case 'field-mapping': return <FieldMappingTool lang={lang} connections={connections} onNavigate={handleNavigate} />;
+
+      // DolphinScheduler Routes
+      case 'dolphin-project': return <ProjectManager lang={lang} configs={dolphinConfigs} onAdd={handleAddDolphinConfig} onUpdate={handleUpdateDolphinConfig} onDelete={handleDeleteDolphinConfig} onNavigate={handleNavigate} onSelectProject={handleSelectProject} />;
+      case 'dolphin-task': return <TaskManager lang={lang} currentProject={currentProject} onNavigate={handleNavigate} />;
 
       case 'pdf-tools': return <PdfTools lang={lang} />;
       case 'time-tools': return <TimeUtility lang={lang} />;
