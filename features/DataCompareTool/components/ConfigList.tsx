@@ -124,12 +124,12 @@ export const ConfigList: React.FC<ConfigListProps> = ({
                     {/* Add New Card */}
                     <button
                         onClick={onNew}
-                        className="group bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-6 rounded-xl border-2 border-dashed border-blue-300 dark:border-blue-700 hover:border-blue-500 dark:hover:border-blue-500 hover:shadow-lg transition-all min-h-[140px] flex flex-col items-center justify-center"
+                        className="group bg-gradient-to-br from-blue-50/50 to-indigo-50/50 dark:from-blue-900/10 dark:to-indigo-900/10 p-6 rounded-2xl border-2 border-dashed border-blue-300 dark:border-blue-600 hover:border-blue-500 dark:hover:border-blue-500 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 min-h-[200px] flex flex-col items-center justify-center"
                     >
-                        <div className="w-14 h-14 rounded-full bg-blue-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                            <Plus size={28} className="text-white" />
+                        <div className="p-4 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 mb-4 group-hover:scale-110 transition-transform duration-300">
+                            <Plus size={32} />
                         </div>
-                        <span className="font-bold text-blue-600 dark:text-blue-400">
+                        <span className="font-bold text-lg text-slate-600 dark:text-slate-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                             {lang === 'zh' ? '新建对比配置' : 'New Compare Config'}
                         </span>
                     </button>

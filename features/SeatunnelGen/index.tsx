@@ -425,9 +425,11 @@ export const SeatunnelGen: React.FC<{
                 </Tooltip>
               ))}
 
-              <button onClick={handleCreateJob} className="flex flex-col items-center justify-center p-6 rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 text-slate-400 hover:text-purple-500 hover:border-purple-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all min-h-[180px]">
-                <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-3"><Plus size={24} /></div>
-                <span className="font-medium">{lang === 'zh' ? '创建新脚本任务' : 'Create New Job'}</span>
+              <button onClick={handleCreateJob} className="group flex flex-col items-center justify-center p-6 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-600 bg-gradient-to-br from-purple-50/50 to-indigo-50/50 dark:from-purple-900/10 dark:to-indigo-900/10 hover:border-purple-400 dark:hover:border-purple-500 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 cursor-pointer min-h-[200px]">
+                <div className="p-4 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform duration-300 mb-4">
+                  <Plus size={32} />
+                </div>
+                <span className="font-bold text-lg text-slate-600 dark:text-slate-300 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">{lang === 'zh' ? '创建新脚本任务' : 'Create New Job'}</span>
               </button>
             </div>
           ) : (

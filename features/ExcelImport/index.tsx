@@ -449,16 +449,14 @@ export const ExcelImport: React.FC<ExcelImportProps> = ({ lang, connections }) =
                         {/* New Import Card - 放在最后 */}
                         <div
                             onClick={handleNewImport}
-                            className="group relative p-6 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border-2 border-dashed border-slate-300 dark:border-slate-600 hover:border-green-400 dark:hover:border-green-500 hover:bg-green-50/10 transition-all duration-300 cursor-pointer overflow-hidden min-h-[200px] flex flex-col"
+                            className="group p-6 bg-gradient-to-br from-green-50/50 to-emerald-50/50 dark:from-green-900/10 dark:to-emerald-900/10 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-600 hover:border-green-400 dark:hover:border-green-500 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 cursor-pointer min-h-[200px] flex flex-col items-center justify-center"
                         >
-                            <div className="flex-1 flex flex-col items-center justify-center">
-                                <div className="p-4 rounded-full bg-green-50 dark:bg-slate-700/50 group-hover:bg-green-100 dark:group-hover:bg-green-900/30 text-green-500 group-hover:scale-110 transition-transform mb-4">
-                                    <Plus size={32} />
-                                </div>
-                                <span className="font-bold text-lg text-slate-600 dark:text-slate-300 group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors">
-                                    {lang === 'zh' ? '新建导入任务' : 'New Import Task'}
-                                </span>
+                            <div className="p-4 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 group-hover:scale-110 transition-transform duration-300 mb-4">
+                                <Plus size={32} />
                             </div>
+                            <span className="font-bold text-lg text-slate-600 dark:text-slate-300 group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors">
+                                {lang === 'zh' ? '新建导入任务' : 'New Import Task'}
+                            </span>
                         </div>
                     </div>
                 ) : (

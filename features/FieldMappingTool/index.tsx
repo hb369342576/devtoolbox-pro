@@ -152,17 +152,14 @@ export const FieldMappingTool: React.FC<{
                      {/* New Card */}
                      <div
                         onClick={handleNewProfile}
-                        className="p-6 bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 border-2 border-dashed border-indigo-300 dark:border-indigo-700 rounded-xl hover:shadow-md text-center cursor-pointer transition-all hover:border-indigo-500 dark:hover:border-indigo-500 flex flex-col items-center justify-center min-h-[200px]"
+                        className="group p-6 bg-gradient-to-br from-indigo-50/50 to-purple-50/50 dark:from-indigo-900/10 dark:to-purple-900/10 border-2 border-dashed border-indigo-300 dark:border-indigo-600 rounded-2xl hover:shadow-lg hover:border-indigo-500 dark:hover:border-indigo-500 hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col items-center justify-center min-h-[200px]"
                      >
-                        <div className="p-4 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 rounded-full mb-3">
+                        <div className="p-4 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-full mb-4 group-hover:scale-110 transition-transform duration-300">
                            <Plus size={32} />
                         </div>
-                        <h3 className="font-bold text-lg text-indigo-700 dark:text-indigo-300">
+                        <span className="font-bold text-lg text-slate-600 dark:text-slate-300 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                            {lang === 'zh' ? '新建项目' : 'New Project'}
-                        </h3>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                           {lang === 'zh' ? '点击创建新的映射项目' : 'Click to create a new mapping'}
-                        </p>
+                        </span>
                      </div>
                   </div>
                ) : (
