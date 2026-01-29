@@ -1,5 +1,5 @@
 import React from 'react';
-import { Moon, Sun, Monitor, Globe, Check } from 'lucide-react';
+import { Moon, Sun, Monitor, Globe, Check, Activity } from 'lucide-react';
 import { Language, Theme } from '../../types';
 
 interface SettingsProps {
@@ -7,13 +7,15 @@ interface SettingsProps {
     onLangChange: (lang: Language) => void;
     theme: Theme;
     onThemeChange: (theme: Theme) => void;
+    monitorEnabled: boolean;
+    onMonitorToggle: (enabled: boolean) => void;
 }
 
 /**
  * Settings 系统设置页面
  * 简单工具，无需拆分组件
  */
-export const Settings: React.FC<SettingsProps> = ({ lang, onLangChange, theme, onThemeChange }) => {
+export const Settings: React.FC<SettingsProps> = ({ lang, onLangChange, theme, onThemeChange, monitorEnabled, onMonitorToggle }) => {
     return (
         <div className="max-w-4xl mx-auto space-y-8">
             {/* Header */}
@@ -88,7 +90,7 @@ export const Settings: React.FC<SettingsProps> = ({ lang, onLangChange, theme, o
                 </div>
 
                 {/* Language Section */}
-                <div className="p-6">
+                <div className="p-6 border-b border-slate-200 dark:border-slate-700">
                     <div className="flex items-center space-x-3 mb-6">
                         <div className="p-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg">
                             <Globe size={20} />
@@ -135,6 +137,35 @@ export const Settings: React.FC<SettingsProps> = ({ lang, onLangChange, theme, o
                                 </div>
                             </div>
                             {lang === 'en' && <Check className="text-blue-500" size={20} />}
+                        </button>
+                    </div>
+                </div>
+
+                {/* System Monitor Section */}
+                <div className="p-6">
+                    <div className="flex items-center space-x-3 mb-6">
+                        <div className="p-2 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-lg">
+                            <Activity size={20} />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-800 dark:text-white">
+                            {lang === 'zh' ? '系统监控' : 'System Monitor'}
+                        </h3>
+                    </div>
+
+                    <div className="flex items-center justify-between p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
+                        <div>
+                            <p className="font-medium text-slate-800 dark:text-white">
+                                {lang === 'zh' ? '启用系统监控' : 'Enable System Monitor'}
+                            </p>
+                            <p className="text-xs text-slate-500 mt-1">
+                                {lang === 'zh' ? '显示 CPU、内存使用情况。关闭可减少资源占用' : 'Show CPU/Memory usage. Disable to save resources'}
+                            </p>
+                        </div>
+                        <button
+                            onClick={() => onMonitorToggle(!monitorEnabled)}
+                            className={`relative w-14 h-7 rounded-full transition-colors ${monitorEnabled ? 'bg-green-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                        >
+                            <div className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow transition-transform ${monitorEnabled ? 'left-8' : 'left-1'}`} />
                         </button>
                     </div>
                 </div>

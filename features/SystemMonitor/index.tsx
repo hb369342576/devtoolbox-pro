@@ -75,7 +75,7 @@ const formatUptime = (uptime: string, lang: Language): string => {
    return uptime; // 无法解析则返回原值
 };
 
-export const SystemMonitor: React.FC<{ lang: Language }> = ({ lang }) => {
+export const SystemMonitor: React.FC<{ lang: Language; enabled?: boolean }> = ({ lang, enabled = true }) => {
    const t = getTexts(lang);
    // Reliable check for Tauri v2
    const isTauri = !!(window as any).__TAURI_INTERNALS__ || !!(window as any).__TAURI__;
@@ -85,6 +85,9 @@ export const SystemMonitor: React.FC<{ lang: Language }> = ({ lang }) => {
    });
 
    useEffect(() => {
+      // 如果未启用，不进行任何数据获取
+      if (!enabled) return;
+      
       // 获取静态系统信息
       const fetchInfo = async () => {
          if (isTauri) {
@@ -127,7 +130,26 @@ export const SystemMonitor: React.FC<{ lang: Language }> = ({ lang }) => {
       }, 1000);
 
       return () => clearInterval(interval);
-   }, [isTauri]);
+   }, [isTauri, enabled]);
+
+   // 未启用时显示友好提示
+   if (!enabled) {
+      return (
+         <div className="h-full flex items-center justify-center">
+            <div className="text-center p-8 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+               <Activity size={48} className="mx-auto mb-4 text-slate-300 dark:text-slate-600" />
+               <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2">
+                  {lang === 'zh' ? '系统监控已关闭' : 'System Monitor Disabled'}
+               </h3>
+               <p className="text-sm text-slate-500 max-w-xs">
+                  {lang === 'zh' 
+                     ? '您可以在「设置」中开启系统监控功能，查看 CPU 和内存使用情况。' 
+                     : 'Enable System Monitor in Settings to view CPU and memory usage.'}
+               </p>
+            </div>
+         </div>
+      );
+   }
 
    return (
       <div className="h-full flex flex-col space-y-6">

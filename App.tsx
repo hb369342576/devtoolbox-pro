@@ -162,6 +162,10 @@ export default function App() {
     const saved = localStorage.getItem('theme');
     return (saved as Theme) || 'light';
   });
+  const [monitorEnabled, setMonitorEnabled] = useState<boolean>(() => {
+    const saved = localStorage.getItem('monitorEnabled');
+    return saved !== null ? JSON.parse(saved) : false; // 默认关闭
+  });
   const [user, setUser] = useState<User | null>(null);
 
   // Centralized Data Source State
@@ -201,6 +205,11 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('theme', theme);
   }, [theme]);
+
+  // Persist monitor enabled
+  useEffect(() => {
+    localStorage.setItem('monitorEnabled', JSON.stringify(monitorEnabled));
+  }, [monitorEnabled]);
 
   // Persist connections
   useEffect(() => {
@@ -281,8 +290,13 @@ export default function App() {
     localStorage.setItem('toolbox_user', JSON.stringify(updated));
   };
 
-  // Navigation Logic
-  const [expandedMenus, setExpandedMenus] = useState<string[]>(['data-dev']);
+  // Navigation Logic - 只展开当前激活页面的父菜单
+  const [expandedMenus, setExpandedMenus] = useState<string[]>(() => {
+    // 获取当前 activeTab 的父菜单ID
+    const saved = localStorage.getItem('activeTab') || 'dashboard';
+    const parentOfActive = NAV_ITEMS.find(item => item.children?.some(child => child.id === saved));
+    return parentOfActive ? [parentOfActive.id] : [];
+  });
 
   const handleToggleMenu = (id: string) => {
     setExpandedMenus(prev =>
@@ -353,13 +367,13 @@ export default function App() {
 
       // DolphinScheduler Routes
       case 'dolphin-project': return <ProjectManager lang={lang} configs={dolphinConfigs} onAdd={handleAddDolphinConfig} onUpdate={handleUpdateDolphinConfig} onDelete={handleDeleteDolphinConfig} onNavigate={handleNavigate} onSelectProject={handleSelectProject} />;
-      case 'dolphin-task': return <TaskManager lang={lang} currentProject={currentProject} onNavigate={handleNavigate} />;
+      case 'dolphin-task': return <TaskManager lang={lang} currentProject={currentProject} configs={dolphinConfigs} onSelectProject={handleSelectProject} onNavigate={handleNavigate} />;
 
       case 'pdf-tools': return <PdfTools lang={lang} />;
       case 'time-tools': return <TimeUtility lang={lang} />;
-      case 'monitor': return <SystemMonitor lang={lang} />;
+      case 'monitor': return <SystemMonitor lang={lang} enabled={monitorEnabled} />;
       case 'profile': return <UserProfile user={user} onUpdate={handleUserUpdate} lang={lang} />;
-      case 'settings': return <Settings lang={lang} onLangChange={setLang} theme={theme} onThemeChange={setTheme} />;
+      case 'settings': return <Settings lang={lang} onLangChange={setLang} theme={theme} onThemeChange={setTheme} monitorEnabled={monitorEnabled} onMonitorToggle={setMonitorEnabled} />;
       default: return null;
     }
   };
