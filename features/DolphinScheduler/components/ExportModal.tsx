@@ -10,25 +10,26 @@ interface ExportModalProps {
     lang: Language;
     processes: ProcessDefinition[];
     projectCode: string;
+    projectName: string;
     baseUrl: string;
     token: string;
     onClose: () => void;
 }
 
-export const ExportModal: React.FC<ExportModalProps> = ({ show, lang, processes, projectCode, baseUrl, token, onClose }) => {
+export const ExportModal: React.FC<ExportModalProps> = ({ show, lang, processes, projectCode, projectName, baseUrl, token, onClose }) => {
     const { toast } = useToast();
     const [exporting, setExporting] = useState(false);
     const [selectedCodes, setSelectedCodes] = useState<number[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
-    const [fileName, setFileName] = useState(`workflows_export_${new Date().toISOString().slice(0, 10)}`);
+    const [fileName, setFileName] = useState(projectName || 'workflows_export');
     
     useEffect(() => {
         if (show) {
             setSelectedCodes([]);
             setSearchTerm('');
-            setFileName(`workflows_export_${new Date().toISOString().slice(0, 10)}`);
+            setFileName(projectName || 'workflows_export');
         }
-    }, [show]);
+    }, [show, projectName]);
     
     if (!show) return null;
     
@@ -111,16 +112,14 @@ export const ExportModal: React.FC<ExportModalProps> = ({ show, lang, processes,
                         />
                     </div>
                     <div>
-                        <label className="text-xs font-medium text-slate-500 block mb-1">{lang === 'zh' ? '导出文件名' : 'Export File Name'}</label>
-                        <div className="flex items-center">
-                            <input 
-                                type="text" 
-                                value={fileName} 
-                                onChange={e => setFileName(e.target.value)} 
-                                className="flex-1 px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-l-lg text-sm focus:ring-2 focus:ring-purple-500 outline-none" 
-                            />
-                            <span className="px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-l-0 border-slate-200 dark:border-slate-700 rounded-r-lg text-sm text-slate-500">.json</span>
-                        </div>
+                        <label className="text-xs font-medium text-slate-500 block mb-1">{lang === 'zh' ? '导出目录名' : 'Export Folder Name'}</label>
+                        <input 
+                            type="text" 
+                            value={fileName} 
+                            onChange={e => setFileName(e.target.value)} 
+                            className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 outline-none" 
+                            placeholder={lang === 'zh' ? '导出文件夹名称' : 'Export folder name'}
+                        />
                     </div>
                     <div className="flex items-center justify-between">
                         <span className="text-xs text-slate-500">{lang === 'zh' ? `共 ${processes.length} 个工作流` : `${processes.length} workflows total`}</span>

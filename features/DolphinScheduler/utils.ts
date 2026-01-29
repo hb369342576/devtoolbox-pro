@@ -13,6 +13,21 @@ export const exportWorkflowsToLocal = async (
 ) => {
     let successCount = 0;
     const isBatch = items.length > 1;
+    
+    // 统一路径分隔符（Windows 使用反斜杠）
+    const normalizePath = (path: string) => path.replace(/\//g, '\\');
+    const joinPath = (...parts: string[]) => normalizePath(parts.join('/'));
+
+    // 先创建批量导出的主目录
+    if (isBatch && batchName) {
+        const batchDir = joinPath(baseDir, batchName);
+        try {
+            await mkdir(batchDir, { recursive: true });
+            console.log('[Export] Created batch directory:', batchDir);
+        } catch (e) {
+            console.log('[Export] Create batch dir result:', e);
+        }
+    }
 
     for (let i = 0; i < items.length; i++) {
         const item = items[i];
@@ -32,12 +47,15 @@ export const exportWorkflowsToLocal = async (
             // 批量: {baseDir}/{batchName}/{workflowName}/
             // 单个: {baseDir}/{workflowName}/
             const workflowDir = isBatch 
-                ? `${baseDir}/${batchName}/${workflowName}`
-                : `${baseDir}/${workflowName}`;
+                ? joinPath(baseDir, batchName, workflowName)
+                : joinPath(baseDir, workflowName);
 
+            // 确保目录存在
             try {
                 await mkdir(workflowDir, { recursive: true });
-            } catch (e) { }
+            } catch (e) {
+                console.log('[Export] mkdir result:', e);
+            }
 
             // 解析并分离文件
             const tasks = workflowData.taskDefinitionList || [];
@@ -65,7 +83,8 @@ export const exportWorkflowsToLocal = async (
                 // 分离 SQL
                 if (taskType === 'SQL' && taskParams.sql) {
                     const sqlFileName = `${taskName}.sql`;
-                    await writeTextFile(`${workflowDir}/${sqlFileName}`, taskParams.sql);
+                    const sqlFilePath = joinPath(workflowDir, sqlFileName);
+                    await writeTextFile(sqlFilePath, taskParams.sql);
                     
                     // 在 JSON 中标记并在 taskParams 中清除内容以免冗余（或者保留引用）
                     taskCopy.sqlFile = sqlFileName;
@@ -74,7 +93,8 @@ export const exportWorkflowsToLocal = async (
                 // 分离 SeaTunnel
                 else if (taskType === 'SEATUNNEL' && taskParams.rawScript) {
                     const confFileName = `${taskName}.conf`;
-                    await writeTextFile(`${workflowDir}/${confFileName}`, taskParams.rawScript);
+                    const confFilePath = joinPath(workflowDir, confFileName);
+                    await writeTextFile(confFilePath, taskParams.rawScript);
                     
                     taskCopy.configFile = confFileName;
                     taskParams.rawScript = `Ref: ${confFileName}`;
@@ -83,8 +103,9 @@ export const exportWorkflowsToLocal = async (
                 simplifiedWorkflow.tasks.push(taskCopy);
             }
 
+            const workflowJsonPath = joinPath(workflowDir, 'workflow.json');
             await writeTextFile(
-                `${workflowDir}/workflow.json`, 
+                workflowJsonPath, 
                 JSON.stringify(simplifiedWorkflow, null, 2)
             );
 

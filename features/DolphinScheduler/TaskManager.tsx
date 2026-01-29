@@ -627,6 +627,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                 lang={lang}
                 processes={processes}
                 projectCode={projectCode}
+                projectName={currentProject?.projectName || currentProject?.name || ''}
                 baseUrl={baseUrl}
                 token={token}
                 onClose={() => setShowExport(false)}
