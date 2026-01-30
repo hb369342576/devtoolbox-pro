@@ -207,7 +207,18 @@ export const LogModal: React.FC<LogModalProps> = ({ show, lang, projectCode, bas
                         <Eye size={20} className="mr-2 text-blue-500" />
                         {lang === 'zh' ? '运行日志' : 'Run Logs'}
                     </h3>
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1"><XCircle size={20} /></button>
+                    <div className="flex items-center space-x-2">
+                        <Tooltip content={lang === 'zh' ? '刷新列表' : 'Refresh'} position="bottom">
+                            <button 
+                                onClick={() => fetchInstances()} 
+                                disabled={loading}
+                                className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400 disabled:opacity-50"
+                            >
+                                <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+                            </button>
+                        </Tooltip>
+                        <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1"><XCircle size={20} /></button>
+                    </div>
                 </div>
                 
                 <div ref={containerRef} className={`flex flex-1 overflow-hidden ${isDragging ? 'select-none' : ''}`}>

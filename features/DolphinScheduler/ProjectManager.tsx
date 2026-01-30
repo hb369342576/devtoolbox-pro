@@ -35,6 +35,7 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({
     const [editingConfig, setEditingConfig] = useState<Partial<DolphinSchedulerConfig>>({});
     const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean, id: string }>({ isOpen: false, id: '' });
     const [testStatus, setTestStatus] = useState<'none' | 'testing' | 'success' | 'failed'>('none');
+    const [testErrorMsg, setTestErrorMsg] = useState<string>('');
 
     const handleAddNew = () => {
         setEditingConfig({
@@ -77,21 +78,73 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({
     };
 
     const handleCardClick = (config: DolphinSchedulerConfig) => {
-        onSelectProject(config);
-        onNavigate('dolphin-task');
+        // 点击卡片打开编辑界面
+        handleEdit(config);
     };
 
     const handleTestConnection = async () => {
+        if (!editingConfig.baseUrl || !editingConfig.token) return;
+        
         setTestStatus('testing');
-        // 模拟测试连接
-        setTimeout(() => {
-            if (Math.random() > 0.2) {
-                setTestStatus('success');
-            } else {
-                setTestStatus('failed');
+        setTestErrorMsg('');
+        try {
+            // 调用 DolphinScheduler API 获取项目列表来验证连接
+            const searchVal = editingConfig.projectName ? encodeURIComponent(editingConfig.projectName) : '';
+            const url = `${editingConfig.baseUrl}/projects?pageNo=1&pageSize=100${searchVal ? `&searchVal=${searchVal}` : ''}`;
+            
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: { 'token': editingConfig.token }
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
             }
-            setTimeout(() => setTestStatus('none'), 3000);
-        }, 1500);
+            
+            const result = await response.json();
+            
+            if (result.code === 0) {
+                // 如果填写了项目名，尝试匹配并自动填充项目编码
+                if (editingConfig.projectName && result.data?.totalList) {
+                    const project = result.data.totalList.find(
+                        (p: any) => p.name === editingConfig.projectName
+                    );
+                    if (project) {
+                        // 自动填充项目编码
+                        setEditingConfig(prev => ({ 
+                            ...prev, 
+                            projectCode: String(project.code) 
+                        }));
+                        setTestStatus('success');
+                        setTestErrorMsg('');
+                    } else {
+                        // 项目名不存在
+                        setTestStatus('failed');
+                        setTestErrorMsg(lang === 'zh' ? `项目 "${editingConfig.projectName}" 不存在` : `Project "${editingConfig.projectName}" not found`);
+                    }
+                } else {
+                    // 没有填项目名，只验证连接
+                    setTestStatus('success');
+                    setTestErrorMsg('');
+                }
+            } else {
+                throw new Error(result.msg || 'API error');
+            }
+        } catch (err: any) {
+            console.error('[ProjectManager] Test connection failed:', err);
+            setTestStatus('failed');
+            // 根据错误类型显示友好提示
+            if (err.message?.includes('Failed to fetch') || err.message?.includes('NetworkError')) {
+                setTestErrorMsg(lang === 'zh' ? '无法连接服务器，请检查地址' : 'Cannot connect to server');
+            } else {
+                setTestErrorMsg(err.message || (lang === 'zh' ? '连接失败' : 'Connection failed'));
+            }
+        }
+        
+        setTimeout(() => {
+            setTestStatus('none');
+            setTestErrorMsg('');
+        }, 5000);
     };
 
     const isFormValid = !!(editingConfig.name && editingConfig.baseUrl && editingConfig.token);
@@ -308,7 +361,7 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({
                                 <span>
                                     {testStatus === 'testing' ? (lang === 'zh' ? '测试中...' : 'Testing...') :
                                         testStatus === 'success' ? (lang === 'zh' ? '连接成功' : 'Success') :
-                                            testStatus === 'failed' ? (lang === 'zh' ? '连接失败' : 'Failed') :
+                                            testStatus === 'failed' ? (testErrorMsg || (lang === 'zh' ? '连接失败' : 'Failed')) :
                                                 (lang === 'zh' ? '测试连接' : 'Test Connection')}
                                 </span>
                             </button>

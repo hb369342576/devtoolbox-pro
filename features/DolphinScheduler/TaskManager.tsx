@@ -192,15 +192,24 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
         }
     }, [currentProject, fetchProcessDefinitions]);
 
+    // 当项目切换时，重置状态
+    const currentProjectId = currentProject?.id;
+    useEffect(() => {
+        // 切换项目时，先清空列表和重置 projectCode
+        setProcesses([]);
+        setResolvedProjectCode('');
+        setPageNo(1);
+        setSearchTerm('');
+    }, [currentProjectId]);
+
     useEffect(() => {
         if (currentProject) {
-            // 重置解析的 projectCode
-            setResolvedProjectCode(currentProject.projectCode || '');
             resolveProjectCodeAndFetch();
         } else {
             setResolvedProjectCode('');
+            setProcesses([]);
         }
-    }, [currentProject, pageNo, searchTerm]);
+    }, [currentProject, pageNo, searchTerm, resolveProjectCodeAndFetch]);
 
     // 刷新
     const handleRefresh = () => {
@@ -405,19 +414,6 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                                 <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 to-purple-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
                             </div>
                         ))}
-                        
-                        {/* 新增项目卡片 */}
-                        <div
-                            onClick={() => onNavigate('dolphin-project')}
-                            className="group relative bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-600 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-all duration-300 cursor-pointer flex flex-col items-center justify-center min-h-[200px]"
-                        >
-                            <div className="w-14 h-14 bg-slate-200 dark:bg-slate-700 rounded-full flex items-center justify-center text-slate-400 group-hover:bg-blue-100 group-hover:text-blue-500 dark:group-hover:bg-blue-900/50 dark:group-hover:text-blue-400 transition-all duration-300 group-hover:scale-110 mb-3">
-                                <Plus size={28} />
-                            </div>
-                            <span className="text-sm font-medium text-slate-500 dark:text-slate-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                                {lang === 'zh' ? '添加项目' : 'Add Project'}
-                            </span>
-                        </div>
                     </div>
                 </div>
                 
