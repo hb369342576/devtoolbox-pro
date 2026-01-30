@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Power, XCircle, Search, Loader2 } from 'lucide-react';
+import { httpFetch } from '../../../utils/http';
 import { useToast } from '../../../components/ui/Toast';
 import { Language, ProcessDefinition } from '../types';
 
@@ -57,7 +58,7 @@ export const BatchPublishModal: React.FC<BatchPublishModalProps> = ({ show, lang
         for (const code of selectedCodes) {
             try {
                 const url = `${baseUrl}/projects/${projectCode}/process-definition/${code}/release`;
-                const response = await fetch(url, {
+                const response = await httpFetch(url, {
                     method: 'POST',
                     headers: { 'token': token, 'Content-Type': 'application/x-www-form-urlencoded' },
                     body: `releaseState=${action}`

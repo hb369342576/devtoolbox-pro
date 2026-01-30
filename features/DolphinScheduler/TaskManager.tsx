@@ -9,6 +9,7 @@ import { getTexts } from '../../locales';
 import { Tooltip } from '../../components/ui/Tooltip';
 import { useToast } from '../../components/ui/Toast';
 import { save, open } from '@tauri-apps/plugin-dialog';
+import { httpFetch } from '../../utils/http';
 import { readDir } from '@tauri-apps/plugin-fs';
 import { exportWorkflowsToLocal, readWorkflowFromDir } from './utils';
 import { ProcessDefinition } from './types';
@@ -137,7 +138,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
         setError(null);
         try {
             const url = `${baseUrl}/projects/${projectCodeParam}/process-definition?pageNo=${pageNo}&pageSize=${pageSize}&searchVal=${encodeURIComponent(searchTerm)}`;
-            const response = await fetch(url, {
+            const response = await httpFetch(url, {
                 method: 'GET',
                 headers: { 'token': token }
             });
@@ -170,7 +171,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
         if (!code && currentProject.projectName) {
             try {
                 const listUrl = `${currentProject.baseUrl}/projects?pageNo=1&pageSize=100&searchVal=${encodeURIComponent(currentProject.projectName)}`;
-                const response = await fetch(listUrl, {
+                const response = await httpFetch(listUrl, {
                     method: 'GET',
                     headers: { 'token': currentProject.token }
                 });
@@ -228,7 +229,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
             const url = `${baseUrl}/projects/${projectCode}/process-definition/${process.code}/release`;
             console.log('[DolphinScheduler] Toggle online URL:', url, 'newState:', newState);
             
-            const response = await fetch(url, {
+            const response = await httpFetch(url, {
                 method: 'POST',
                 headers: { 
                     'token': token, 
@@ -266,7 +267,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
             const url = `${baseUrl}/projects/${projectCode}/process-definition/batch-copy`;
             console.log('[DolphinScheduler] Copy workflow URL:', url, 'codes:', process.code);
             
-            const response = await fetch(url, {
+            const response = await httpFetch(url, {
                 method: 'POST',
                 headers: { 
                     'token': token, 
@@ -521,6 +522,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                         <div className="overflow-auto flex-1">
                             <table className="w-full text-sm" style={{ tableLayout: 'fixed' }}>
                                 <colgroup>
+                                    <col style={{ width: '50px' }} />
                                     <col style={{ width: columnWidths.name }} />
                                     <col style={{ width: columnWidths.version }} />
                                     <col style={{ width: columnWidths.state }} />
@@ -530,6 +532,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                                 </colgroup>
                                 <thead className="bg-slate-50 dark:bg-slate-900/50 sticky top-0">
                                     <tr className="text-center text-slate-500 dark:text-slate-400">
+                                        <th className="px-2 py-3 font-medium w-12 text-center">#</th>
                                         <th className="px-4 py-3 font-medium relative text-left">
                                             {lang === 'zh' ? '名称' : 'Name'}
                                             <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-purple-400 active:bg-purple-500" onMouseDown={e => handleResizeStart(e, 'name')} />
@@ -554,8 +557,9 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                                    {filteredProcesses.map(process => (
+                                    {filteredProcesses.map((process, index) => (
                                         <tr key={process.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                                            <td className="px-2 py-3 text-center text-slate-400 text-xs">{(pageNo - 1) * pageSize + index + 1}</td>
                                             <td className="px-4 py-3">
                                                 <button 
                                                     onClick={() => setDetailProcess(process)}

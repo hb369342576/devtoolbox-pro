@@ -1,5 +1,6 @@
 import { save, open } from '@tauri-apps/plugin-dialog';
 import { mkdir, writeTextFile, readTextFile, readDir } from '@tauri-apps/plugin-fs';
+import { httpFetch } from '../../utils/http';
 
 // 导出核心逻辑
 export const exportWorkflowsToLocal = async (
@@ -35,7 +36,7 @@ export const exportWorkflowsToLocal = async (
 
         try {
             const url = `${baseUrl}/projects/${projectCode}/process-definition/${item.code}`;
-            const response = await fetch(url, { headers: { 'token': token } });
+            const response = await httpFetch(url, { headers: { 'token': token } });
             const result = await response.json();
 
             if (result.code !== 0 || !result.data) continue;

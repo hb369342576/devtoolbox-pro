@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Timer, XCircle, Loader2 } from 'lucide-react';
+import { httpFetch } from '../../../utils/http';
 import { useToast } from '../../../components/ui/Toast';
 import { Language, ProcessDefinition } from '../types';
 
@@ -44,7 +45,7 @@ export const ScheduleModal: React.FC<ScheduleModalProps> = ({ process, lang, pro
                 environmentCode: ''
             });
             
-            const response = await fetch(url, {
+            const response = await httpFetch(url, {
                 method: 'POST',
                 headers: { 'token': token, 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: params.toString()

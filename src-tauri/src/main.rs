@@ -478,6 +478,67 @@ fn get_download_dir() -> Result<String, String> {
         .ok_or_else(|| "Could not find download directory".to_string())
 }
 
+// HTTP 请求响应结构
+#[derive(Debug, Serialize)]
+struct HttpResponse {
+    status: u16,
+    body: String,
+    headers: std::collections::HashMap<String, String>,
+}
+
+// 通用 HTTP 请求命令 - 绕过 CORS 限制
+#[tauri::command]
+async fn http_request(
+    url: String,
+    method: String,
+    headers: Option<std::collections::HashMap<String, String>>,
+    body: Option<String>,
+) -> Result<HttpResponse, String> {
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(30))
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let mut request = match method.to_uppercase().as_str() {
+        "GET" => client.get(&url),
+        "POST" => client.post(&url),
+        "PUT" => client.put(&url),
+        "DELETE" => client.delete(&url),
+        "PATCH" => client.patch(&url),
+        _ => return Err(format!("Unsupported HTTP method: {}", method)),
+    };
+
+    // 添加请求头
+    if let Some(hdrs) = headers {
+        for (key, value) in hdrs {
+            request = request.header(&key, &value);
+        }
+    }
+
+    // 添加请求体
+    if let Some(b) = body {
+        request = request.body(b);
+    }
+
+    let response = request.send().await.map_err(|e| e.to_string())?;
+    
+    let status = response.status().as_u16();
+    let mut resp_headers = std::collections::HashMap::new();
+    for (key, value) in response.headers() {
+        if let Ok(v) = value.to_str() {
+            resp_headers.insert(key.to_string(), v.to_string());
+        }
+    }
+    
+    let body = response.text().await.map_err(|e| e.to_string())?;
+
+    Ok(HttpResponse {
+        status,
+        body,
+        headers: resp_headers,
+    })
+}
+
 fn main() {
     let state = AppState {
         sys: Mutex::new(System::new_all()),
@@ -501,7 +562,8 @@ fn main() {
             process_pdf,
             save_file,
             open_explorer,
-            get_download_dir
+            get_download_dir,
+            http_request
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

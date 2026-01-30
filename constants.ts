@@ -13,7 +13,9 @@ import {
   GitCompare,
   CalendarClock,
   FolderKanban,
-  ListTodo
+  ListTodo,
+  Server,
+  Activity
 } from 'lucide-react';
 import { NavItem, Language } from './types';
 
@@ -134,6 +136,36 @@ export const NAV_ITEMS: NavItem[] = [
         label: { en: 'Task Manager', zh: '任务管理' },
         tooltip: { en: 'Manage DolphinScheduler tasks', zh: '管理 DolphinScheduler 任务' },
         icon: ListTodo,
+        category: 'db',
+        order: 2,
+        visible: true
+      }
+    ]
+  },
+
+  {
+    id: 'seatunnel-manager',
+    label: { en: 'SeaTunnel Manager', zh: 'SeaTunnel 管理' },
+    tooltip: { en: 'SeaTunnel engine and job management', zh: 'SeaTunnel 引擎和作业管理' },
+    icon: Server,
+    category: 'db',
+    order: 7,
+    visible: true,
+    children: [
+      {
+        id: 'seatunnel-engine',
+        label: { en: 'Engine Manager', zh: '引擎管理' },
+        tooltip: { en: 'Manage SeaTunnel engine configurations', zh: '管理 SeaTunnel 引擎配置' },
+        icon: Server,
+        category: 'db',
+        order: 1,
+        visible: true
+      },
+      {
+        id: 'seatunnel-job',
+        label: { en: 'Job Manager', zh: '作业管理' },
+        tooltip: { en: 'Monitor and manage SeaTunnel jobs', zh: '监控和管理 SeaTunnel 作业' },
+        icon: Activity,
         category: 'db',
         order: 2,
         visible: true

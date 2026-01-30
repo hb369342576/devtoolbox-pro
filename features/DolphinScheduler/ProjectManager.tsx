@@ -6,6 +6,7 @@ import {
 import { Language, DolphinSchedulerConfig } from '../../types';
 import { getTexts } from '../../locales';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
+import { httpFetch } from '../../utils/http';
 import { Tooltip } from '../../components/ui/Tooltip';
 import { ViewModeToggle } from '../../components/shared/ViewModeToggle';
 import { useViewMode } from '../../store/globalStore';
@@ -92,7 +93,7 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({
             const searchVal = editingConfig.projectName ? encodeURIComponent(editingConfig.projectName) : '';
             const url = `${editingConfig.baseUrl}/projects?pageNo=1&pageSize=100${searchVal ? `&searchVal=${searchVal}` : ''}`;
             
-            const response = await fetch(url, {
+            const response = await httpFetch(url, {
                 method: 'GET',
                 headers: { 'token': editingConfig.token }
             });

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { PlayCircle, XCircle, Loader2 } from 'lucide-react';
+import { httpFetch } from '../../../utils/http';
 import { useToast } from '../../../components/ui/Toast';
 import { Language, ProcessDefinition } from '../types';
 
@@ -47,7 +48,7 @@ export const RunModal: React.FC<RunModalProps> = ({ process, lang, projectCode, 
             
             console.log('[DolphinScheduler] Running workflow:', url);
             
-            const response = await fetch(url, {
+            const response = await httpFetch(url, {
                 method: 'POST',
                 headers: { 
                     'token': token, 

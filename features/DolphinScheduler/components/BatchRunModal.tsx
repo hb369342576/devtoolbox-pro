@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { PlayCircle, XCircle, Search, Loader2 } from 'lucide-react';
+import { httpFetch } from '../../../utils/http';
 import { useToast } from '../../../components/ui/Toast';
 import { Language, ProcessDefinition } from '../types';
 
@@ -62,7 +63,7 @@ export const BatchRunModal: React.FC<BatchRunModalProps> = ({ show, lang, proces
                     dryRun: '0',
                     complementDependentMode: 'OFF_MODE'
                 });
-                const response = await fetch(url, {
+                const response = await httpFetch(url, {
                     method: 'POST',
                     headers: { 'token': token, 'Content-Type': 'application/x-www-form-urlencoded' },
                     body: params.toString()

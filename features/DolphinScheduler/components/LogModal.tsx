@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Eye, XCircle, Search, Loader2, Tag, RefreshCw } from 'lucide-react';
+import { httpFetch } from '../../../utils/http';
 import { useToast } from '../../../components/ui/Toast';
 import { Tooltip } from '../../../components/ui/Tooltip';
 import { Language, ProcessInstance } from '../types';
@@ -65,7 +66,7 @@ export const LogModal: React.FC<LogModalProps> = ({ show, lang, projectCode, bas
         setLoading(true);
         try {
             const url = `${baseUrl}/projects/${projectCode}/process-instances?pageNo=${pageNo}&pageSize=${pageSize}`;
-            const response = await fetch(url, { headers: { 'token': token } });
+            const response = await httpFetch(url, { headers: { 'token': token } });
             const result = await response.json();
             if (result.code === 0) {
                 setInstances(result.data?.totalList || []);
@@ -86,7 +87,7 @@ export const LogModal: React.FC<LogModalProps> = ({ show, lang, projectCode, bas
         setLogContent('');
         try {
             const taskUrl = `${baseUrl}/projects/${projectCode}/task-instances?processInstanceId=${instance.id}&pageNo=1&pageSize=100`;
-            const taskResponse = await fetch(taskUrl, { 
+            const taskResponse = await httpFetch(taskUrl, { 
                 method: 'GET',
                 headers: { 
                     'token': token,
@@ -136,7 +137,7 @@ export const LogModal: React.FC<LogModalProps> = ({ show, lang, projectCode, bas
                             while (hasMore && fetchCount < maxFetch) {
                                 fetchCount++;
                                 const logUrl = `${baseUrl}/log/detail?taskInstanceId=${taskId}&limit=${limit}&skipLineNum=${skipLineNum}`;
-                                const logResponse = await fetch(logUrl, { headers: { 'token': token } });
+                                const logResponse = await httpFetch(logUrl, { headers: { 'token': token } });
                                 const logResult = await logResponse.json();
                                 
                                 if (logResult.code === 0 && logResult.data) {
