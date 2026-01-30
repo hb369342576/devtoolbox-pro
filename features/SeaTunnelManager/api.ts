@@ -169,6 +169,39 @@ const zetaApiV1 = {
             return { success: false, error: err.message };
         }
     },
+
+    // 获取作业日志
+    async getJobLog(baseUrl: string, jobId: string): Promise<ApiResponse<string>> {
+        try {
+            // 尝试多种可能的日志 API 端点
+            const endpoints = [
+                `${baseUrl}/hazelcast/rest/maps/logs/${jobId}`,
+                `${baseUrl}/hazelcast/rest/maps/log/${jobId}`,
+                `${baseUrl}/hazelcast/rest/maps/job-log/${jobId}`,
+            ];
+            
+            for (const url of endpoints) {
+                try {
+                    const response = await httpFetch(url, { method: 'GET' });
+                    if (response.ok) {
+                        const text = await response.text();
+                        if (text && text.trim()) {
+                            return { success: true, data: text };
+                        }
+                    }
+                } catch {
+                    // 继续尝试下一个端点
+                }
+            }
+            
+            return { 
+                success: false, 
+                error: 'SeaTunnel Zeta API 暂不支持日志查询，日志存储在服务器本地 logs/ 目录' 
+            };
+        } catch (err: any) {
+            return { success: false, error: err.message };
+        }
+    },
 };
 
 // ============ Zeta Engine API V2 (Jetty REST) ============
@@ -506,5 +539,17 @@ export const seaTunnelApi = {
             return getZetaApi(config.apiVersion).getJobInfo(config.baseUrl, jobId);
         }
         return { success: false, error: 'Engine does not support job info API' };
+    },
+
+    // 获取作业日志 (仅 Zeta 支持)
+    async getJobLog(config: SeaTunnelEngineConfig, jobId: string): Promise<ApiResponse<string>> {
+        if (config.engineType === 'zeta') {
+            const api = getZetaApi(config.apiVersion);
+            // 只有 v1 API 可能支持日志
+            if ('getJobLog' in api) {
+                return (api as typeof zetaApiV1).getJobLog(config.baseUrl, jobId);
+            }
+        }
+        return { success: false, error: 'Engine does not support log API' };
     },
 };

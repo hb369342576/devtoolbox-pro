@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Language, DbConnection, ScriptJob, JobConfig } from '../../types';
 import {
   Workflow, Plus, Trash2, ChevronLeft, Save, X,
-  ArrowRight, Database, Play, Settings, Plug, Search, Check
+  ArrowRight, Database, Play, Settings, Plug, Search, Check, Upload, FileJson
 } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { TableInfo, ColumnInfo, TableDetail } from '../../types';
@@ -12,6 +12,9 @@ import { useViewMode } from '../../store/globalStore';
 import { generateConfig } from './utils/configGenerator';
 import { useToast } from '../../components/ui/Toast';
 import { Tooltip } from '../../components/ui/Tooltip';
+import { SeaTunnelEngineConfig } from '../SeaTunnelManager/types';
+import { seaTunnelApi } from '../SeaTunnelManager/api';
+import { convertToJson } from '../../utils/hoconParser';
 
 // 数据源选择弹窗
 const DataSourceSelectorModal: React.FC<{
@@ -111,6 +114,15 @@ export const SeatunnelGen: React.FC<{
 
   // 删除确认状态
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; jobId: string }>({ isOpen: false, jobId: '' });
+
+  // SeaTunnel 引擎配置
+  const [engines, setEngines] = useState<SeaTunnelEngineConfig[]>(() => {
+    const saved = localStorage.getItem('seatunnel_engine_configs');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [selectedEngineId, setSelectedEngineId] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [configPanelHeight, setConfigPanelHeight] = useState(300);
 
   // Auto-load databases and tables when entering a job
   useEffect(() => {
@@ -505,7 +517,18 @@ export const SeatunnelGen: React.FC<{
             className="font-bold text-lg text-slate-800 dark:text-white bg-transparent outline-none border-b border-transparent focus:border-purple-500 transition-colors"
           />
         </div>
-        <div className="flex space-x-2">
+        <div className="flex items-center space-x-3">
+          {/* 项目选择 */}
+          <select
+            value={selectedEngineId}
+            onChange={(e) => setSelectedEngineId(e.target.value)}
+            className="px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm outline-none focus:ring-2 focus:ring-purple-500"
+          >
+            <option value="">{lang === 'zh' ? '-- 选择项目 --' : '-- Select Project --'}</option>
+            {engines.filter(e => e.engineType === 'zeta').map(engine => (
+              <option key={engine.id} value={engine.id}>{engine.name}</option>
+            ))}
+          </select>
           <button
             onClick={handleGenerateConfig}
             disabled={isGenerating || !activeJob.source.host || !activeJob.sink.host}
@@ -513,6 +536,52 @@ export const SeatunnelGen: React.FC<{
           >
             <Play size={16} className="mr-2" />
             {isGenerating ? (lang === 'zh' ? '生成中...' : 'Generating...') : (lang === 'zh' ? '生成预览' : 'Generate')}
+          </button>
+          <button
+            onClick={async () => {
+              if (!generatedConfig || !selectedEngineId) return;
+              const engine = engines.find(e => e.id === selectedEngineId);
+              if (!engine) return;
+              
+              setIsSubmitting(true);
+              try {
+                // 转换为 JSON
+                const convertResult = convertToJson(generatedConfig);
+                if (convertResult.error) {
+                  throw new Error(convertResult.error);
+                }
+                const result = await seaTunnelApi.submitJob(engine, {
+                  jobName: activeJob.name,
+                  config: convertResult.json
+                });
+                if (result.success) {
+                  toast({
+                    title: lang === 'zh' ? '提交成功' : 'Submit Success',
+                    description: `Job ID: ${result.data}`,
+                    variant: 'success'
+                  });
+                } else {
+                  toast({
+                    title: lang === 'zh' ? '提交失败' : 'Submit Failed',
+                    description: result.error,
+                    variant: 'destructive'
+                  });
+                }
+              } catch (err: any) {
+                toast({
+                  title: lang === 'zh' ? '提交失败' : 'Submit Failed',
+                  description: err.message,
+                  variant: 'destructive'
+                });
+              } finally {
+                setIsSubmitting(false);
+              }
+            }}
+            disabled={!generatedConfig || !selectedEngineId || isSubmitting}
+            className="px-4 py-2 bg-cyan-600 text-white rounded-lg font-medium flex items-center shadow-lg hover:bg-cyan-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Upload size={16} className="mr-2" />
+            {isSubmitting ? (lang === 'zh' ? '提交中...' : 'Submitting...') : (lang === 'zh' ? '提交作业' : 'Submit')}
           </button>
         </div>
       </div>
@@ -525,7 +594,7 @@ export const SeatunnelGen: React.FC<{
               <span className="font-bold text-blue-700 dark:text-blue-300 flex items-center"><Database size={16} className="mr-2" /> Source</span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-slate-200 dark:divide-slate-700 h-[400px]">
+            <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-slate-200 dark:divide-slate-700 h-[210px]">
               {/* Left: Connection & DB Select */}
               <div className="p-5 flex flex-col space-y-6 bg-slate-50/50 dark:bg-slate-900/20">
                 {/* Source Connection Select */}
@@ -634,7 +703,7 @@ export const SeatunnelGen: React.FC<{
               <span className="font-bold text-green-700 dark:text-green-300 flex items-center"><Database size={16} className="mr-2" /> Sink</span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-slate-200 dark:divide-slate-700 h-[400px]">
+            <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-slate-200 dark:divide-slate-700 h-[210px]">
               {/* Left: Connection & DB Select */}
               <div className="p-5 flex flex-col space-y-6 bg-slate-50/50 dark:bg-slate-900/20">
                 {/* Sink Connection Select */}
@@ -736,28 +805,80 @@ export const SeatunnelGen: React.FC<{
           </div>
         </div>
 
-        {/* Preview Section */}
-        <div className="bg-[#1e1e1e] rounded-xl border border-slate-800 overflow-hidden mt-2">
+        {/* 可拖动分隔线 */}
+        <div 
+          className="h-2 bg-slate-200 dark:bg-slate-700 rounded cursor-ns-resize hover:bg-purple-400 dark:hover:bg-purple-600 transition-colors flex items-center justify-center mt-2"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            const startY = e.clientY;
+            const startHeight = configPanelHeight;
+            const onMouseMove = (moveEvent: MouseEvent) => {
+              const delta = startY - moveEvent.clientY;
+              const newHeight = Math.max(150, Math.min(600, startHeight + delta));
+              setConfigPanelHeight(newHeight);
+            };
+            const onMouseUp = () => {
+              document.removeEventListener('mousemove', onMouseMove);
+              document.removeEventListener('mouseup', onMouseUp);
+            };
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+          }}
+        >
+          <div className="w-8 h-1 bg-slate-400 dark:bg-slate-500 rounded-full" />
+        </div>
+
+        <div className="bg-[#1e1e1e] rounded-xl border border-slate-800 overflow-hidden mt-2" style={{ height: configPanelHeight }}>
           <div className="h-9 bg-[#252526] border-b border-slate-700 flex items-center justify-between px-4">
-            <span className="text-xs text-slate-400 font-mono">config.conf</span>
-            <button
-              onClick={() => {
-                if (generatedConfig) {
-                  navigator.clipboard.writeText(generatedConfig);
-                  toast({
-                    title: lang === 'zh' ? '已复制' : 'Copied',
-                    description: lang === 'zh' ? '配置已复制到剪贴板' : 'Configuration copied to clipboard',
-                    variant: 'success'
-                  });
-                }
-              }}
-              disabled={!generatedConfig}
-              className="text-xs text-slate-400 hover:text-white flex items-center transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-            >
-              <Save size={14} className="mr-1" /> Copy
-            </button>
+            <span className="text-xs text-slate-400 font-mono">{lang === 'zh' ? '配置文件' : 'Configuration'}</span>
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={() => {
+                  if (generatedConfig) {
+                    try {
+                      const convertResult = convertToJson(generatedConfig);
+                      if (convertResult.error) {
+                        throw new Error(convertResult.error);
+                      }
+                      setGeneratedConfig(convertResult.json);
+                      toast({
+                        title: lang === 'zh' ? '转换成功' : 'Converted',
+                        description: lang === 'zh' ? '已转换为 JSON 格式' : 'Converted to JSON format',
+                        variant: 'success'
+                      });
+                    } catch (err: any) {
+                      toast({
+                        title: lang === 'zh' ? '转换失败' : 'Convert Failed',
+                        description: err.message,
+                        variant: 'destructive'
+                      });
+                    }
+                  }
+                }}
+                disabled={!generatedConfig}
+                className="text-xs text-amber-400 hover:text-amber-300 flex items-center transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <FileJson size={14} className="mr-1" /> JSON
+              </button>
+              <button
+                onClick={() => {
+                  if (generatedConfig) {
+                    navigator.clipboard.writeText(generatedConfig);
+                    toast({
+                      title: lang === 'zh' ? '已复制' : 'Copied',
+                      description: lang === 'zh' ? '配置已复制到剪贴板' : 'Configuration copied to clipboard',
+                      variant: 'success'
+                    });
+                  }
+                }}
+                disabled={!generatedConfig}
+                className="text-xs text-slate-400 hover:text-white flex items-center transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <Save size={14} className="mr-1" /> Copy
+              </button>
+            </div>
           </div>
-          <div className="p-4 font-mono text-sm text-blue-300 max-h-96 overflow-y-auto custom-scrollbar">
+          <div className="p-4 font-mono text-sm text-blue-300 overflow-y-auto custom-scrollbar" style={{ height: 'calc(100% - 36px)' }}>
             {generatedConfig ? (
               <pre className="whitespace-pre-wrap text-green-300">{generatedConfig}</pre>
             ) : (

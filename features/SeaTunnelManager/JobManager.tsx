@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
     ListTodo, ArrowLeft, Search, RefreshCw, PlayCircle, 
     StopCircle, AlertCircle, CheckCircle2, XCircle, Timer,
-    Loader2, Upload, Eye, Clock, ChevronLeft, ChevronRight
+    Loader2, Upload, Eye, Clock, ChevronLeft, ChevronRight, FileText
 } from 'lucide-react';
 import { Language } from '../../types';
 import { SeaTunnelEngineConfig, SeaTunnelJob, JobStatus, FinishedJobState } from './types';
@@ -10,6 +10,7 @@ import { seaTunnelApi } from './api';
 import { Tooltip } from '../../components/ui/Tooltip';
 import { useToast } from '../../components/ui/Toast';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
+import { DagVisualizer } from './components/DagVisualizer';
 
 interface JobManagerProps {
     lang: Language;
@@ -36,6 +37,8 @@ export const JobManager: React.FC<JobManagerProps> = ({
     const [cancelConfirm, setCancelConfirm] = useState<{ isOpen: boolean; jobId: string; jobName: string }>({ isOpen: false, jobId: '', jobName: '' });
     const [detailJob, setDetailJob] = useState<SeaTunnelJob | null>(null);
     const [detailLoading, setDetailLoading] = useState(false);
+    const [jobLog, setJobLog] = useState<string | null>(null);
+    const [logLoading, setLogLoading] = useState(false);
     
     // 分页状态
     const [pageNo, setPageNo] = useState(1);
@@ -144,6 +147,11 @@ export const JobManager: React.FC<JobManagerProps> = ({
             job.jobId.toLowerCase().includes(searchTerm.toLowerCase());
         const matchStatus = !statusFilter || job.jobStatus === statusFilter;
         return matchSearch && matchStatus;
+    }).sort((a, b) => {
+        // 按创建时间倒序排序
+        const timeA = a.createTime ? new Date(a.createTime).getTime() : 0;
+        const timeB = b.createTime ? new Date(b.createTime).getTime() : 0;
+        return timeB - timeA;
     });
     
     // 分页计算
@@ -276,11 +284,13 @@ export const JobManager: React.FC<JobManagerProps> = ({
                         </button>
                     </Tooltip>
                     {currentEngine.engineType === 'zeta' && (
-                        <Tooltip content={lang === 'zh' ? '提交作业' : 'Submit Job'} position="bottom">
-                            <button onClick={onOpenSubmitModal} className="p-2 hover:bg-cyan-100 dark:hover:bg-cyan-900/30 rounded-lg text-cyan-600">
-                                <Upload size={18} />
-                            </button>
-                        </Tooltip>
+                        <button 
+                            onClick={onOpenSubmitModal} 
+                            className="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white text-sm font-medium rounded-lg flex items-center"
+                        >
+                            <Upload size={14} className="mr-1.5" />
+                            {lang === 'zh' ? '提交作业' : 'Submit Job'}
+                        </button>
                     )}
                 </div>
             </div>
@@ -308,10 +318,11 @@ export const JobManager: React.FC<JobManagerProps> = ({
                                 <tr className="text-center text-slate-500 dark:text-slate-400">
                                     <th className="px-2 py-3 font-medium w-12 text-center">#</th>
                                     <th className="px-4 py-3 font-medium text-left">{lang === 'zh' ? '作业名称' : 'Job Name'}</th>
-                                    <th className="px-4 py-3 font-medium w-32">{lang === 'zh' ? '状态' : 'Status'}</th>
-                                    <th className="px-4 py-3 font-medium w-48">{lang === 'zh' ? '创建时间' : 'Created'}</th>
-                                    <th className="px-4 py-3 font-medium w-48">{lang === 'zh' ? '完成时间' : 'Finished'}</th>
-                                    <th className="px-4 py-3 font-medium w-32">{lang === 'zh' ? '操作' : 'Actions'}</th>
+                                    <th className="px-4 py-3 font-medium w-28">{lang === 'zh' ? '状态' : 'Status'}</th>
+                                    <th className="px-4 py-3 font-medium w-20">{lang === 'zh' ? '用时' : 'Duration'}</th>
+                                    <th className="px-4 py-3 font-medium w-36">{lang === 'zh' ? '创建时间' : 'Created'}</th>
+                                    <th className="px-4 py-3 font-medium w-36">{lang === 'zh' ? '完成时间' : 'Finished'}</th>
+                                    <th className="px-4 py-3 font-medium w-24">{lang === 'zh' ? '操作' : 'Actions'}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
@@ -328,6 +339,19 @@ export const JobManager: React.FC<JobManagerProps> = ({
                                             <p className="text-xs text-slate-400 font-mono truncate max-w-xs">{job.jobId}</p>
                                         </td>
                                         <td className="px-4 py-3 text-center">{renderStatusTag(job.jobStatus)}</td>
+                                        <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-xs text-center">
+                                            {job.createTime && job.finishTime ? (() => {
+                                                const duration = new Date(job.finishTime).getTime() - new Date(job.createTime).getTime();
+                                                const seconds = Math.floor(duration / 1000);
+                                                if (seconds < 60) return `${seconds}s`;
+                                                const minutes = Math.floor(seconds / 60);
+                                                const secs = seconds % 60;
+                                                if (minutes < 60) return `${minutes}m ${secs}s`;
+                                                const hours = Math.floor(minutes / 60);
+                                                const mins = minutes % 60;
+                                                return `${hours}h ${mins}m`;
+                                            })() : job.jobStatus === 'RUNNING' ? '...' : '-'}
+                                        </td>
                                         <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-xs text-center">
                                             {job.createTime ? new Date(job.createTime).toLocaleString() : '-'}
                                         </td>
@@ -428,6 +452,22 @@ export const JobManager: React.FC<JobManagerProps> = ({
                                     <label className="text-xs text-slate-500 uppercase font-bold">{lang === 'zh' ? '完成时间' : 'Finished'}</label>
                                     <p className="text-slate-600 dark:text-slate-300 text-sm">{detailJob.finishTime ? new Date(detailJob.finishTime).toLocaleString() : '-'}</p>
                                 </div>
+                                <div>
+                                    <label className="text-xs text-slate-500 uppercase font-bold">{lang === 'zh' ? '用时' : 'Duration'}</label>
+                                    <p className="text-slate-600 dark:text-slate-300 text-sm font-medium">
+                                        {detailJob.createTime && detailJob.finishTime ? (() => {
+                                            const duration = new Date(detailJob.finishTime).getTime() - new Date(detailJob.createTime).getTime();
+                                            const seconds = Math.floor(duration / 1000);
+                                            if (seconds < 60) return `${seconds} 秒`;
+                                            const minutes = Math.floor(seconds / 60);
+                                            const secs = seconds % 60;
+                                            if (minutes < 60) return `${minutes} 分 ${secs} 秒`;
+                                            const hours = Math.floor(minutes / 60);
+                                            const mins = minutes % 60;
+                                            return `${hours} 时 ${mins} 分`;
+                                        })() : detailJob.jobStatus === 'RUNNING' ? '运行中...' : '-'}
+                                    </p>
+                                </div>
                             </div>
                             {detailJob.metrics && (
                                 <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
@@ -455,15 +495,51 @@ export const JobManager: React.FC<JobManagerProps> = ({
                             {detailJob.errorMsg && (
                                 <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
                                     <label className="text-xs text-red-500 uppercase font-bold mb-2 block">{lang === 'zh' ? '错误信息' : 'Error Message'}</label>
-                                    <pre className="bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 p-3 rounded-lg text-xs overflow-auto max-h-32">{detailJob.errorMsg}</pre>
+                                    <pre className="bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 p-3 rounded-lg text-xs overflow-auto max-h-40 whitespace-pre-wrap">{detailJob.errorMsg}</pre>
+                                </div>
+                            )}
+                            {detailJob.jobDag && (
+                                <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
+                                    <label className="text-xs text-slate-500 uppercase font-bold mb-2 block">{lang === 'zh' ? '作业 DAG' : 'Job DAG'}</label>
+                                    <DagVisualizer dagData={detailJob.jobDag} lang={lang} />
+                                </div>
+                            )}
+                            {detailLoading && (
+                                <div className="flex items-center justify-center py-4">
+                                    <Loader2 size={20} className="animate-spin text-cyan-600 mr-2" />
+                                    <span className="text-sm text-slate-500">{lang === 'zh' ? '加载详细信息...' : 'Loading details...'}</span>
                                 </div>
                             )}
                         </div>
-                        <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 flex justify-end bg-slate-50 dark:bg-slate-800/50">
-                            <button onClick={() => setDetailJob(null)} className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg">
+                        <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 flex justify-between bg-slate-50 dark:bg-slate-800/50">
+                            <button 
+                                onClick={() => {
+                                    toast({ 
+                                        title: lang === 'zh' ? '功能暂不可用' : 'Feature not available',
+                                        description: lang === 'zh' 
+                                            ? 'SeaTunnel Zeta REST API 暂不支持日志查询，请登录服务器查看 logs/ 目录'
+                                            : 'SeaTunnel Zeta REST API does not support log query. Please check logs/ directory on server.',
+                                        variant: 'default' 
+                                    });
+                                }}
+                                className="flex items-center px-3 py-2 text-sm text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
+                            >
+                                <FileText size={14} className="mr-1" />
+                                {lang === 'zh' ? '查看日志' : 'View Logs'}
+                            </button>
+                            <button onClick={() => { setDetailJob(null); setJobLog(null); }} className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg">
                                 {lang === 'zh' ? '关闭' : 'Close'}
                             </button>
                         </div>
+                        {jobLog && (
+                            <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-900">
+                                <div className="flex justify-between items-center mb-2">
+                                    <label className="text-xs text-green-400 uppercase font-bold">作业日志</label>
+                                    <button onClick={() => setJobLog(null)} className="text-xs text-slate-400 hover:text-white">关闭</button>
+                                </div>
+                                <pre className="text-xs text-green-400 font-mono overflow-auto max-h-64 whitespace-pre-wrap">{jobLog}</pre>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}

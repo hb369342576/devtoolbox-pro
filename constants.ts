@@ -91,24 +91,6 @@ export const NAV_ITEMS: NavItem[] = [
         category: 'db',
         order: 3,
         visible: true
-      },
-      {
-        id: 'seatunnel',
-        label: { en: 'Seatunnel Gen', zh: '任务脚本' },
-        tooltip: { en: 'Generate SeaTunnel sync configurations', zh: '生成 SeaTunnel 同步配置' },
-        icon: Workflow,
-        category: 'db',
-        order: 4,
-        visible: true
-      },
-      {
-        id: 'field-mapping',
-        label: { en: 'Field Mapping', zh: '数据映射' },
-        tooltip: { en: 'Configure field mappings between tables', zh: '配置表字段映射关系' },
-        icon: ArrowRightLeft,
-        category: 'db',
-        order: 5,
-        visible: true
       }
     ]
   },
@@ -168,6 +150,24 @@ export const NAV_ITEMS: NavItem[] = [
         icon: Activity,
         category: 'db',
         order: 2,
+        visible: true
+      },
+      {
+        id: 'seatunnel',
+        label: { en: 'Config Generator', zh: '配置生成' },
+        tooltip: { en: 'Generate SeaTunnel sync configurations', zh: '生成 SeaTunnel 同步配置' },
+        icon: Workflow,
+        category: 'db',
+        order: 3,
+        visible: true
+      },
+      {
+        id: 'field-mapping',
+        label: { en: 'Field Mapping', zh: '数据映射' },
+        tooltip: { en: 'Configure field mappings between tables', zh: '配置表字段映射关系' },
+        icon: ArrowRightLeft,
+        category: 'db',
+        order: 4,
         visible: true
       }
     ]

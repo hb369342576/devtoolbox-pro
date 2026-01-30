@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { X, Upload, FileText, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+import { X, Upload, FileText, AlertCircle, CheckCircle, Loader2, RefreshCw } from 'lucide-react';
 import { Language } from '../../../types';
 import { SeaTunnelEngineConfig, SubmitJobRequest } from '../types';
 import { seaTunnelApi } from '../api';
 import { useToast } from '../../../components/ui/Toast';
+import { isHoconFormat, convertToJson } from '../../../utils/hoconParser';
 
 interface SubmitJobModalProps {
     show: boolean;
@@ -24,6 +25,32 @@ export const SubmitJobModal: React.FC<SubmitJobModalProps> = ({
     const [jobName, setJobName] = useState('');
     const [config, setConfig] = useState('');
     const [submitting, setSubmitting] = useState(false);
+    const [isHocon, setIsHocon] = useState(false);
+
+    // 检测配置格式
+    const handleConfigChange = (value: string) => {
+        setConfig(value);
+        setIsHocon(isHoconFormat(value));
+    };
+
+    // 转换为 JSON
+    const handleConvertToJson = () => {
+        const result = convertToJson(config);
+        if (result.json) {
+            setConfig(result.json);
+            setIsHocon(false);
+            toast({ 
+                title: lang === 'zh' ? 'CONF 已转换为 JSON' : 'CONF converted to JSON', 
+                variant: 'success' 
+            });
+        } else {
+            toast({ 
+                title: lang === 'zh' ? '转换失败' : 'Conversion failed', 
+                description: result.error,
+                variant: 'destructive' 
+            });
+        }
+    };
 
     const handleSubmit = async () => {
         if (!config.trim()) {
@@ -31,11 +58,27 @@ export const SubmitJobModal: React.FC<SubmitJobModalProps> = ({
             return;
         }
 
+        // 如果是 HOCON 格式，先转换为 JSON
+        let finalConfig = config;
+        if (isHocon) {
+            const result = convertToJson(config);
+            if (result.json) {
+                finalConfig = result.json;
+            } else {
+                toast({ 
+                    title: lang === 'zh' ? 'CONF 转换失败' : 'CONF conversion failed', 
+                    description: result.error,
+                    variant: 'destructive' 
+                });
+                return;
+            }
+        }
+
         setSubmitting(true);
         try {
             const request: SubmitJobRequest = {
                 jobName: jobName || undefined,
-                config: config
+                config: finalConfig
             };
             const result = await seaTunnelApi.submitJob(engine, request);
             
@@ -67,7 +110,7 @@ export const SubmitJobModal: React.FC<SubmitJobModalProps> = ({
             if (selected && typeof selected === 'string') {
                 const { readTextFile } = await import('@tauri-apps/plugin-fs');
                 const content = await readTextFile(selected);
-                setConfig(content);
+                handleConfigChange(content);
                 
                 // 从文件名提取作业名
                 const fileName = selected.split(/[/\\]/).pop()?.replace(/\.(conf|hocon|json)$/, '') || '';
@@ -97,13 +140,28 @@ export const SubmitJobModal: React.FC<SubmitJobModalProps> = ({
                 </div>
 
                 <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
-                    {/* 引擎信息 */}
-                    <div className="p-3 bg-cyan-50 dark:bg-cyan-900/20 rounded-lg flex items-center text-sm">
-                        <AlertCircle size={16} className="text-cyan-600 mr-2" />
-                        <span className="text-cyan-700 dark:text-cyan-300">
-                            {lang === 'zh' ? '提交到: ' : 'Submit to: '}
-                            <strong>{engine.name}</strong> ({engine.baseUrl})
-                        </span>
+                    {/* 引擎信息和运行模式说明 */}
+                    <div className="space-y-2">
+                        <div className="p-3 bg-cyan-50 dark:bg-cyan-900/20 rounded-lg flex items-start text-sm">
+                            <AlertCircle size={16} className="text-cyan-600 mr-2 mt-0.5 flex-shrink-0" />
+                            <div>
+                                <div className="text-cyan-700 dark:text-cyan-300">
+                                    <strong>{lang === 'zh' ? '集群模式' : 'Cluster Mode'}</strong> - {lang === 'zh' ? '提交到' : 'Submit to'}: {engine.name}
+                                </div>
+                                <div className="text-xs text-cyan-600 dark:text-cyan-400 mt-1">
+                                    {lang === 'zh' 
+                                        ? `作业将在 SeaTunnel Zeta 集群上运行 (${engine.baseUrl})`
+                                        : `Job will run on SeaTunnel Zeta cluster (${engine.baseUrl})`
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                        <div className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-xs text-slate-500 dark:text-slate-400">
+                            💡 {lang === 'zh' 
+                                ? '本地模式请使用命令行: ./bin/seatunnel.sh -c config.conf'
+                                : 'For local mode, use CLI: ./bin/seatunnel.sh -c config.conf'
+                            }
+                        </div>
                     </div>
 
                     {/* 作业名称 */}
@@ -124,37 +182,67 @@ export const SubmitJobModal: React.FC<SubmitJobModalProps> = ({
                     {/* 配置内容 */}
                     <div>
                         <div className="flex justify-between items-center mb-1">
-                            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                                {lang === 'zh' ? '配置内容' : 'Config Content'}
-                                <span className="text-red-500 ml-1">*</span>
-                            </label>
-                            <button
-                                onClick={handleFileSelect}
-                                className="text-sm text-cyan-600 hover:text-cyan-700 flex items-center"
-                            >
-                                <FileText size={14} className="mr-1" />
-                                {lang === 'zh' ? '从文件加载' : 'Load from file'}
-                            </button>
+                            <div className="flex items-center">
+                                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                                    {lang === 'zh' ? '配置内容' : 'Config Content'}
+                                    <span className="text-red-500 ml-1">*</span>
+                                </label>
+                                {isHocon && (
+                                    <span className="ml-2 px-2 py-0.5 text-xs bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 rounded">
+                                        CONF 格式
+                                    </span>
+                                )}
+                            </div>
+                            <div className="flex items-center space-x-3">
+                                {isHocon && (
+                                    <button
+                                        onClick={handleConvertToJson}
+                                        className="text-sm text-amber-600 hover:text-amber-700 flex items-center"
+                                    >
+                                        <RefreshCw size={14} className="mr-1" />
+                                        {lang === 'zh' ? '转换为 JSON' : 'Convert to JSON'}
+                                    </button>
+                                )}
+                                <button
+                                    onClick={handleFileSelect}
+                                    className="text-sm text-cyan-600 hover:text-cyan-700 flex items-center"
+                                >
+                                    <FileText size={14} className="mr-1" />
+                                    {lang === 'zh' ? '从文件加载' : 'Load from file'}
+                                </button>
+                            </div>
                         </div>
                         <textarea
                             value={config}
-                            onChange={e => setConfig(e.target.value)}
-                            className="w-full h-64 px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-cyan-500 outline-none text-slate-900 dark:text-white font-mono text-sm resize-none"
-                            placeholder={`env {
-  parallelism = 2
-  job.mode = "BATCH"
-}
-
-source {
-  MySQL {
-    ...
-  }
-}
-
-sink {
-  Console {}
+                            onChange={e => handleConfigChange(e.target.value)}
+                            className={`w-full h-64 px-3 py-2 bg-slate-50 dark:bg-slate-900 border rounded-lg focus:ring-2 focus:ring-cyan-500 outline-none text-slate-900 dark:text-white font-mono text-sm resize-none ${isHocon ? 'border-amber-400' : 'border-slate-300 dark:border-slate-600'}`}
+                            placeholder={`{
+  "env": {
+    "execution.parallelism": 1,
+    "job.mode": "BATCH"
+  },
+  "source": [
+    {
+      "plugin_name": "Jdbc",
+      "url": "jdbc:mysql://host:3306/db",
+      "driver": "com.mysql.cj.jdbc.Driver",
+      "user": "root",
+      "password": "***",
+      "query": "SELECT * FROM table"
+    }
+  ],
+  "sink": [
+    {
+      "plugin_name": "Console"
+    }
+  ]
 }`}
                         />
+                        <p className="mt-1 text-xs text-slate-500">
+                            {lang === 'zh' 
+                                ? '默认支持 JSON 格式，也支持 CONF/HOCON 格式（会自动转换）' 
+                                : 'JSON format by default. CONF/HOCON format is also supported (auto-converted)'}
+                        </p>
                     </div>
                 </div>
 
