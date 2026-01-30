@@ -114,7 +114,7 @@ export const BatchRunModal: React.FC<BatchRunModalProps> = ({ show, lang, proces
                         </button>
                     </div>
                 </div>
-                <div className="p-4 max-h-[300px] overflow-y-auto">
+                <div className="p-4 h-[300px] overflow-y-auto">
                     <div className="space-y-1">
                         {filteredProcesses.map(p => (
                             <label key={p.code} className="flex items-center p-2 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-lg cursor-pointer">

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Download, XCircle, Search, Loader2 } from 'lucide-react';
+import { Download, XCircle, Search, Loader2, FolderOpen } from 'lucide-react';
 import { useToast } from '../../../components/ui/Toast';
 import { open } from '@tauri-apps/plugin-dialog';
 import { exportWorkflowsToLocal } from '../utils';
@@ -22,14 +22,32 @@ export const ExportModal: React.FC<ExportModalProps> = ({ show, lang, processes,
     const [selectedCodes, setSelectedCodes] = useState<number[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [fileName, setFileName] = useState(projectName || 'workflows_export');
+    const [targetDir, setTargetDir] = useState<string>('');
     
     useEffect(() => {
         if (show) {
             setSelectedCodes([]);
             setSearchTerm('');
             setFileName(projectName || 'workflows_export');
+            setTargetDir('');
         }
     }, [show, projectName]);
+    
+    // 选择目标文件夹
+    const handleSelectFolder = async () => {
+        try {
+            const selected = await open({
+                directory: true,
+                multiple: false,
+                title: lang === 'zh' ? '选择导出目录' : 'Select Export Directory'
+            });
+            if (selected) {
+                setTargetDir(selected as string);
+            }
+        } catch (err) {
+            console.error('[Export] Select folder error:', err);
+        }
+    };
     
     if (!show) return null;
     
@@ -49,20 +67,13 @@ export const ExportModal: React.FC<ExportModalProps> = ({ show, lang, processes,
             return;
         }
         
+        if (!targetDir) {
+            toast({ title: lang === 'zh' ? '请先选择导出目录' : 'Please select export directory', variant: 'destructive' });
+            return;
+        }
+        
         setExporting(true);
         try {
-            // 选择保存目录
-            const savePath = await open({
-                directory: true,
-                multiple: false,
-                title: lang === 'zh' ? '选择导出目录' : 'Select Export Directory'
-            });
-            
-            if (!savePath) {
-                setExporting(false);
-                return;
-            }
-            
             const items = selectedCodes.map(code => {
                 const process = processes.find(p => p.code === code);
                 return { code, name: process?.name || `workflow_${code}` };
@@ -73,7 +84,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({ show, lang, processes,
                 projectCode,
                 baseUrl,
                 token,
-                savePath as string,
+                targetDir,
                 fileName,
                 (current, total, name) => {
                     // 可以在这里添加进度提示，如果有进度条组件的话
@@ -112,13 +123,32 @@ export const ExportModal: React.FC<ExportModalProps> = ({ show, lang, processes,
                         />
                     </div>
                     <div>
-                        <label className="text-xs font-medium text-slate-500 block mb-1">{lang === 'zh' ? '导出目录名' : 'Export Folder Name'}</label>
+                        <label className="text-xs font-medium text-slate-500 block mb-1">{lang === 'zh' ? '导出目录' : 'Export Directory'}</label>
+                        <div className="flex items-center space-x-2">
+                            <input 
+                                type="text" 
+                                value={targetDir} 
+                                readOnly
+                                className="flex-1 px-3 py-2 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-600 dark:text-slate-400 cursor-default" 
+                                placeholder={lang === 'zh' ? '点击右侧按钮选择文件夹' : 'Click button to select folder'}
+                            />
+                            <button
+                                onClick={handleSelectFolder}
+                                className="px-3 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg text-sm font-medium flex items-center transition-colors"
+                            >
+                                <FolderOpen size={16} className="mr-1" />
+                                {lang === 'zh' ? '选择' : 'Browse'}
+                            </button>
+                        </div>
+                    </div>
+                    <div>
+                        <label className="text-xs font-medium text-slate-500 block mb-1">{lang === 'zh' ? '项目目录名' : 'Project Folder Name'}</label>
                         <input 
                             type="text" 
                             value={fileName} 
                             onChange={e => setFileName(e.target.value)} 
                             className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 outline-none" 
-                            placeholder={lang === 'zh' ? '导出文件夹名称' : 'Export folder name'}
+                            placeholder={lang === 'zh' ? '导出项目文件夹名称' : 'Export project folder name'}
                         />
                     </div>
                     <div className="flex items-center justify-between">
@@ -128,7 +158,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({ show, lang, processes,
                         </button>
                     </div>
                 </div>
-                <div className="p-4 max-h-[250px] overflow-y-auto">
+                <div className="p-4 h-[250px] overflow-y-auto">
                     <div className="space-y-1">
                         {filteredProcesses.map(p => (
                             <label key={p.code} className="flex items-center p-2 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-lg cursor-pointer">

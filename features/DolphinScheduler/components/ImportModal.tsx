@@ -213,7 +213,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({ show, lang, projectCod
                                 </button>
                             </div>
                         </div>
-                        <div className="p-4 max-h-[250px] overflow-y-auto">
+                        <div className="p-4 h-[250px] overflow-y-auto">
                             <div className="space-y-1">
                                 {filteredWorkflows.map(w => (
                                     <label key={w._index} className="flex items-center p-2 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-lg cursor-pointer">

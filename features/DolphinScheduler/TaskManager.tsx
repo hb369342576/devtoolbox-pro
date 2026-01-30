@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
     ListTodo, ArrowLeft, Search, Folder, Calendar, AlertCircle,
     PlayCircle, Settings, RefreshCw, CalendarClock, Plus, CheckCircle2, XCircle, Timer, User, Loader2,
@@ -51,6 +51,76 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
     const [pageNo, setPageNo] = useState(1);
     const [total, setTotal] = useState(0);
     const pageSize = 20;
+    
+    // 列宽配置 - 从 localStorage 加载
+    const COLUMN_WIDTHS_KEY = 'dolphin_task_manager_column_widths';
+    const defaultColumnWidths = {
+        name: 300,
+        version: 60,
+        state: 80,
+        schedule: 80,
+        updatedTime: 150,
+        actions: 180
+    };
+    
+    const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => {
+        try {
+            const saved = localStorage.getItem(COLUMN_WIDTHS_KEY);
+            if (saved) {
+                return { ...defaultColumnWidths, ...JSON.parse(saved) };
+            }
+        } catch (e) {
+            console.error('[TaskManager] Failed to load column widths:', e);
+        }
+        return defaultColumnWidths;
+    });
+    
+    // 保存列宽到 localStorage
+    const saveColumnWidths = useCallback((widths: Record<string, number>) => {
+        try {
+            localStorage.setItem(COLUMN_WIDTHS_KEY, JSON.stringify(widths));
+        } catch (e) {
+            console.error('[TaskManager] Failed to save column widths:', e);
+        }
+    }, []);
+    
+    // 拖拽调整列宽
+    const resizingRef = useRef<{ column: string; startX: number; startWidth: number } | null>(null);
+    
+    const handleResizeStart = useCallback((e: React.MouseEvent, column: string) => {
+        e.preventDefault();
+        resizingRef.current = {
+            column,
+            startX: e.clientX,
+            startWidth: columnWidths[column] || 100
+        };
+        
+        const handleMouseMove = (moveEvent: MouseEvent) => {
+            if (!resizingRef.current) return;
+            const delta = moveEvent.clientX - resizingRef.current.startX;
+            const newWidth = Math.max(50, resizingRef.current.startWidth + delta);
+            setColumnWidths(prev => {
+                const updated = { ...prev, [resizingRef.current!.column]: newWidth };
+                return updated;
+            });
+        };
+        
+        const handleMouseUp = () => {
+            if (resizingRef.current) {
+                // 保存到 localStorage
+                setColumnWidths(prev => {
+                    saveColumnWidths(prev);
+                    return prev;
+                });
+            }
+            resizingRef.current = null;
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        };
+        
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+    }, [columnWidths, saveColumnWidths]);
     
     // 项目配置
     const baseUrl = currentProject?.baseUrl || '';
@@ -183,13 +253,28 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
     // 复制工作流
     const handleCopyWorkflow = async (process: ProcessDefinition) => {
         try {
-            const url = `${baseUrl}/projects/${projectCode}/process-definition/${process.code}/copy`;
+            // DolphinScheduler copy API: /projects/{projectCode}/process-definition/batch-copy
+            const url = `${baseUrl}/projects/${projectCode}/process-definition/batch-copy`;
+            console.log('[DolphinScheduler] Copy workflow URL:', url, 'codes:', process.code);
+            
             const response = await fetch(url, {
                 method: 'POST',
-                headers: { 'token': token, 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `targetProjectCode=${projectCode}`
+                headers: { 
+                    'token': token, 
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Accept': 'application/json'
+                },
+                body: `codes=${process.code}&targetProjectCode=${projectCode}`
             });
-            const result = await response.json();
+            
+            const responseText = await response.text();
+            console.log('[DolphinScheduler] Copy response:', response.status, responseText.substring(0, 200));
+            
+            if (responseText.trim().startsWith('<')) {
+                throw new Error(`API 返回 HTML 页面，请检查 API 地址是否正确`);
+            }
+            
+            const result = JSON.parse(responseText);
             if (result.code === 0) {
                 toast({ title: lang === 'zh' ? '复制成功' : 'Copy Success', variant: 'success' });
                 handleRefresh();
@@ -197,6 +282,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                 throw new Error(result.msg);
             }
         } catch (err: any) {
+            console.error('[DolphinScheduler] Copy error:', err);
             toast({ title: lang === 'zh' ? '复制失败' : 'Copy Failed', description: err.message, variant: 'destructive' });
         }
     };
@@ -437,16 +523,38 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                 ) : (
                     <>
                         <div className="overflow-auto flex-1">
-                            <table className="w-full text-sm">
+                            <table className="w-full text-sm" style={{ tableLayout: 'fixed' }}>
+                                <colgroup>
+                                    <col style={{ width: columnWidths.name }} />
+                                    <col style={{ width: columnWidths.version }} />
+                                    <col style={{ width: columnWidths.state }} />
+                                    <col style={{ width: columnWidths.schedule }} />
+                                    <col style={{ width: columnWidths.actions }} />
+                                    <col /> {/* 更新时间列自动填充剩余空间 */}
+                                </colgroup>
                                 <thead className="bg-slate-50 dark:bg-slate-900/50 sticky top-0">
-                                    <tr className="text-left text-slate-500 dark:text-slate-400">
-                                        <th className="px-4 py-3 font-medium">{lang === 'zh' ? '名称' : 'Name'}</th>
-                                        <th className="px-4 py-3 font-medium w-20">{lang === 'zh' ? '版本' : 'Ver'}</th>
-                                        <th className="px-4 py-3 font-medium w-24">{lang === 'zh' ? '状态' : 'State'}</th>
-                                        <th className="px-4 py-3 font-medium w-24">{lang === 'zh' ? '调度' : 'Schedule'}</th>
-                                        <th className="px-4 py-3 font-medium w-32">{lang === 'zh' ? '修改人' : 'Modified'}</th>
-                                        <th className="px-4 py-3 font-medium w-40">{lang === 'zh' ? '更新时间' : 'Updated'}</th>
-                                        <th className="px-4 py-3 font-medium w-48 text-right">{lang === 'zh' ? '操作' : 'Actions'}</th>
+                                    <tr className="text-center text-slate-500 dark:text-slate-400">
+                                        <th className="px-4 py-3 font-medium relative text-left">
+                                            {lang === 'zh' ? '名称' : 'Name'}
+                                            <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-purple-400 active:bg-purple-500" onMouseDown={e => handleResizeStart(e, 'name')} />
+                                        </th>
+                                        <th className="px-4 py-3 font-medium relative">
+                                            {lang === 'zh' ? '版本' : 'Ver'}
+                                            <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-purple-400 active:bg-purple-500" onMouseDown={e => handleResizeStart(e, 'version')} />
+                                        </th>
+                                        <th className="px-4 py-3 font-medium relative">
+                                            {lang === 'zh' ? '状态' : 'State'}
+                                            <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-purple-400 active:bg-purple-500" onMouseDown={e => handleResizeStart(e, 'state')} />
+                                        </th>
+                                        <th className="px-4 py-3 font-medium relative">
+                                            {lang === 'zh' ? '调度' : 'Schedule'}
+                                            <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-purple-400 active:bg-purple-500" onMouseDown={e => handleResizeStart(e, 'schedule')} />
+                                        </th>
+                                        <th className="px-4 py-3 font-medium relative">
+                                            {lang === 'zh' ? '操作' : 'Actions'}
+                                            <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-purple-400 active:bg-purple-500" onMouseDown={e => handleResizeStart(e, 'actions')} />
+                                        </th>
+                                        <th className="px-4 py-3 font-medium">{lang === 'zh' ? '更新时间' : 'Updated'}</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
@@ -474,14 +582,8 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                                                     {process.scheduleReleaseState || 'NONE'}
                                                 </span>
                                             </td>
-                                            <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-xs">
-                                                {process.userName || process.modifyBy || '-'}
-                                            </td>
-                                            <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-xs">
-                                                {new Date(process.updateTime).toLocaleString()}
-                                            </td>
                                             <td className="px-4 py-3">
-                                                <div className="flex items-center justify-end space-x-1">
+                                                <div className="flex items-center justify-center space-x-1">
                                                     <Tooltip content={lang === 'zh' ? '运行' : 'Run'} position="top">
                                                         <button
                                                             onClick={() => setRunProcess(process)}
@@ -532,6 +634,9 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                                                         </button>
                                                     </Tooltip>
                                                 </div>
+                                            </td>
+                                            <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-xs text-center">
+                                                {new Date(process.updateTime).toLocaleString()}
                                             </td>
                                         </tr>
                                     ))}
