@@ -976,6 +976,45 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                 </select>
                             </div>
                             
+                            {/* Worker Group 和环境变量 */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                                        Worker Group
+                                    </label>
+                                    <select
+                                        value={editingNode.taskParams.workerGroup || 'default'}
+                                        onChange={(e) => setEditingNode({ 
+                                            ...editingNode, 
+                                            taskParams: { ...editingNode.taskParams, workerGroup: e.target.value }
+                                        })}
+                                        className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
+                                    >
+                                        {workerGroups.map(g => (
+                                            <option key={g} value={g}>{g}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                                        {lang === 'zh' ? '环境变量' : 'Environment'}
+                                    </label>
+                                    <select
+                                        value={editingNode.taskParams.environmentCode || ''}
+                                        onChange={(e) => setEditingNode({ 
+                                            ...editingNode, 
+                                            taskParams: { ...editingNode.taskParams, environmentCode: e.target.value ? parseInt(e.target.value) : undefined }
+                                        })}
+                                        className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
+                                    >
+                                        <option value="">{lang === 'zh' ? '无' : 'None'}</option>
+                                        {environments.map(e => (
+                                            <option key={e.code} value={e.code}>{e.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+                            
                             <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-4">
                                 <h4 className="text-sm font-bold text-slate-600 dark:text-slate-300 mb-3 flex items-center">
                                     <Settings size={16} className="mr-2" />
