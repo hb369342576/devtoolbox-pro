@@ -120,9 +120,59 @@ export const SeatunnelGen: React.FC<{
     const saved = localStorage.getItem('seatunnel_engine_configs');
     return saved ? JSON.parse(saved) : [];
   });
-  const [selectedEngineId, setSelectedEngineId] = useState<string>('');
+  const [selectedEngineId, setSelectedEngineId] = useState<string>(() => {
+    return localStorage.getItem('seatunnel_gen_selected_engine') || '';
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [configPanelHeight, setConfigPanelHeight] = useState(300);
+
+  // 配置文件编辑模式
+  const [isConfigEditing, setIsConfigEditing] = useState(false);
+  const [editingConfig, setEditingConfig] = useState('');
+
+  // 同步 selectedEngineId 到 localStorage
+  useEffect(() => {
+    if (selectedEngineId) {
+      localStorage.setItem('seatunnel_gen_selected_engine', selectedEngineId);
+    }
+  }, [selectedEngineId]);
+
+  // 同步 generatedConfig 到当前 job
+  useEffect(() => {
+    if (activeJob && generatedConfig) {
+      const updatedJob = { ...activeJob, generatedConfig };
+      const newJobs = jobs.map(j => j.id === activeJob.id ? updatedJob : j);
+      // 不调用 saveJobs 避免循环，直接更新 localStorage
+      localStorage.setItem('seatunnel_jobs', JSON.stringify(newJobs));
+    }
+  }, [generatedConfig]);
+
+  // 切换 job 时恢复 generatedConfig
+  useEffect(() => {
+    setGeneratedConfig((activeJob as any)?.generatedConfig || '');
+    setIsConfigEditing(false);
+  }, [activeJob?.id]);
+
+  // 退出确认弹窗状态
+  const [exitConfirmModal, setExitConfirmModal] = useState(false);
+
+  // 检测是否有未保存的更改
+  const hasUnsavedChanges = () => {
+    if (!activeJob) return false;
+    const savedJob = jobs.find(j => j.id === activeJob.id);
+    if (!savedJob) return true;
+    // 比较配置文件是否有变化
+    return generatedConfig !== ((savedJob as any).generatedConfig || '');
+  };
+
+  // 处理返回按钮点击
+  const handleBackClick = () => {
+    if (hasUnsavedChanges()) {
+      setExitConfirmModal(true);
+    } else {
+      setActiveJob(null);
+    }
+  };
 
   // Auto-load databases and tables when entering a job
   useEffect(() => {
@@ -501,10 +551,33 @@ export const SeatunnelGen: React.FC<{
         lang={lang}
       />
 
+      {/* 退出确认弹窗 */}
+      <ConfirmModal
+        isOpen={exitConfirmModal}
+        title={lang === 'zh' ? '退出确认' : 'Confirm Exit'}
+        message={lang === 'zh' 
+          ? '是否保存当前配置后退出？' 
+          : 'Save current configuration before exit?'}
+        confirmText={lang === 'zh' ? '保存并退出' : 'Save & Exit'}
+        cancelText={lang === 'zh' ? '不保存' : 'Discard'}
+        type="info"
+        onConfirm={() => {
+          // 保存配置到 job
+          const updatedJob = { ...activeJob, generatedConfig };
+          saveJobs(jobs.map(j => j.id === activeJob.id ? updatedJob : j));
+          setExitConfirmModal(false);
+          setActiveJob(null);
+        }}
+        onCancel={() => {
+          setExitConfirmModal(false);
+          setActiveJob(null);
+        }}
+      />
+
       {/* Header */}
       <div className="flex items-center justify-between bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
         <div className="flex items-center space-x-3">
-          <button onClick={() => setActiveJob(null)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 transition-colors">
+          <button onClick={handleBackClick} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 transition-colors">
             <ChevronLeft size={20} />
           </button>
           <input
@@ -830,59 +903,104 @@ export const SeatunnelGen: React.FC<{
 
         <div className="bg-[#1e1e1e] rounded-xl border border-slate-800 overflow-hidden mt-2" style={{ height: configPanelHeight }}>
           <div className="h-9 bg-[#252526] border-b border-slate-700 flex items-center justify-between px-4">
-            <span className="text-xs text-slate-400 font-mono">{lang === 'zh' ? '配置文件' : 'Configuration'}</span>
+            <span className="text-xs text-slate-400 font-mono">
+              {lang === 'zh' ? '配置文件' : 'Configuration'}
+              {isConfigEditing && <span className="ml-2 text-amber-400">(编辑中)</span>}
+            </span>
             <div className="flex items-center space-x-3">
-              <button
-                onClick={() => {
-                  if (generatedConfig) {
-                    try {
-                      const convertResult = convertToJson(generatedConfig);
-                      if (convertResult.error) {
-                        throw new Error(convertResult.error);
+              {isConfigEditing ? (
+                <>
+                  <button
+                    onClick={() => {
+                      setGeneratedConfig(editingConfig);
+                      setIsConfigEditing(false);
+                    }}
+                    className="text-xs text-green-400 hover:text-green-300 flex items-center"
+                  >
+                    <Save size={14} className="mr-1" /> {lang === 'zh' ? '保存' : 'Save'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setEditingConfig(generatedConfig);
+                      setIsConfigEditing(false);
+                    }}
+                    className="text-xs text-slate-400 hover:text-white"
+                  >
+                    {lang === 'zh' ? '取消' : 'Cancel'}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => {
+                      setEditingConfig(generatedConfig);
+                      setIsConfigEditing(true);
+                    }}
+                    disabled={!generatedConfig}
+                    className="text-xs text-blue-400 hover:text-blue-300 flex items-center disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    {lang === 'zh' ? '编辑' : 'Edit'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (generatedConfig) {
+                        try {
+                          const convertResult = convertToJson(generatedConfig);
+                          if (convertResult.error) {
+                            throw new Error(convertResult.error);
+                          }
+                          setGeneratedConfig(convertResult.json);
+                          toast({
+                            title: lang === 'zh' ? '转换成功' : 'Converted',
+                            description: lang === 'zh' ? '已转换为 JSON 格式' : 'Converted to JSON format',
+                            variant: 'success'
+                          });
+                        } catch (err: any) {
+                          toast({
+                            title: lang === 'zh' ? '转换失败' : 'Convert Failed',
+                            description: err.message,
+                            variant: 'destructive'
+                          });
+                        }
                       }
-                      setGeneratedConfig(convertResult.json);
-                      toast({
-                        title: lang === 'zh' ? '转换成功' : 'Converted',
-                        description: lang === 'zh' ? '已转换为 JSON 格式' : 'Converted to JSON format',
-                        variant: 'success'
-                      });
-                    } catch (err: any) {
-                      toast({
-                        title: lang === 'zh' ? '转换失败' : 'Convert Failed',
-                        description: err.message,
-                        variant: 'destructive'
-                      });
-                    }
-                  }
-                }}
-                disabled={!generatedConfig}
-                className="text-xs text-amber-400 hover:text-amber-300 flex items-center transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-              >
-                <FileJson size={14} className="mr-1" /> JSON
-              </button>
-              <button
-                onClick={() => {
-                  if (generatedConfig) {
-                    navigator.clipboard.writeText(generatedConfig);
-                    toast({
-                      title: lang === 'zh' ? '已复制' : 'Copied',
-                      description: lang === 'zh' ? '配置已复制到剪贴板' : 'Configuration copied to clipboard',
-                      variant: 'success'
-                    });
-                  }
-                }}
-                disabled={!generatedConfig}
-                className="text-xs text-slate-400 hover:text-white flex items-center transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-              >
-                <Save size={14} className="mr-1" /> Copy
-              </button>
+                    }}
+                    disabled={!generatedConfig}
+                    className="text-xs text-amber-400 hover:text-amber-300 flex items-center transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    <FileJson size={14} className="mr-1" /> JSON
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (generatedConfig) {
+                        navigator.clipboard.writeText(generatedConfig);
+                        toast({
+                          title: lang === 'zh' ? '已复制' : 'Copied',
+                          description: lang === 'zh' ? '配置已复制到剪贴板' : 'Configuration copied to clipboard',
+                          variant: 'success'
+                        });
+                      }
+                    }}
+                    disabled={!generatedConfig}
+                    className="text-xs text-slate-400 hover:text-white flex items-center transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    <Save size={14} className="mr-1" /> Copy
+                  </button>
+                </>
+              )}
             </div>
           </div>
-          <div className="p-4 font-mono text-sm text-blue-300 overflow-y-auto custom-scrollbar" style={{ height: 'calc(100% - 36px)' }}>
-            {generatedConfig ? (
-              <pre className="whitespace-pre-wrap text-green-300">{generatedConfig}</pre>
+          <div className="font-mono text-sm overflow-y-auto custom-scrollbar" style={{ height: 'calc(100% - 36px)' }}>
+            {isConfigEditing ? (
+              <textarea
+                value={editingConfig}
+                onChange={(e) => setEditingConfig(e.target.value)}
+                className="w-full h-full p-4 bg-transparent text-green-300 resize-none outline-none"
+                spellCheck={false}
+              />
+            ) : generatedConfig ? (
+              <pre className="p-4 whitespace-pre-wrap text-green-300">{generatedConfig}</pre>
             ) : (
-              <span className="text-slate-500"># {lang === 'zh' ? '点击生成按钮预览配置...' : 'Click Generate to preview configuration...'}</span>
+              <span className="p-4 text-slate-500 block"># {lang === 'zh' ? '点击生成按钮预览配置...' : 'Click Generate to preview configuration...'}</span>
             )}
           </div>
         </div>

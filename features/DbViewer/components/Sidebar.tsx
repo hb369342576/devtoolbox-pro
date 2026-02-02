@@ -355,6 +355,16 @@ export const Sidebar: React.FC<{ lang: Language }> = ({ lang }) => {
             y: e.clientY,
             items: [
                 {
+                    label: lang === 'zh' ? '复制库名' : 'Copy Database Name',
+                    icon: <Copy size={14} />,
+                    onClick: async () => {
+                        await navigator.clipboard.writeText(selectedDatabase);
+                        showToast(lang === 'zh' ? '复制成功' : 'Copied successfully', 'success');
+                        setContextMenu(null);
+                    }
+                },
+                { divider: true },
+                {
                     label: lang === 'zh' ? '导出库结构' : 'Export Database Structure',
                     icon: <Download size={14} />,
                     onClick: () => openExportModal('db-structure')

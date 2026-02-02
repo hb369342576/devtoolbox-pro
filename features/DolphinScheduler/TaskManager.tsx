@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import {
     ListTodo, ArrowLeft, Search, Folder, Calendar, AlertCircle,
     PlayCircle, Settings, RefreshCw, CalendarClock, Plus, CheckCircle2, XCircle, Timer, User, Loader2,
-    Eye, Download, Upload, Power, Clock, ChevronLeft, ChevronRight, MoreHorizontal, Tag, Copy
+    Eye, Download, Upload, Power, Clock, ChevronLeft, ChevronRight, MoreHorizontal, Tag, Copy, Edit
 } from 'lucide-react';
 import { Language, DolphinSchedulerConfig } from '../../types';
 import { getTexts } from '../../locales';
@@ -15,7 +15,7 @@ import { exportWorkflowsToLocal, readWorkflowFromDir } from './utils';
 import { ProcessDefinition } from './types';
 import {
     DetailModal, RunModal, ScheduleModal, BatchRunModal, 
-    BatchPublishModal, ExportModal, ImportModal, LogModal 
+    BatchPublishModal, ExportModal, ImportModal, LogModal, TaskEditor 
 } from './components';
 
 interface TaskManagerProps {
@@ -47,6 +47,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
     const [showExport, setShowExport] = useState(false);
     const [showImport, setShowImport] = useState(false);
     const [showLog, setShowLog] = useState(false);
+    const [editProcess, setEditProcess] = useState<ProcessDefinition | null>(null);
     
     // 分页
     const [pageNo, setPageNo] = useState(1);
@@ -584,6 +585,14 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                                             </td>
                                             <td className="px-4 py-3">
                                                 <div className="flex items-center justify-center space-x-1">
+                                                    <Tooltip content={lang === 'zh' ? '编辑' : 'Edit'} position="top">
+                                                        <button
+                                                            onClick={() => setEditProcess(process)}
+                                                            className="p-1.5 hover:bg-cyan-100 dark:hover:bg-cyan-900/30 rounded text-cyan-600"
+                                                        >
+                                                            <Edit size={16} />
+                                                        </button>
+                                                    </Tooltip>
                                                     <Tooltip content={lang === 'zh' ? '运行' : 'Run'} position="top">
                                                         <button
                                                             onClick={() => setRunProcess(process)}
@@ -757,6 +766,16 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                 token={token}
                 onClose={() => setShowLog(false)}
             />
+            
+            {/* 任务编辑器 */}
+            {editProcess && currentProject && (
+                <TaskEditor
+                    lang={lang}
+                    process={editProcess}
+                    projectConfig={currentProject}
+                    onClose={() => setEditProcess(null)}
+                />
+            )}
         </div>
     );
 };

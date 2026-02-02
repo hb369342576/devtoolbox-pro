@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
     Plus, Edit, Trash2, CheckCircle, X,
-    FolderKanban, AlertCircle, RefreshCw, Power, CalendarClock
+    FolderKanban, AlertCircle, RefreshCw, Power, CalendarClock, LogIn
 } from 'lucide-react';
 import { Language, DolphinSchedulerConfig } from '../../types';
 import { getTexts } from '../../locales';
@@ -194,6 +194,13 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({
                                             <CalendarClock size={24} />
                                         </div>
                                         <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button 
+                                                onClick={(e) => { e.stopPropagation(); onSelectProject(config); }} 
+                                                className="p-2 text-slate-400 hover:text-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors"
+                                                title={lang === 'zh' ? '进入项目' : 'Enter Project'}
+                                            >
+                                                <LogIn size={18} />
+                                            </button>
                                             <button onClick={(e) => handleEdit(config, e)} className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"><Edit size={18} /></button>
                                             <button onClick={(e) => handleDeleteClick(config.id, e)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"><Trash2 size={18} /></button>
                                         </div>
@@ -257,9 +264,21 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({
                                     <div className="col-span-3 text-sm text-slate-500 dark:text-slate-400 truncate text-xs">
                                         {config.baseUrl}
                                     </div>
-                                    <div className="col-span-1 flex justify-end space-x-2">
-                                        <button onClick={(e) => handleEdit(config, e)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"><Edit size={16} /></button>
-                                        <button onClick={(e) => handleDeleteClick(config.id, e)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"><Trash2 size={16} /></button>
+                                    <div className="col-span-1 flex justify-end space-x-1">
+                                        <Tooltip content={lang === 'zh' ? '进入项目' : 'Enter Project'}>
+                                            <button 
+                                                onClick={(e) => { e.stopPropagation(); onSelectProject(config); }} 
+                                                className="p-1.5 text-slate-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors"
+                                            >
+                                                <LogIn size={16} />
+                                            </button>
+                                        </Tooltip>
+                                        <Tooltip content={lang === 'zh' ? '编辑' : 'Edit'}>
+                                            <button onClick={(e) => handleEdit(config, e)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"><Edit size={16} /></button>
+                                        </Tooltip>
+                                        <Tooltip content={lang === 'zh' ? '删除' : 'Delete'}>
+                                            <button onClick={(e) => handleDeleteClick(config.id, e)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"><Trash2 size={16} /></button>
+                                        </Tooltip>
                                     </div>
                                 </div>
                             ))}

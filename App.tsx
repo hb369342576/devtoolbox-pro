@@ -245,6 +245,11 @@ export default function App() {
   };
   const handleSelectProject = (config: DolphinSchedulerConfig) => {
     setCurrentProject(config);
+    // 导航到任务管理页面
+    if (!openTabs.includes('dolphin-task')) {
+      setOpenTabs([...openTabs, 'dolphin-task']);
+    }
+    setActiveTab('dolphin-task');
   };
 
   useEffect(() => {

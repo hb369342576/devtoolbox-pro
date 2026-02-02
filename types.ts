@@ -126,12 +126,15 @@ export interface FieldMapping {
 
 export interface CanvasNode {
   id: string;
-  type: 'source' | 'target';
+  type: 'source' | 'target' | 'sink' | 'transform';
   x: number;
   y: number;
-  tableName: string;
-  dbType: DatabaseType;
-  columns: ColumnInfo[];
+  tableName?: string;
+  dbType?: DatabaseType;
+  columns?: ColumnInfo[];
+  connId?: string;
+  database?: string;
+  sql?: string; // Transform 节点的 SQL 语句
 }
 
 export interface CanvasLink {
@@ -158,6 +161,9 @@ export interface MappingProfile {
     source: { connId: string; db: string };
     target: { connId: string; db: string };
   };
+
+  // 生成的配置文件
+  generatedConfig?: string;
 }
 
 // --- Interview Questions Types ---

@@ -14,10 +14,11 @@ export const MappingModal: React.FC<MappingModalProps> = ({ lang }) => {
     const activeLink = useFieldMappingStore((state) => state.activeLink);
     const nodes = useFieldMappingStore((state) => state.nodes);
     const setShowMappingModal = useFieldMappingStore((state) => state.setShowMappingModal);
-    const updateLink = useFieldMappingStore((state) => state.updateLink);
+    const syncPathMappings = useFieldMappingStore((state) => state.syncPathMappings);
 
     // Logic
     const [localMappings, setLocalMappings] = useState<FieldMapping[]>([]);
+    const [originalMappings, setOriginalMappings] = useState<FieldMapping[]>([]); // 用于检测修改
     const [isBatchMode, setIsBatchMode] = useState(false);
     const [batchText, setBatchText] = useState('');
 
@@ -32,10 +33,36 @@ export const MappingModal: React.FC<MappingModalProps> = ({ lang }) => {
     useEffect(() => {
         if (activeLink) {
             setLocalMappings(activeLink.mappings || []);
+            setOriginalMappings(activeLink.mappings || []); // 保存原始映射
         }
     }, [activeLink]);
 
+    // 检测是否有修改（使用 JSON 序列化进行深层比较）
+    const hasChanges = (): boolean => {
+        const currentStr = JSON.stringify(localMappings.map(m => ({
+            sourceField: m.sourceField,
+            targetField: m.targetField
+        })));
+        const originalStr = JSON.stringify(originalMappings.map(m => ({
+            sourceField: m.sourceField,
+            targetField: m.targetField
+        })));
+        return currentStr !== originalStr;
+    };
+
     const handleClose = () => {
+        // 如果有修改，提示保存
+        if (hasChanges()) {
+            const confirmSave = window.confirm(
+                lang === 'zh' 
+                    ? '映射已修改，是否保存？' 
+                    : 'Mappings have been modified. Save changes?'
+            );
+            if (confirmSave) {
+                handleSave();
+                return;
+            }
+        }
         setIsBatchMode(false);
         setBatchText('');
         setShowMappingModal(false);
@@ -112,9 +139,12 @@ export const MappingModal: React.FC<MappingModalProps> = ({ lang }) => {
         }
 
         if (activeLink) {
-            updateLink(activeLink.id, { mappings: mappingsToSave });
+            // 使用 syncPathMappings 同步所有同路径连线
+            syncPathMappings(activeLink.id, mappingsToSave);
         }
-        handleClose();
+        setIsBatchMode(false);
+        setBatchText('');
+        setShowMappingModal(false);
     };
 
     if (!showMappingModal || !activeLink || !sourceNode || !targetNode) return null;

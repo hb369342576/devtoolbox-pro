@@ -62,6 +62,8 @@ interface FieldMappingState {
     updateSideConfig: (config: Partial<{ source: { connId: string; db: string }; target: { connId: string; db: string } }>) => void;
     updateActiveProfile: (updates: Partial<MappingProfile>) => void;
     saveCurrentProfile: () => void;
+    syncPathMappings: (linkId: string, mappings: CanvasLink['mappings']) => void;
+    hasUnsavedChanges: () => boolean;
 }
 
 export const useFieldMappingStore = create<FieldMappingState>()(
@@ -110,6 +112,47 @@ export const useFieldMappingStore = create<FieldMappingState>()(
             updateLink: (id, updates) => set((state) => ({ links: state.links.map(l => l.id === id ? { ...l, ...updates } : l) })),
             deleteLink: (id) => set((state) => ({ links: state.links.filter(l => l.id !== id) })),
             setLinks: (links) => set({ links }),
+
+            // 同步同一路径上所有连线的映射
+            syncPathMappings: (linkId, mappings) => {
+                const { links, nodes } = get();
+                const currentLink = links.find(l => l.id === linkId);
+                if (!currentLink) return;
+
+                // 找到同一路径上的所有连线
+                const pathLinks: string[] = [linkId];
+                
+                // 向上追溯
+                let upNode = currentLink.sourceNodeId;
+                while (true) {
+                    const node = nodes.find(n => n.id === upNode);
+                    if (!node || node.type === 'source') break;
+                    const inLink = links.find(l => l.targetNodeId === upNode);
+                    if (inLink && !pathLinks.includes(inLink.id)) {
+                        pathLinks.push(inLink.id);
+                        upNode = inLink.sourceNodeId;
+                    } else break;
+                }
+
+                // 向下追溯
+                let downNode = currentLink.targetNodeId;
+                while (true) {
+                    const node = nodes.find(n => n.id === downNode);
+                    if (!node || node.type === 'sink' || node.type === 'target') break;
+                    const outLink = links.find(l => l.sourceNodeId === downNode);
+                    if (outLink && !pathLinks.includes(outLink.id)) {
+                        pathLinks.push(outLink.id);
+                        downNode = outLink.targetNodeId;
+                    } else break;
+                }
+
+                // 更新所有同路径连线的映射
+                set((state) => ({
+                    links: state.links.map(l => 
+                        pathLinks.includes(l.id) ? { ...l, mappings } : l
+                    )
+                }));
+            },
 
             setViewport: (viewport) => set({ viewport }),
 
@@ -171,6 +214,25 @@ export const useFieldMappingStore = create<FieldMappingState>()(
                 set({
                     profiles: profiles.map(p => p.id === updated.id ? updated : p)
                 });
+            },
+
+            // 检测是否有未保存的更改
+            hasUnsavedChanges: () => {
+                const { activeProfile, nodes, links, profiles } = get();
+                if (!activeProfile) return false;
+                
+                // 从已保存的 profiles 中找到当前 profile
+                const savedProfile = profiles.find(p => p.id === activeProfile.id);
+                if (!savedProfile) return true; // 新项目还未保存
+                
+                // 比较 nodes 和 links
+                const currentNodesStr = JSON.stringify(nodes.map(n => ({ id: n.id, type: n.type, tableName: n.tableName, x: n.x, y: n.y })));
+                const savedNodesStr = JSON.stringify((savedProfile.nodes || []).map(n => ({ id: n.id, type: n.type, tableName: n.tableName, x: n.x, y: n.y })));
+                
+                const currentLinksStr = JSON.stringify(links.map(l => ({ id: l.id, sourceNodeId: l.sourceNodeId, targetNodeId: l.targetNodeId, mappings: l.mappings })));
+                const savedLinksStr = JSON.stringify((savedProfile.links || []).map(l => ({ id: l.id, sourceNodeId: l.sourceNodeId, targetNodeId: l.targetNodeId, mappings: l.mappings })));
+                
+                return currentNodesStr !== savedNodesStr || currentLinksStr !== savedLinksStr;
             }
         }),
         {

@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { X, ZoomIn, ZoomOut, Move, Link as LinkIcon, Lock } from 'lucide-react';
+import { X, ZoomIn, ZoomOut, Move, Link as LinkIcon, Lock, Trash2 } from 'lucide-react';
 import { useFieldMappingStore } from '../store';
 import { invoke } from '@tauri-apps/api/core';
 import { CanvasNode, CanvasLink, Language, DbConnection, TableInfo, TableDetail } from '../../../types';
@@ -8,9 +8,10 @@ import { getTexts } from '../../../locales';
 interface CanvasProps {
     lang: Language;
     connections: DbConnection[];
+    onNodeClick?: (node: CanvasNode) => void;
 }
 
-export const Canvas: React.FC<CanvasProps> = ({ lang, connections }) => {
+export const Canvas: React.FC<CanvasProps> = ({ lang, connections, onNodeClick }) => {
     const {
         nodes,
         links,
@@ -32,6 +33,14 @@ export const Canvas: React.FC<CanvasProps> = ({ lang, connections }) => {
     const [tempLinkEnd, setTempLinkEnd] = useState<{ x: number, y: number } | null>(null);
 
     const containerRef = useRef<HTMLDivElement>(null);
+
+    // 右键菜单状态
+    const [contextMenu, setContextMenu] = useState<{
+        x: number;
+        y: number;
+        type: 'node' | 'link';
+        targetId: string;
+    } | null>(null);
 
     // Convert screen coords to canvas coords
     const toCanvasCoords = (cx: number, cy: number) => {
@@ -121,7 +130,10 @@ export const Canvas: React.FC<CanvasProps> = ({ lang, connections }) => {
         if (linkingSourceId && linkingSourceId !== targetId) {
             const source = nodes.find(n => n.id === linkingSourceId);
             const target = nodes.find(n => n.id === targetId);
-            if (source?.type === 'source' && target?.type === 'target') {
+            // 允许 source/transform 连接到 target/sink/transform
+            const validSourceTypes = ['source', 'transform'];
+            const validTargetTypes = ['target', 'sink', 'transform'];
+            if (source && target && validSourceTypes.includes(source.type) && validTargetTypes.includes(target.type)) {
                 // Check exists
                 const exists = links.find(l => l.sourceNodeId === linkingSourceId && l.targetNodeId === targetId);
                 if (!exists) {
@@ -139,9 +151,84 @@ export const Canvas: React.FC<CanvasProps> = ({ lang, connections }) => {
         setTempLinkEnd(null);
     };
 
-    const handleLinkClick = (link: CanvasLink) => {
+    // 双击连线打开映射编辑
+    const handleLinkDoubleClick = (link: CanvasLink) => {
+        // 追溯完整路径找到 source 和 sink 节点
+        const sourceNode = findPathSource(link.sourceNodeId);
+        const sinkNode = findPathSink(link.targetNodeId);
+        
+        if (sourceNode && sinkNode) {
+            // 获取 source 和 sink 的列信息并设置到连线两端节点上
+            const currentSourceNode = nodes.find(n => n.id === link.sourceNodeId);
+            const currentTargetNode = nodes.find(n => n.id === link.targetNodeId);
+            
+            // 如果当前节点没有 columns（比如是 transform），使用路径上的 source/sink 的 columns
+            if (currentSourceNode && !currentSourceNode.columns?.length && sourceNode.columns?.length) {
+                updateNode(currentSourceNode.id, { columns: sourceNode.columns });
+            }
+            if (currentTargetNode && !currentTargetNode.columns?.length && sinkNode.columns?.length) {
+                updateNode(currentTargetNode.id, { columns: sinkNode.columns });
+            }
+        }
+        
         setActiveLink(link);
         setShowMappingModal(true);
+    };
+
+    // 追溯路径找到 source 节点（向上追溯）
+    const findPathSource = (nodeId: string): CanvasNode | undefined => {
+        const node = nodes.find(n => n.id === nodeId);
+        if (!node) return undefined;
+        if (node.type === 'source') return node;
+        
+        // 查找指向当前节点的连线
+        const incomingLink = links.find(l => l.targetNodeId === nodeId);
+        if (incomingLink) {
+            return findPathSource(incomingLink.sourceNodeId);
+        }
+        return undefined;
+    };
+
+    // 追溯路径找到 sink 节点（向下追溯）
+    const findPathSink = (nodeId: string): CanvasNode | undefined => {
+        const node = nodes.find(n => n.id === nodeId);
+        if (!node) return undefined;
+        if (node.type === 'sink' || node.type === 'target') return node;
+        
+        // 查找从当前节点出发的连线
+        const outgoingLink = links.find(l => l.sourceNodeId === nodeId);
+        if (outgoingLink) {
+            return findPathSink(outgoingLink.targetNodeId);
+        }
+        return undefined;
+    };
+
+    // 右键菜单处理
+    const handleContextMenu = (e: React.MouseEvent, type: 'node' | 'link', targetId: string) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setContextMenu({
+            x: e.clientX,
+            y: e.clientY,
+            type,
+            targetId
+        });
+    };
+
+    // 关闭右键菜单
+    const closeContextMenu = () => {
+        setContextMenu(null);
+    };
+
+    // 处理删除
+    const handleDelete = () => {
+        if (!contextMenu) return;
+        if (contextMenu.type === 'node') {
+            deleteNode(contextMenu.targetId);
+        } else {
+            deleteLink(contextMenu.targetId);
+        }
+        closeContextMenu();
     };
 
     // Rendering Helpers
@@ -166,10 +253,31 @@ export const Canvas: React.FC<CanvasProps> = ({ lang, connections }) => {
     // Global Store Drag Item
     const draggedItem = useFieldMappingStore((state) => state.draggedItem);
 
-    // Drop Handler (Mouse Up)
+    // HTML5 Drop handler for sidebar node types
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        const nodeType = e.dataTransfer.getData('nodeType');
+        if (nodeType) {
+            const pos = toCanvasCoords(e.clientX, e.clientY);
+            useFieldMappingStore.getState().addNode({
+                id: Date.now().toString(),
+                type: nodeType as 'source' | 'sink' | 'transform',
+                x: pos.x - 100,
+                y: pos.y - 20,
+            });
+            useFieldMappingStore.getState().saveCurrentProfile();
+        }
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+    };
+
+    // Drop Handler (Mouse Up) - legacy for draggedItem from old sidebar
     const handleMouseUp = async (e: React.MouseEvent) => {
         if (draggedItem) {
-            e.stopPropagation(); // Stop global clear
+            e.stopPropagation();
             const pos = toCanvasCoords(e.clientX, e.clientY);
 
             try {
@@ -194,33 +302,33 @@ export const Canvas: React.FC<CanvasProps> = ({ lang, connections }) => {
                         columns: detail.columns
                     });
 
-                    // Trigger save
                     useFieldMappingStore.getState().saveCurrentProfile();
                 }
             } catch (err) {
                 console.error(err);
             }
-            // Clear drag state is handled by GlobalMouseUp? 
-            // If we stopPropagation, Global might not receive it?
-            // Global listener is on container. 
-            // We should manually clear here to be safe.
             useFieldMappingStore.getState().setDraggedItem(null);
             return;
         }
+    };
 
-        // This part handles the case where the mouseup event is on the canvas
-        // but not related to a draggedItem from the sidebar.
-        // It should not interfere with the global window mouseup for panning/node dragging.
-        // The global window mouseup will handle clearing isDragging, dragNodeId, linkingSourceId, tempLinkEnd.
+    // Node click handler
+    const handleNodeClick = (e: React.MouseEvent, node: CanvasNode) => {
+        e.stopPropagation();
+        if (onNodeClick) {
+            onNodeClick(node);
+        }
     };
 
     return (
         <div
             ref={containerRef}
-            className="flex-1 bg-slate-50 dark:bg-slate-900 border dark:border-slate-700 overflow-hidden relative canvas-bg cursor-move"
+            className="h-full w-full bg-slate-50 dark:bg-slate-900 border dark:border-slate-700 overflow-hidden relative canvas-bg cursor-move"
             onWheel={handleWheel}
             onMouseDown={handleMouseDown}
             onMouseUp={handleMouseUp}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
         >
             {/* Background Grid */}
             <div
@@ -242,7 +350,12 @@ export const Canvas: React.FC<CanvasProps> = ({ lang, connections }) => {
                         const p1 = getNodeCenter(link.sourceNodeId);
                         const p2 = getTargetLeft(link.targetNodeId);
                         return (
-                            <g key={link.id} onClick={(e) => { e.stopPropagation(); handleLinkClick(link); }} className="cursor-pointer pointer-events-auto">
+                            <g 
+                                key={link.id} 
+                                onDoubleClick={(e) => { e.stopPropagation(); handleLinkDoubleClick(link); }} 
+                                onContextMenu={(e) => handleContextMenu(e, 'link', link.id)}
+                                className="cursor-pointer pointer-events-auto"
+                            >
                                 <path
                                     d={drawPath(p1, p2)}
                                     stroke="#94a3b8"
@@ -267,59 +380,94 @@ export const Canvas: React.FC<CanvasProps> = ({ lang, connections }) => {
                 </svg>
 
                 {/* Nodes Layer */}
-                {nodes.map(node => (
-                    <div
-                        key={node.id}
-                        className={`absolute w-[220px] bg-white dark:bg-slate-800 rounded-lg shadow-lg border-2 flex flex-col ${node.type === 'source' ? 'border-blue-500' : 'border-green-500'
-                            }`}
-                        style={{
-                            left: node.x,
-                            top: node.y,
-                        }}
-                        onMouseDown={(e) => handleNodeDragStart(e, node.id)}
-                    >
-                        {/* Header */}
-                        <div className={`p-2 ${node.type === 'source' ? 'bg-blue-50 text-blue-700' : 'bg-green-50 text-green-700'} font-bold text-sm flex justify-between items-center rounded-t-lg handle cursor-grab`}>
-                            <span className="truncate">{node.tableName}</span>
-                            <div className="flex space-x-1">
-                                {node.type === 'source' && (
+                {nodes.map(node => {
+                    // 根据节点类型设置颜色
+                    const nodeColors = {
+                        source: { border: 'border-blue-500', header: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300', dot: 'bg-blue-200 border-blue-500' },
+                        sink: { border: 'border-green-500', header: 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300', dot: 'bg-green-200 border-green-500' },
+                        target: { border: 'border-green-500', header: 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300', dot: 'bg-green-200 border-green-500' },
+                        transform: { border: 'border-amber-500', header: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300', dot: 'bg-amber-200 border-amber-500' }
+                    };
+                    const colors = nodeColors[node.type] || nodeColors.source;
+                    const displayName = node.tableName || (node.type === 'source' ? 'Source' : node.type === 'sink' ? 'Sink' : 'Transform');
+
+                    return (
+                        <div
+                            key={node.id}
+                            className={`absolute w-[220px] bg-white dark:bg-slate-800 rounded-lg shadow-lg border-2 flex flex-col ${colors.border} cursor-pointer hover:shadow-xl transition-shadow`}
+                            style={{ left: node.x, top: node.y }}
+                            onMouseDown={(e) => handleNodeDragStart(e, node.id)}
+                            onDoubleClick={(e) => handleNodeClick(e, node)}
+                            onContextMenu={(e) => handleContextMenu(e, 'node', node.id)}
+                        >
+                            {/* Header */}
+                            <div className={`p-2 ${colors.header} font-bold text-sm flex justify-between items-center rounded-t-lg handle cursor-grab`}>
+                                <span className="truncate">{displayName}</span>
+                                <div className="flex space-x-1">
+                                    {(node.type === 'source' || node.type === 'transform') && (
+                                        <button
+                                            onMouseDown={(e) => handleLinkStart(e, node.id)}
+                                            className="p-1 hover:bg-white/50 rounded" title="拖拽连接"
+                                        >
+                                            <LinkIcon size={12} />
+                                        </button>
+                                    )}
                                     <button
-                                        onMouseDown={(e) => handleLinkStart(e, node.id)}
-                                        className="p-1 hover:bg-white/50 rounded" title="拖拽连接"
+                                        onClick={(e) => { e.stopPropagation(); deleteNode(node.id); }}
+                                        className="p-1 hover:bg-red-200 text-red-500 rounded"
                                     >
-                                        <LinkIcon size={12} />
+                                        <X size={12} />
                                     </button>
-                                )}
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); deleteNode(node.id); }}
-                                    className="p-1 hover:bg-red-200 text-red-500 rounded"
-                                >
-                                    <X size={12} />
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Columns (Preview first 5) */}
-                        <div className="p-2 space-y-1 text-xs text-slate-600 dark:text-slate-300 max-h-[150px] overflow-hidden pointer-events-none">
-                            {node.columns.map(c => (
-                                <div key={c.name} className="flex justify-between">
-                                    <span>{c.name}</span>
-                                    <span className="text-slate-400">{c.type}</span>
                                 </div>
-                            ))}
-                        </div>
-
-                        {/* Connect Point Target */}
-                        {node.type === 'target' && (
-                            <div
-                                className="absolute -left-3 top-8 w-6 h-6 bg-green-200 border-2 border-green-500 rounded-full flex items-center justify-center cursor-pointer hover:scale-110"
-                                onMouseUp={(e) => handleLinkEnd(e, node.id)}
-                            >
-                                <LinkIcon size={12} />
                             </div>
-                        )}
-                    </div>
-                ))}
+
+                            {/* Node Content: Transform shows SQL, Source/Sink shows columns */}
+                            <div className="p-2 space-y-1 text-xs text-slate-600 dark:text-slate-300 max-h-[150px] overflow-hidden">
+                                {node.type === 'transform' ? (
+                                    // Transform 节点显示 SQL 片段
+                                    node.sql ? (
+                                        <pre className="font-mono text-amber-600 dark:text-amber-400 whitespace-pre-wrap overflow-hidden">
+                                            {node.sql.slice(0, 100)}{node.sql.length > 100 ? '...' : ''}
+                                        </pre>
+                                    ) : (
+                                        <div className="text-center text-slate-400 py-2">
+                                            {lang === 'zh' ? '双击编写 SQL' : 'Double-click to write SQL'}
+                                        </div>
+                                    )
+                                ) : (
+                                    // Source/Sink 节点显示列信息
+                                    node.columns && node.columns.length > 0 ? (
+                                        <>
+                                            {node.columns.slice(0, 5).map(c => (
+                                                <div key={c.name} className="flex justify-between">
+                                                    <span>{c.name}</span>
+                                                    <span className="text-slate-400">{c.type}</span>
+                                                </div>
+                                            ))}
+                                            {node.columns.length > 5 && (
+                                                <div className="text-center text-slate-400">...</div>
+                                            )}
+                                        </>
+                                    ) : (
+                                        <div className="text-center text-slate-400 py-2">
+                                            {lang === 'zh' ? '双击配置数据源' : 'Double-click to configure'}
+                                        </div>
+                                    )
+                                )}
+                            </div>
+
+                            {/* Connect Point for Target/Sink */}
+                            {(node.type === 'target' || node.type === 'sink' || node.type === 'transform') && (
+                                <div
+                                    className={`absolute -left-3 top-8 w-6 h-6 ${colors.dot} border-2 rounded-full flex items-center justify-center cursor-pointer hover:scale-110`}
+                                    onMouseUp={(e) => handleLinkEnd(e, node.id)}
+                                >
+                                    <LinkIcon size={12} />
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
             </div>
 
             {/* Controls */}
@@ -328,6 +476,31 @@ export const Canvas: React.FC<CanvasProps> = ({ lang, connections }) => {
                 <button onClick={() => setScale(s => Math.max(0.1, s - 0.1))} className="p-2 bg-white dark:bg-slate-800 rounded shadow"><ZoomOut size={20} /></button>
                 <button onClick={() => { setScale(1); setOffset({ x: 0, y: 0 }); }} className="p-2 bg-white dark:bg-slate-800 rounded shadow"><Move size={20} /></button>
             </div>
+
+            {/* Right-Click Context Menu */}
+            {contextMenu && (
+                <>
+                    {/* Backdrop to close menu */}
+                    <div 
+                        className="fixed inset-0 z-40" 
+                        onClick={closeContextMenu}
+                        onContextMenu={(e) => { e.preventDefault(); closeContextMenu(); }}
+                    />
+                    {/* Menu */}
+                    <div 
+                        className="fixed z-50 bg-white dark:bg-slate-800 rounded-lg shadow-xl border dark:border-slate-700 py-1 min-w-[120px]"
+                        style={{ left: contextMenu.x, top: contextMenu.y }}
+                    >
+                        <button
+                            onClick={handleDelete}
+                            className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center space-x-2"
+                        >
+                            <Trash2 size={14} />
+                            <span>{lang === 'zh' ? '删除' : 'Delete'}</span>
+                        </button>
+                    </div>
+                </>
+            )}
         </div>
     );
 };
