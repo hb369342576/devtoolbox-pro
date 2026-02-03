@@ -232,7 +232,7 @@ export const Settings: React.FC<SettingsProps> = ({ lang, onLangChange, theme, o
                             <div className="flex items-center justify-between">
                                 <div>
                                     <p className="font-medium text-slate-800 dark:text-white">DevToolbox Pro</p>
-                                    <p className="text-xs text-slate-500 mt-1">v1.0.0</p>
+                                    <p className="text-xs text-slate-500 mt-1">v1.1.0</p>
                                 </div>
                                 <button
                                     onClick={handleCheckUpdate}
@@ -302,7 +302,7 @@ export const Settings: React.FC<SettingsProps> = ({ lang, onLangChange, theme, o
 
             {/* Footer */}
             <div className="text-center text-xs text-slate-400 mt-8">
-                <p>DevToolbox Pro v1.0.0</p>
+                <p>DevToolbox Pro v1.1.0</p>
                 <p>&copy; 2024 DevToolbox Team. All rights reserved.</p>
             </div>
         </div>
