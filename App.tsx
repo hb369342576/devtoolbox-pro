@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Layout } from './components/ui/Layout';
 import { ToastProvider } from './components/ui/Toast';
+import { UpdateChecker } from './components/UpdateChecker';
 import { Tooltip } from './components/ui/Tooltip';
 import { Login } from './features/Login';
 import { UserProfile } from './features/UserProfile';
@@ -87,12 +88,12 @@ const Dashboard: React.FC<{ onNavigate: (id: string) => void, lang: Language }> 
   const tools = NAV_ITEMS.filter(item => item.id !== 'dashboard');
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-12 py-8">
+    <div className="flex flex-col items-center space-y-12 pt-8 pb-8">
       <div className="space-y-4 text-center max-w-3xl px-4">
         <h1 className="text-4xl md:text-5xl font-bold text-slate-900 dark:text-white tracking-tight">
           {lang === 'zh' ? '欢迎使用' : 'Welcome to'} <span className="text-blue-600">DevToolbox</span>
         </h1>
-        <p className="text-lg text-slate-600 dark:text-slate-400">
+        <p className="text-lg md:text-xl text-slate-600 dark:text-slate-400">
           {lang === 'zh'
             ? '一站式开发者工具箱，集成数据库管理、PDF处理、系统监控等核心功能。'
             : 'One-stop developer toolkit integrating database management, PDF processing, and system monitoring.'}
@@ -413,6 +414,8 @@ export default function App() {
           </div>
         ))}
       </Layout>
+      {/* 自动更新检查 */}
+      <UpdateChecker lang={lang} />
     </ToastProvider>
   );
 }

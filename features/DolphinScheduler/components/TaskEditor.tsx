@@ -136,13 +136,15 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
     // 运行弹窗状态
     const [showRunModal, setShowRunModal] = useState(false);
     const [runningProcess, setRunningProcess] = useState(false);
+    const [runningNodeCode, setRunningNodeCode] = useState<number>(0);  // 要运行的节点 code
     const [runConfig, setRunConfig] = useState({
         failureStrategy: 'CONTINUE',        // 失败策略: CONTINUE/END
         warningType: 'NONE',                // 告警类型: NONE/SUCCESS/FAILURE/ALL
         processInstancePriority: 'MEDIUM',  // 优先级: HIGHEST/HIGH/MEDIUM/LOW/LOWEST
         workerGroup: 'default',
         dryRun: 0,                          // 空跑: 0=否, 1=是
-        execType: 'START_PROCESS'           // 执行类型
+        execType: 'START_PROCESS',          // 执行类型
+        taskDependType: 'TASK_POST'         // 任务依赖类型: TASK_ONLY=只运行当前, TASK_POST=运行当前及后续
     });
 
     // 加载工作流详情
@@ -169,7 +171,17 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                     let locationMap: Record<string, { x: number; y: number }> = {};
                     try {
                         if (locations) {
-                            locationMap = typeof locations === 'string' ? JSON.parse(locations) : locations;
+                            // locations 可能是 JSON 字符串，先解析
+                            const locArray = typeof locations === 'string' ? JSON.parse(locations) : locations;
+                            // locations 是数组格式 [{taskCode, x, y}, ...]，转换为对象格式 {taskCode: {x, y}}
+                            if (Array.isArray(locArray)) {
+                                locArray.forEach((loc: { taskCode: number; x: number; y: number }) => {
+                                    locationMap[loc.taskCode] = { x: loc.x, y: loc.y };
+                                });
+                            } else {
+                                // 兼容旧格式（对象格式）
+                                locationMap = locArray;
+                            }
                         }
                     } catch (e) {
                         console.error('Failed to parse locations:', e);
@@ -480,8 +492,9 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
     // 关闭右键菜单
     const closeContextMenu = () => setContextMenu(null);
     
-    // 打开运行弹窗
-    const handleOpenRunModal = () => {
+    // 打开运行弹窗 - 传入要运行的节点
+    const handleOpenRunModal = (node: TaskNode) => {
+        setRunningNodeCode(node.code);  // 传入节点 code
         setShowRunModal(true);
     };
     
@@ -489,24 +502,60 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
     const handleRunProcess = async () => {
         setRunningProcess(true);
         try {
+            // 1. 先获取最新的工作流定义，确保使用最新版本号
+            const defUrl = `${projectConfig.baseUrl}/projects/${projectConfig.projectCode}/process-definition/${process.code}`;
+            const defResponse = await httpFetch(defUrl, {
+                method: 'GET',
+                headers: { 'token': projectConfig.token }
+            });
+            const defResult = await defResponse.json();
+            
+            if (defResult.code !== 0 || !defResult.data?.processDefinition) {
+                throw new Error(defResult.msg || 'Failed to get process definition');
+            }
+            
+            const latestVersion = defResult.data.processDefinition.version;
+            console.log('Using latest version:', latestVersion);
+            
+            // 2. 启动工作流实例
             const url = `${projectConfig.baseUrl}/projects/${projectConfig.projectCode}/executors/start-process-instance`;
+            
+            // 构建 scheduleTime JSON
+            const today = new Date();
+            const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')} 00:00:00`;
+            const scheduleTimeJson = JSON.stringify({
+                complementStartDate: dateStr,
+                complementEndDate: dateStr
+            });
+            
             const formData = new URLSearchParams();
             formData.append('processDefinitionCode', process.code.toString());
-            formData.append('scheduleTime', '');
             formData.append('failureStrategy', runConfig.failureStrategy);
             formData.append('warningType', runConfig.warningType);
-            formData.append('warningGroupId', '0');
+            formData.append('warningGroupId', '');
             formData.append('execType', runConfig.execType);
-            formData.append('startNodeList', '');
-            formData.append('taskDependType', 'TASK_POST');
-            formData.append('commandType', 'START_PROCESS');
+            formData.append('startNodeList', runningNodeCode.toString());  // 使用任务 code
+            formData.append('taskDependType', runConfig.taskDependType);  // 使用用户选择的模式
+            formData.append('complementDependentMode', 'OFF_MODE');
             formData.append('runMode', 'RUN_MODE_SERIAL');
             formData.append('processInstancePriority', runConfig.processInstancePriority);
             formData.append('workerGroup', runConfig.workerGroup);
+            formData.append('tenantCode', 'default');
+            formData.append('environmentCode', '');
+            formData.append('startParams', '');
+            formData.append('expectedParallelismNumber', '2');
             formData.append('dryRun', runConfig.dryRun.toString());
-            formData.append('version', '1');
+            formData.append('testFlag', '0');
+            formData.append('version', latestVersion.toString());
             formData.append('allLevelDependent', 'false');
-            formData.append('complementDependentMode', 'OFF_MODE');
+            formData.append('executionOrder', 'DESC_ORDER');
+            formData.append('scheduleTime', scheduleTimeJson);
+            
+            // 调试：输出完整请求参数
+            console.log('=== Start Process Request ===');
+            console.log('URL:', url);
+            console.log('Params:', formData.toString());
+            console.log('startNodeList (code):', runningNodeCode);
             
             const response = await httpFetch(url, {
                 method: 'POST',
@@ -521,7 +570,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
             if (result.code === 0) {
                 toast({
                     title: lang === 'zh' ? '运行成功' : 'Run Success',
-                    description: lang === 'zh' ? '工作流已开始运行' : 'Workflow has started running'
+                    description: lang === 'zh' ? '任务已开始运行' : 'Task has started running'
                 });
                 setShowRunModal(false);
             } else {
@@ -911,8 +960,8 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                                 <foreignObject x={NODE_WIDTH - 32} y="22" width="24" height="24">
                                                     <button 
                                                         className="w-6 h-6 rounded-full bg-green-500 hover:bg-green-600 flex items-center justify-center text-white shadow-sm transition-colors"
-                                                        onClick={(e) => { e.stopPropagation(); handleOpenRunModal(); }}
-                                                        title={lang === 'zh' ? '运行工作流' : 'Run Workflow'}
+                                                        onClick={(e) => { e.stopPropagation(); handleOpenRunModal(node); }}
+                                                        title={lang === 'zh' ? '运行此节点' : 'Run This Node'}
                                                     >
                                                         <Play size={12} fill="white" />
                                                     </button>
@@ -1504,11 +1553,11 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                     >
                         {process.releaseState === 'ONLINE' && (
                             <button
-                                onClick={() => { handleOpenRunModal(); closeContextMenu(); }}
+                                onClick={() => { handleOpenRunModal(contextMenu.node); closeContextMenu(); }}
                                 className="w-full px-4 py-2 text-left text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center space-x-2"
                             >
                                 <Play size={16} className="text-green-500" />
-                                <span>{lang === 'zh' ? '运行工作流' : 'Run Workflow'}</span>
+                                <span>{lang === 'zh' ? '运行此节点' : 'Run This Node'}</span>
                             </button>
                         )}
                         <button
@@ -1557,6 +1606,21 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                         <div className="p-6 space-y-4 overflow-y-auto max-h-[60vh]">
                             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 text-sm text-blue-700 dark:text-blue-300">
                                 <strong>{process.name}</strong>
+                            </div>
+                            
+                            {/* 任务执行范围 */}
+                            <div>
+                                <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
+                                    {lang === 'zh' ? '执行范围' : 'Execution Scope'}
+                                </label>
+                                <select
+                                    value={runConfig.taskDependType}
+                                    onChange={(e) => setRunConfig({ ...runConfig, taskDependType: e.target.value })}
+                                    className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
+                                >
+                                    <option value="TASK_ONLY">{lang === 'zh' ? '当前节点' : 'Current Node Only'}</option>
+                                    <option value="TASK_POST">{lang === 'zh' ? '当前及以后节点' : 'Current and Downstream Nodes'}</option>
+                                </select>
                             </div>
                             
                             <div className="grid grid-cols-2 gap-4">

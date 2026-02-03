@@ -35,7 +35,7 @@ export const NAV_ITEMS: NavItem[] = [
     tooltip: { en: 'PDF merge, split and conversion tools', zh: 'PDF 合并、拆分和转换工具' },
     icon: FileText,
     category: 'office',
-    order: 3,
+    order: 8,
     visible: true
   },
   {
