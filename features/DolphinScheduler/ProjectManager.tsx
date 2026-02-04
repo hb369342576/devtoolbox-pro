@@ -167,6 +167,7 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({
                 <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center">
                     <FolderKanban className="mr-3 text-blue-600" />
                     {lang === 'zh' ? '项目管理' : 'Project Manager'}
+                    <span className="ml-2 px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-xs font-medium rounded-full">v3.2.2</span>
                 </h2>
                 <div className="flex items-center space-x-3">
                     <ViewModeToggle />
@@ -182,11 +183,11 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({
 
             <div className="flex-1 overflow-y-auto pb-4 custom-scrollbar">
                 {viewMode === 'grid' ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-2">
+                    <div className="flex flex-wrap gap-6 pt-2">
                         {configs.map(config => (
                             <Tooltip key={config.id} content={config.name} position="top">
                                 <div
-                                    className="group relative bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border-2 border-slate-200 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-2xl hover:shadow-blue-500/20 hover:-translate-y-2 transition-all duration-300 cursor-pointer overflow-hidden min-h-[200px]"
+                                    className="group relative bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border-2 border-slate-200 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-2xl hover:shadow-blue-500/20 hover:-translate-y-2 transition-all duration-300 cursor-pointer overflow-hidden min-h-[200px] w-72"
                                     onClick={() => handleCardClick(config)}
                                 >
                                     <div className="flex items-start justify-between mb-4">
@@ -225,7 +226,7 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({
                         ))}
                         <button
                             onClick={handleAddNew}
-                            className="group flex flex-col items-center justify-center p-6 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-600 bg-gradient-to-br from-blue-50/50 to-indigo-50/50 dark:from-blue-900/10 dark:to-indigo-900/10 hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 cursor-pointer min-h-[200px]"
+                            className="group flex flex-col items-center justify-center p-6 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-600 bg-gradient-to-br from-blue-50/50 to-indigo-50/50 dark:from-blue-900/10 dark:to-indigo-900/10 hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 cursor-pointer min-h-[200px] w-72"
                         >
                             <div className="p-4 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform duration-300 mb-4">
                                 <Plus size={32} />

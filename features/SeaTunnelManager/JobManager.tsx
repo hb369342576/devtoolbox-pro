@@ -179,12 +179,12 @@ export const JobManager: React.FC<JobManagerProps> = ({
                 </div>
                 
                 <div className="flex-1 overflow-y-auto pb-4 custom-scrollbar">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-2">
+                <div className="flex flex-wrap gap-6 pt-2">
                         {configs.map(config => (
                             <div
                                 key={config.id}
                                 onClick={() => onSelectEngine(config)}
-                                className="group relative bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border-2 border-slate-200 dark:border-slate-700 hover:border-cyan-400 dark:hover:border-cyan-500 hover:shadow-2xl hover:shadow-cyan-500/20 hover:-translate-y-2 transition-all duration-300 cursor-pointer overflow-hidden min-h-[180px]"
+                                className="group relative bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border-2 border-slate-200 dark:border-slate-700 hover:border-cyan-400 dark:hover:border-cyan-500 hover:shadow-2xl hover:shadow-cyan-500/20 hover:-translate-y-2 transition-all duration-300 cursor-pointer overflow-hidden min-h-[180px] w-72"
                             >
                                 <div className="flex items-start justify-between mb-4">
                                     <div className="p-3 rounded-lg bg-cyan-100 dark:bg-cyan-900/30 text-2xl">
@@ -241,7 +241,7 @@ export const JobManager: React.FC<JobManagerProps> = ({
                     >
                         <ArrowLeft size={20} />
                     </button>
-                    <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center">
+                    <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center whitespace-nowrap">
                         <ListTodo className="mr-3 text-cyan-600" />
                         {lang === 'zh' ? '作业管理' : 'Job Manager'}
                         <span className="mx-2 text-slate-300 dark:text-slate-600">/</span>

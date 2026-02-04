@@ -160,10 +160,22 @@ export default function App() {
     const saved = localStorage.getItem('language');
     return (saved as Language) || 'zh';
   });
-  const [theme, setTheme] = useState<Theme>(() => {
+  const [theme, setThemeState] = useState<Theme>(() => {
     const saved = localStorage.getItem('theme');
     return (saved as Theme) || 'light';
   });
+  
+  // 主题切换函数：同时更新状态、localStorage 和 DOM
+  const setTheme = (newTheme: Theme) => {
+    setThemeState(newTheme);
+    localStorage.setItem('theme', newTheme);
+    const root = window.document.documentElement;
+    if (newTheme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+  };
   const [monitorEnabled, setMonitorEnabled] = useState<boolean>(() => {
     const saved = localStorage.getItem('monitorEnabled');
     return saved !== null ? JSON.parse(saved) : false; // 默认关闭
@@ -203,10 +215,6 @@ export default function App() {
     localStorage.setItem('language', lang);
   }, [lang]);
 
-  // Persist theme
-  useEffect(() => {
-    localStorage.setItem('theme', theme);
-  }, [theme]);
 
   // Persist monitor enabled
   useEffect(() => {
@@ -264,11 +272,6 @@ export default function App() {
     }
   }, []);
 
-  useEffect(() => {
-    const root = window.document.documentElement;
-    if (theme === 'dark') root.classList.add('dark');
-    else root.classList.remove('dark');
-  }, [theme]);
 
   const handleLogin = (username: string) => {
     const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`;

@@ -8,6 +8,7 @@ import { Language, DolphinSchedulerConfig } from '../../../types';
 import { ProcessDefinition } from '../types';
 import { httpFetch } from '../../../utils/http';
 import { useToast } from '../../../components/ui/Toast';
+import { ConfirmModal } from '../../../components/ui/ConfirmModal';
 
 // 节点类型定义
 const NODE_TYPES = [
@@ -80,6 +81,8 @@ interface TaskNode {
     timeout?: number;
     // 描述
     description?: string;
+    // 保存原始任务数据（用于保存时保留所有字段）
+    rawTask?: any;
 }
 
 // 节点连线
@@ -147,6 +150,15 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
         taskDependType: 'TASK_POST'         // 任务依赖类型: TASK_ONLY=只运行当前, TASK_POST=运行当前及后续
     });
 
+    // 保存和退出提示状态
+    const [saving, setSaving] = useState(false);
+    const [showExitConfirm, setShowExitConfirm] = useState(false);
+    const [originalSnapshot, setOriginalSnapshot] = useState('');
+    const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+    // 只读模式：上线状态不允许编辑
+    const isReadOnly = process.releaseState === 'ONLINE';
+
     // 加载工作流详情
     useEffect(() => {
         const loadWorkflowDetail = async () => {
@@ -207,7 +219,8 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                             failRetryTimes: task.failRetryTimes || 0,
                             failRetryInterval: task.failRetryInterval || 1,
                             timeout: task.timeout || 0,
-                            description: task.description || ''
+                            description: task.description || '',
+                            rawTask: task  // 保存原始数据
                         };
                     });
                     
@@ -223,6 +236,8 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                     
                     setTaskNodes(nodes);
                     setTaskRelations(relations);
+                    // 保存原始快照用于检测未保存更改
+                    setOriginalSnapshot(JSON.stringify({ nodes, relations }));
                 } else {
                     toast({
                         title: lang === 'zh' ? '加载失败' : 'Load Failed',
@@ -328,6 +343,158 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
         loadAlertGroups();
     }, [process.code, projectConfig]);
 
+    // 检测未保存更改
+    useEffect(() => {
+        if (!originalSnapshot) return;
+        const currentSnapshot = JSON.stringify({ 
+            nodes: taskNodes.map(n => ({ ...n })), 
+            relations: taskRelations 
+        });
+        setHasUnsavedChanges(currentSnapshot !== originalSnapshot);
+    }, [taskNodes, taskRelations, originalSnapshot]);
+
+    // 保存工作流
+    const handleSaveWorkflow = async () => {
+        setSaving(true);
+        try {
+            // 构建 locations 数组
+            const locations = taskNodes.map(node => ({
+                taskCode: node.code,
+                x: Math.round(node.x),
+                y: Math.round(node.y)
+            }));
+            
+            // 构建 taskDefinitionJson - 使用原始数据合并当前修改
+            const taskDefinitionJson = taskNodes.map(node => {
+                // taskParams 需要保持为对象格式
+                const taskParams = typeof node.taskParams === 'string' 
+                    ? JSON.parse(node.taskParams) 
+                    : (node.taskParams || {});
+                
+                // 如果有原始数据，合并原始数据和当前修改
+                if (node.rawTask) {
+                    return {
+                        ...node.rawTask,
+                        name: node.name,
+                        taskType: node.taskType,
+                        taskParams: taskParams,
+                        failRetryTimes: node.failRetryTimes || 0,
+                        failRetryInterval: node.failRetryInterval || 1,
+                        timeout: node.timeout || 0,
+                        description: node.description || ''
+                    };
+                }
+                
+                // 新创建的节点（没有原始数据）
+                return {
+                    code: node.code,
+                    version: 1,
+                    name: node.name,
+                    taskType: node.taskType,
+                    taskParams: taskParams,
+                    failRetryTimes: node.failRetryTimes || 0,
+                    failRetryInterval: node.failRetryInterval || 1,
+                    timeout: node.timeout || 0,
+                    description: node.description || '',
+                    flag: 'YES',
+                    taskPriority: 'MEDIUM',
+                    workerGroup: taskParams?.workerGroup || 'default',
+                    environmentCode: taskParams?.environmentCode || -1,
+                    delayTime: 0,
+                    timeoutFlag: 'CLOSE',
+                    timeoutNotifyStrategy: ''
+                };
+            });
+            
+            // 构建 taskRelationJson
+            const taskRelationJson = taskRelations.map(rel => ({
+                preTaskCode: rel.preTaskCode,
+                postTaskCode: rel.postTaskCode,
+                name: '',
+                preTaskVersion: 1,
+                postTaskVersion: 1,
+                conditionType: 'NONE',
+                conditionParams: {}
+            }));
+            
+            // 添加根节点关系（没有前置任务的节点需要与 0 关联）
+            const postTaskCodes = new Set(taskRelations.map(r => r.postTaskCode));
+            taskNodes.forEach(node => {
+                if (!postTaskCodes.has(node.code)) {
+                    taskRelationJson.push({
+                        preTaskCode: 0,
+                        postTaskCode: node.code,
+                        name: '',
+                        preTaskVersion: 0,
+                        postTaskVersion: 1,
+                        conditionType: 'NONE',
+                        conditionParams: {}
+                    });
+                }
+            });
+            
+            // 调用更新API
+            const url = `${projectConfig.baseUrl}/projects/${projectConfig.projectCode}/process-definition/${process.code}`;
+            const formData = new URLSearchParams();
+            formData.append('name', process.name);
+            formData.append('locations', JSON.stringify(locations));
+            formData.append('taskDefinitionJson', JSON.stringify(taskDefinitionJson));
+            formData.append('taskRelationJson', JSON.stringify(taskRelationJson));
+            formData.append('tenantCode', 'default');
+            formData.append('executionType', 'PARALLEL');
+            formData.append('description', process.description || '');
+            formData.append('globalParams', '[]');
+            formData.append('timeout', '0');
+            
+            console.log('=== Save Workflow Request ===');
+            console.log('URL:', url);
+            console.log('locations:', JSON.stringify(locations));
+            console.log('taskDefinitionJson:', JSON.stringify(taskDefinitionJson));
+            console.log('taskRelationJson:', JSON.stringify(taskRelationJson));
+            
+            const response = await httpFetch(url, {
+                method: 'PUT',
+                headers: { 
+                    'token': projectConfig.token,
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: formData.toString()
+            });
+            const result = await response.json();
+            
+            if (result.code === 0) {
+                toast({ 
+                    title: lang === 'zh' ? '保存成功' : 'Saved Successfully',
+                    variant: 'success' 
+                });
+                // 更新原始快照
+                setOriginalSnapshot(JSON.stringify({ nodes: taskNodes, relations: taskRelations }));
+                setHasUnsavedChanges(false);
+                return true;
+            } else {
+                throw new Error(result.msg || 'Unknown error');
+            }
+        } catch (error: any) {
+            toast({ 
+                title: lang === 'zh' ? '保存失败' : 'Save Failed', 
+                description: error.message, 
+                variant: 'destructive' 
+            });
+            return false;
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    // 处理关闭（检查未保存更改）
+    const handleClose = () => {
+        if (hasUnsavedChanges) {
+            setShowExitConfirm(true);
+        } else {
+            onClose();
+        }
+    };
+
     // 获取节点类型信息
     const getNodeType = (taskType: string) => {
         return NODE_TYPES.find(t => t.id.toLowerCase() === taskType.toLowerCase()) || NODE_TYPES[NODE_TYPES.length - 1];
@@ -370,8 +537,10 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
     // 节点拖拽开始
     const handleNodeMouseDown = (e: React.MouseEvent, node: TaskNode) => {
         e.stopPropagation();
-        setDraggingNode(node.id);
         setSelectedNode(node);
+        // 只读模式不允许拖拽
+        if (isReadOnly) return;
+        setDraggingNode(node.id);
         setDragStart({ x: e.clientX / scale - node.x, y: e.clientY / scale - node.y });
     };
 
@@ -394,13 +563,19 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
         setDraggingNode(null);
     };
 
-    // 节点双击编辑
+    // 节点双击编辑/查看
     const handleNodeDoubleClick = (node: TaskNode) => {
+        // 只读模式也允许打开查看，但不能保存
         setEditingNode(node);
     };
 
     // 左侧节点拖拽到画布
     const handleDragStart = (e: React.DragEvent, nodeType: typeof NODE_TYPES[0]) => {
+        // 只读模式不允许添加新节点
+        if (isReadOnly) {
+            e.preventDefault();
+            return;
+        }
         e.dataTransfer.setData('nodeType', JSON.stringify(nodeType));
     };
 
@@ -462,6 +637,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
         e.preventDefault();
         e.stopPropagation();
         setSelectedNode(node);
+        // 只读模式也显示右键菜单（但只允许运行）
         setContextMenu({ x: e.clientX, y: e.clientY, node });
     };
 
@@ -689,21 +865,37 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
         <div className="fixed inset-0 z-50 bg-slate-100 dark:bg-slate-900 flex flex-col">
             {/* 顶部栏 */}
             <div className="h-14 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between px-4 shrink-0 shadow-sm">
-                <div className="flex items-center space-x-3">
-                    <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 transition-colors">
+            <div className="flex items-center space-x-3">
+                    <button onClick={handleClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 transition-colors">
                         <ChevronLeft size={20} />
                     </button>
                     <div>
-                        <h2 className="font-bold text-slate-800 dark:text-white">{process.name}</h2>
-                        <span className="text-xs text-slate-500">{lang === 'zh' ? '工作流编辑器' : 'Workflow Editor'}</span>
+                        <h2 className="font-bold text-slate-800 dark:text-white flex items-center">
+                            {process.name}
+                            {isReadOnly && (
+                                <span className="ml-2 px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 text-xs font-medium rounded-full">
+                                    {lang === 'zh' ? '已上线' : 'ONLINE'}
+                                </span>
+                            )}
+                        </h2>
+                        <span className="text-xs text-slate-500">
+                            {lang === 'zh' ? '工作流编辑器' : 'Workflow Editor'}
+                            {isReadOnly && (lang === 'zh' ? ' (只读模式)' : ' (Read Only)')}
+                        </span>
                     </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                    <button className="px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm flex items-center space-x-1 transition-colors">
-                        <Save size={16} />
-                        <span>{lang === 'zh' ? '保存' : 'Save'}</span>
-                    </button>
-                    <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 transition-colors">
+                    {!isReadOnly && (
+                        <button 
+                            onClick={handleSaveWorkflow}
+                            disabled={saving}
+                            className="px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm flex items-center space-x-1 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                            <span>{lang === 'zh' ? '保存' : 'Save'}</span>
+                        </button>
+                    )}
+                    <button onClick={handleClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 transition-colors">
                         <X size={20} />
                     </button>
                 </div>
@@ -987,9 +1179,9 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                 </div>
                                 <div>
                                     <h3 className="font-bold text-lg text-slate-800 dark:text-white">
-                                        {lang === 'zh' ? '编辑节点' : 'Edit Node'}
+                                        {lang === 'zh' ? (isReadOnly ? '查看节点' : '编辑节点') : (isReadOnly ? 'View Node' : 'Edit Node')}
                                     </h3>
-                                    <span className="text-xs text-slate-500">{editingNode.taskType}</span>
+                                    <span className="text-xs text-slate-500">{editingNode.taskType}{isReadOnly && (lang === 'zh' ? ' (只读)' : ' (Read Only)')}</span>
                                 </div>
                             </div>
                             <button onClick={() => setEditingNode(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
@@ -997,6 +1189,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                             </button>
                         </div>
                         
+                        <fieldset disabled={isReadOnly} className={isReadOnly ? 'opacity-80' : ''}>
                         <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
@@ -1521,23 +1714,26 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                 </div>
                             </div>
                         </div>
+                        </fieldset>
                         
                         <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 flex justify-end space-x-3 bg-slate-50 dark:bg-slate-800/80">
                             <button
                                 onClick={() => setEditingNode(null)}
                                 className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
                             >
-                                {lang === 'zh' ? '取消' : 'Cancel'}
+                                {lang === 'zh' ? (isReadOnly ? '关闭' : '取消') : (isReadOnly ? 'Close' : 'Cancel')}
                             </button>
-                            <button
-                                onClick={() => {
-                                    setTaskNodes(nodes => nodes.map(n => n.id === editingNode.id ? editingNode : n));
-                                    setEditingNode(null);
-                                }}
-                                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
-                            >
-                                {lang === 'zh' ? '确定' : 'Confirm'}
-                            </button>
+                            {!isReadOnly && (
+                                <button
+                                    onClick={() => {
+                                        setTaskNodes(nodes => nodes.map(n => n.id === editingNode.id ? editingNode : n));
+                                        setEditingNode(null);
+                                    }}
+                                    className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+                                >
+                                    {lang === 'zh' ? '确定' : 'Confirm'}
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -1565,23 +1761,27 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                             className="w-full px-4 py-2 text-left text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center space-x-2"
                         >
                             <Edit size={16} className="text-blue-500" />
-                            <span>{lang === 'zh' ? '编辑节点' : 'Edit Node'}</span>
+                            <span>{lang === 'zh' ? (isReadOnly ? '查看节点' : '编辑节点') : (isReadOnly ? 'View Node' : 'Edit Node')}</span>
                         </button>
-                        <button
-                            onClick={() => handleCopyNode(contextMenu.node)}
-                            className="w-full px-4 py-2 text-left text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center space-x-2"
-                        >
-                            <Copy size={16} className="text-green-500" />
-                            <span>{lang === 'zh' ? '复制节点' : 'Copy Node'}</span>
-                        </button>
-                        <div className="h-px bg-slate-200 dark:bg-slate-600 my-1" />
-                        <button
-                            onClick={() => handleDeleteNode(contextMenu.node)}
-                            className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 flex items-center space-x-2"
-                        >
-                            <Trash2 size={16} />
-                            <span>{lang === 'zh' ? '删除节点' : 'Delete Node'}</span>
-                        </button>
+                        {!isReadOnly && (
+                            <>
+                                <button
+                                    onClick={() => handleCopyNode(contextMenu.node)}
+                                    className="w-full px-4 py-2 text-left text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center space-x-2"
+                                >
+                                    <Copy size={16} className="text-green-500" />
+                                    <span>{lang === 'zh' ? '复制节点' : 'Copy Node'}</span>
+                                </button>
+                                <div className="h-px bg-slate-200 dark:bg-slate-600 my-1" />
+                                <button
+                                    onClick={() => handleDeleteNode(contextMenu.node)}
+                                    className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 flex items-center space-x-2"
+                                >
+                                    <Trash2 size={16} />
+                                    <span>{lang === 'zh' ? '删除节点' : 'Delete Node'}</span>
+                                </button>
+                            </>
+                        )}
                     </div>
                 </>
             )}
@@ -1719,6 +1919,27 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                     </div>
                 </div>
             )}
+
+            {/* 退出确认弹窗 */}
+            <ConfirmModal
+                isOpen={showExitConfirm}
+                title={lang === 'zh' ? '退出确认' : 'Confirm Exit'}
+                message={lang === 'zh' ? '是否保存当前更改后退出？' : 'Save changes before exit?'}
+                confirmText={lang === 'zh' ? '保存并退出' : 'Save & Exit'}
+                cancelText={lang === 'zh' ? '不保存' : 'Discard'}
+                type="info"
+                onConfirm={async () => {
+                    const saved = await handleSaveWorkflow();
+                    if (saved) {
+                        setShowExitConfirm(false);
+                        onClose();
+                    }
+                }}
+                onCancel={() => {
+                    setShowExitConfirm(false);
+                    onClose();
+                }}
+            />
         </div>
     );
 };

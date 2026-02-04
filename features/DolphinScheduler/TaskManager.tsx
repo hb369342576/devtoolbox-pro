@@ -388,13 +388,13 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                 
                 {/* 项目卡片网格 */}
                 <div className="flex-1 overflow-y-auto pb-4 custom-scrollbar">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-2">
+                    <div className="flex flex-wrap gap-6 pt-2">
                         {/* 已配置的项目卡片 */}
                         {configs.map(config => (
                             <div
                                 key={config.id}
                                 onClick={() => onSelectProject(config)}
-                                className="group relative bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border-2 border-slate-200 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-2xl hover:shadow-blue-500/20 hover:-translate-y-2 transition-all duration-300 cursor-pointer overflow-hidden min-h-[200px]"
+                                className="group relative bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border-2 border-slate-200 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-2xl hover:shadow-blue-500/20 hover:-translate-y-2 transition-all duration-300 cursor-pointer overflow-hidden min-h-[200px] w-72"
                             >
                                 <div className="flex items-start justify-between mb-4">
                                     <div className="p-3 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
@@ -441,7 +441,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                     >
                         <ArrowLeft size={20} />
                     </button>
-                    <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center">
+                    <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center whitespace-nowrap">
                         <ListTodo className="mr-3 text-blue-600" />
                         {lang === 'zh' ? '任务管理' : 'Task Manager'}
                         <span className="mx-2 text-slate-300 dark:text-slate-600">/</span>

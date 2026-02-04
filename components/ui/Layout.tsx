@@ -382,7 +382,7 @@ export const Layout: React.FC<LayoutProps> = ({
 
         {/* Viewport */}
         <div className="flex-1 overflow-auto p-6 scroll-smooth">
-          <div className="max-w-7xl mx-auto h-full">
+          <div className="w-full h-full">
             {children}
           </div>
         </div>

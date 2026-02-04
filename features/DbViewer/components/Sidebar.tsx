@@ -554,8 +554,13 @@ export const Sidebar: React.FC<{ lang: Language }> = ({ lang }) => {
                                 key={table.name}
                                 onClick={() => setSelectedTable(table.name)}
                                 onContextMenu={(e) => handleContextMenu(e, table.name)}
+                                draggable
+                                onDragStart={(e) => {
+                                    e.dataTransfer.setData('text/plain', `\`${selectedDatabase}\`.\`${table.name}\``);
+                                    e.dataTransfer.effectAllowed = 'copy';
+                                }}
                                 title={table.name}
-                                className={`w-full text-left px-4 py-3 border-b border-slate-200 dark:border-slate-700 transition-colors group ${selectedTable === table.name
+                                className={`w-full text-left px-4 py-3 border-b border-slate-200 dark:border-slate-700 transition-colors group cursor-grab active:cursor-grabbing ${selectedTable === table.name
                                     ? 'bg-blue-50 dark:bg-blue-900/30 border-l-4 border-l-blue-500'
                                     : 'hover:bg-slate-100 dark:hover:bg-slate-800 border-l-4 border-l-transparent'
                                     }`}
