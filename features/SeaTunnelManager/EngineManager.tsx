@@ -171,7 +171,6 @@ export const EngineManager: React.FC<EngineManagerProps> = ({
                 <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center">
                     <Server className="mr-3 text-cyan-600" />
                     {lang === 'zh' ? '引擎管理' : 'Engine Manager'}
-                    <span className="ml-2 px-2 py-0.5 bg-cyan-100 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400 text-xs font-medium rounded-full">v2.3.8</span>
                 </h2>
                 <div className="flex items-center space-x-3">
                     <ViewModeToggle />
@@ -213,6 +212,14 @@ export const EngineManager: React.FC<EngineManagerProps> = ({
                                             <span className="w-16 text-xs font-bold uppercase opacity-70">URL</span>
                                             <span className="truncate flex-1 text-xs font-mono">{config.baseUrl}</span>
                                         </div>
+                                        {config.engineType === 'zeta' && (
+                                            <div className="flex items-center text-sm text-slate-500 dark:text-slate-400">
+                                                <span className="w-16 text-xs font-bold uppercase opacity-70">API</span>
+                                                <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${config.apiVersion === 'v2' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'}`}>
+                                                    {config.apiVersion || 'v1'}
+                                                </span>
+                                            </div>
+                                        )}
                                     </div>
                                     <div className={`absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r ${getEngineColor(config.engineType)} transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left`} />
                                 </div>
@@ -233,7 +240,8 @@ export const EngineManager: React.FC<EngineManagerProps> = ({
                         <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-500 uppercase tracking-wider sticky top-0 z-10">
                             <div className="col-span-3">{lang === 'zh' ? '名称' : 'Name'}</div>
                             <div className="col-span-2">{lang === 'zh' ? '引擎类型' : 'Engine Type'}</div>
-                            <div className="col-span-5">Base URL</div>
+                            <div className="col-span-4">Base URL</div>
+                            <div className="col-span-1">API</div>
                             <div className="col-span-2 text-right">{lang === 'zh' ? '操作' : 'Actions'}</div>
                         </div>
                         <div className="divide-y divide-slate-100 dark:divide-slate-700">
@@ -250,8 +258,17 @@ export const EngineManager: React.FC<EngineManagerProps> = ({
                                     <div className="col-span-2 text-sm text-slate-600 dark:text-slate-300 capitalize">
                                         {config.engineType}
                                     </div>
-                                    <div className="col-span-5 text-sm text-slate-500 dark:text-slate-400 truncate font-mono text-xs">
+                                    <div className="col-span-4 text-sm text-slate-500 dark:text-slate-400 truncate font-mono text-xs">
                                         {config.baseUrl}
+                                    </div>
+                                    <div className="col-span-1">
+                                        {config.engineType === 'zeta' ? (
+                                            <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${config.apiVersion === 'v2' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'}`}>
+                                                {config.apiVersion || 'v1'}
+                                            </span>
+                                        ) : (
+                                            <span className="text-slate-400">-</span>
+                                        )}
                                     </div>
                                     <div className="col-span-2 flex justify-end space-x-2">
                                         <button onClick={(e) => handleEdit(config, e)} className="p-1.5 text-slate-400 hover:text-cyan-600 hover:bg-cyan-50 dark:hover:bg-cyan-900/20 rounded-lg transition-colors"><Edit size={16} /></button>

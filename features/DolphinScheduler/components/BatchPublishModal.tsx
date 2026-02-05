@@ -3,6 +3,8 @@ import { Power, XCircle, Search, Loader2 } from 'lucide-react';
 import { httpFetch } from '../../../utils/http';
 import { useToast } from '../../../components/ui/Toast';
 import { Language, ProcessDefinition } from '../types';
+import { DolphinSchedulerApiVersion } from '../../../types';
+import { getWorkflowApiPath } from '../utils';
 
 interface BatchPublishModalProps {
     show: boolean;
@@ -11,11 +13,12 @@ interface BatchPublishModalProps {
     projectCode: string;
     baseUrl: string;
     token: string;
+    apiVersion?: DolphinSchedulerApiVersion;
     onClose: () => void;
     onSuccess: () => void;
 }
 
-export const BatchPublishModal: React.FC<BatchPublishModalProps> = ({ show, lang, processes, projectCode, baseUrl, token, onClose, onSuccess }) => {
+export const BatchPublishModal: React.FC<BatchPublishModalProps> = ({ show, lang, processes, projectCode, baseUrl, token, apiVersion, onClose, onSuccess }) => {
     const { toast } = useToast();
     const [processing, setProcessing] = useState(false);
     const [selectedCodes, setSelectedCodes] = useState<number[]>([]);
@@ -57,7 +60,8 @@ export const BatchPublishModal: React.FC<BatchPublishModalProps> = ({ show, lang
         
         for (const code of selectedCodes) {
             try {
-                const url = `${baseUrl}/projects/${projectCode}/process-definition/${code}/release`;
+                const apiPath = getWorkflowApiPath(apiVersion);
+                const url = `${baseUrl}/projects/${projectCode}/${apiPath}/${code}/release`;
                 const response = await httpFetch(url, {
                     method: 'POST',
                     headers: { 'token': token, 'Content-Type': 'application/x-www-form-urlencoded' },

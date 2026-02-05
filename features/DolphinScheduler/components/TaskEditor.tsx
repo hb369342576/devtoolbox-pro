@@ -7,6 +7,7 @@ import {
 import { Language, DolphinSchedulerConfig } from '../../../types';
 import { ProcessDefinition } from '../types';
 import { httpFetch } from '../../../utils/http';
+import { getWorkflowApiPath } from '../utils';
 import { useToast } from '../../../components/ui/Toast';
 import { ConfirmModal } from '../../../components/ui/ConfirmModal';
 
@@ -164,7 +165,8 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
         const loadWorkflowDetail = async () => {
             setLoading(true);
             try {
-                const url = `${projectConfig.baseUrl}/projects/${projectConfig.projectCode}/process-definition/${process.code}`;
+                const apiPath = getWorkflowApiPath(projectConfig.apiVersion);
+                const url = `${projectConfig.baseUrl}/projects/${projectConfig.projectCode}/${apiPath}/${process.code}`;
                 const response = await httpFetch(url, {
                     method: 'GET',
                     headers: { 'token': projectConfig.token }
@@ -434,7 +436,8 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
             });
             
             // 调用更新API
-            const url = `${projectConfig.baseUrl}/projects/${projectConfig.projectCode}/process-definition/${process.code}`;
+            const apiPath = getWorkflowApiPath(projectConfig.apiVersion);
+            const url = `${projectConfig.baseUrl}/projects/${projectConfig.projectCode}/${apiPath}/${process.code}`;
             const formData = new URLSearchParams();
             formData.append('name', process.name);
             formData.append('locations', JSON.stringify(locations));
@@ -679,7 +682,8 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
         setRunningProcess(true);
         try {
             // 1. 先获取最新的工作流定义，确保使用最新版本号
-            const defUrl = `${projectConfig.baseUrl}/projects/${projectConfig.projectCode}/process-definition/${process.code}`;
+            const apiPath = getWorkflowApiPath(projectConfig.apiVersion);
+            const defUrl = `${projectConfig.baseUrl}/projects/${projectConfig.projectCode}/${apiPath}/${process.code}`;
             const defResponse = await httpFetch(defUrl, {
                 method: 'GET',
                 headers: { 'token': projectConfig.token }

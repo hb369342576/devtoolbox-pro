@@ -4,6 +4,7 @@ import { useToast } from '../../../components/ui/Toast';
 import { open } from '@tauri-apps/plugin-dialog';
 import { exportWorkflowsToLocal } from '../utils';
 import { Language, ProcessDefinition } from '../types';
+import { DolphinSchedulerApiVersion } from '../../../types';
 
 interface ExportModalProps {
     show: boolean;
@@ -13,16 +14,18 @@ interface ExportModalProps {
     projectName: string;
     baseUrl: string;
     token: string;
+    apiVersion?: DolphinSchedulerApiVersion;
     onClose: () => void;
 }
 
-export const ExportModal: React.FC<ExportModalProps> = ({ show, lang, processes, projectCode, projectName, baseUrl, token, onClose }) => {
+export const ExportModal: React.FC<ExportModalProps> = ({ show, lang, processes, projectCode, projectName, baseUrl, token, apiVersion, onClose }) => {
     const { toast } = useToast();
     const [exporting, setExporting] = useState(false);
     const [selectedCodes, setSelectedCodes] = useState<number[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [fileName, setFileName] = useState(projectName || 'workflows_export');
     const [targetDir, setTargetDir] = useState<string>('');
+    const [exportVersion, setExportVersion] = useState<DolphinSchedulerApiVersion>(apiVersion || 'v3.2');
     
     useEffect(() => {
         if (show) {
@@ -30,8 +33,9 @@ export const ExportModal: React.FC<ExportModalProps> = ({ show, lang, processes,
             setSearchTerm('');
             setFileName(projectName || 'workflows_export');
             setTargetDir('');
+            setExportVersion(apiVersion || 'v3.2');
         }
-    }, [show, projectName]);
+    }, [show, projectName, apiVersion]);
     
     // 选择目标文件夹
     const handleSelectFolder = async () => {
@@ -88,7 +92,9 @@ export const ExportModal: React.FC<ExportModalProps> = ({ show, lang, processes,
                 fileName,
                 (current, total, name) => {
                     // 可以在这里添加进度提示，如果有进度条组件的话
-                }
+                },
+                apiVersion,
+                exportVersion
             );
             
             toast({ title: lang === 'zh' ? `导出成功，共 ${count} 个工作流` : `Exported ${count} workflows`, variant: 'success' });
@@ -150,6 +156,22 @@ export const ExportModal: React.FC<ExportModalProps> = ({ show, lang, processes,
                             className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 outline-none" 
                             placeholder={lang === 'zh' ? '导出项目文件夹名称' : 'Export project folder name'}
                         />
+                    </div>
+                    <div>
+                        <label className="text-xs font-medium text-slate-500 block mb-1">{lang === 'zh' ? '导出版本' : 'Export Version'}</label>
+                        <select
+                            value={exportVersion}
+                            onChange={e => setExportVersion(e.target.value as DolphinSchedulerApiVersion)}
+                            className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 outline-none"
+                        >
+                            <option value="v3.2">v3.2.x / v3.3.x</option>
+                            <option value="v3.4">v3.4.x+</option>
+                        </select>
+                        <p className="mt-1 text-xs text-slate-400">
+                            {apiVersion === exportVersion 
+                                ? (lang === 'zh' ? '当前连接版本' : 'Current connection version')
+                                : (lang === 'zh' ? '将转换为此版本格式' : 'Will convert to this version format')}
+                        </p>
                     </div>
                     <div className="flex items-center justify-between">
                         <span className="text-xs text-slate-500">{lang === 'zh' ? `共 ${processes.length} 个工作流` : `${processes.length} workflows total`}</span>

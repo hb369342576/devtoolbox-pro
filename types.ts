@@ -225,6 +225,9 @@ export interface CompareResultRow {
 
 // --- DolphinScheduler Types ---
 
+// DolphinScheduler API 版本
+export type DolphinSchedulerApiVersion = 'v3.2' | 'v3.4';
+
 export interface DolphinSchedulerConfig {
   id: string;
   name: string;
@@ -232,4 +235,5 @@ export interface DolphinSchedulerConfig {
   token: string;      // API Token
   projectCode?: string; // 项目编码
   projectName?: string; // 项目名称
+  apiVersion?: DolphinSchedulerApiVersion; // API 版本，默认 v3.2
 }

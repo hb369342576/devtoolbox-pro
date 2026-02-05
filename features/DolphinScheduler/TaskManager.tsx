@@ -4,14 +4,14 @@ import {
     PlayCircle, Settings, RefreshCw, CalendarClock, Plus, CheckCircle2, XCircle, Timer, User, Loader2,
     Eye, Download, Upload, Power, Clock, ChevronLeft, ChevronRight, MoreHorizontal, Tag, Copy, Edit
 } from 'lucide-react';
-import { Language, DolphinSchedulerConfig } from '../../types';
+import { Language, DolphinSchedulerConfig, DolphinSchedulerApiVersion } from '../../types';
 import { getTexts } from '../../locales';
 import { Tooltip } from '../../components/ui/Tooltip';
 import { useToast } from '../../components/ui/Toast';
 import { save, open } from '@tauri-apps/plugin-dialog';
 import { httpFetch } from '../../utils/http';
 import { readDir } from '@tauri-apps/plugin-fs';
-import { exportWorkflowsToLocal, readWorkflowFromDir } from './utils';
+import { exportWorkflowsToLocal, readWorkflowFromDir, getWorkflowApiPath } from './utils';
 import { ProcessDefinition } from './types';
 import {
     DetailModal, RunModal, ScheduleModal, BatchRunModal, 
@@ -48,6 +48,11 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
     const [showImport, setShowImport] = useState(false);
     const [showLog, setShowLog] = useState(false);
     const [editProcess, setEditProcess] = useState<ProcessDefinition | null>(null);
+    
+    // 单个导出版本选择
+    const [exportSingleProcess, setExportSingleProcess] = useState<ProcessDefinition | null>(null);
+    const [exportSingleVersion, setExportSingleVersion] = useState<DolphinSchedulerApiVersion>('v3.2');
+    const [exportingSingle, setExportingSingle] = useState(false);
     
     // 分页
     const [pageNo, setPageNo] = useState(1);
@@ -138,7 +143,8 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
         setLoading(true);
         setError(null);
         try {
-            const url = `${baseUrl}/projects/${projectCodeParam}/process-definition?pageNo=${pageNo}&pageSize=${pageSize}&searchVal=${encodeURIComponent(searchTerm)}`;
+            const apiPath = getWorkflowApiPath(currentProject?.apiVersion);
+            const url = `${baseUrl}/projects/${projectCodeParam}/${apiPath}?pageNo=${pageNo}&pageSize=${pageSize}&searchVal=${encodeURIComponent(searchTerm)}`;
             const response = await httpFetch(url, {
                 method: 'GET',
                 headers: { 'token': token }
@@ -226,8 +232,9 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
     const handleToggleOnline = async (process: ProcessDefinition) => {
         const newState = process.releaseState === 'ONLINE' ? 'OFFLINE' : 'ONLINE';
         try {
-            // DolphinScheduler API: POST /projects/{projectCode}/process-definition/{code}/release
-            const url = `${baseUrl}/projects/${projectCode}/process-definition/${process.code}/release`;
+            // DolphinScheduler API: POST /projects/{projectCode}/[process|workflow]-definition/{code}/release
+            const apiPath = getWorkflowApiPath(currentProject?.apiVersion);
+            const url = `${baseUrl}/projects/${projectCode}/${apiPath}/${process.code}/release`;
             console.log('[DolphinScheduler] Toggle online URL:', url, 'newState:', newState);
             
             const response = await httpFetch(url, {
@@ -264,8 +271,9 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
     // 复制工作流
     const handleCopyWorkflow = async (process: ProcessDefinition) => {
         try {
-            // DolphinScheduler copy API: /projects/{projectCode}/process-definition/batch-copy
-            const url = `${baseUrl}/projects/${projectCode}/process-definition/batch-copy`;
+            // DolphinScheduler copy API: /projects/{projectCode}/[process|workflow]-definition/batch-copy
+            const apiPath = getWorkflowApiPath(currentProject?.apiVersion);
+            const url = `${baseUrl}/projects/${projectCode}/${apiPath}/batch-copy`;
             console.log('[DolphinScheduler] Copy workflow URL:', url, 'codes:', process.code);
             
             const response = await httpFetch(url, {
@@ -298,8 +306,16 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
         }
     };
 
-    // 导出单个工作流
-    const handleExportSingle = async (process: ProcessDefinition) => {
+    // 导出单个工作流 - 打开版本选择对话框
+    const handleExportSingle = (process: ProcessDefinition) => {
+        setExportSingleVersion(currentProject?.apiVersion || 'v3.2');
+        setExportSingleProcess(process);
+    };
+    
+    // 执行单个导出
+    const doExportSingle = async () => {
+        if (!exportSingleProcess) return;
+        
         try {
             const savePath = await open({
                 directory: true,
@@ -309,19 +325,25 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
             
             if (!savePath) return;
             
+            setExportingSingle(true);
             const count = await exportWorkflowsToLocal(
-                [{ code: process.code, name: process.name }],
+                [{ code: exportSingleProcess.code, name: exportSingleProcess.name }],
                 projectCode,
                 baseUrl,
                 token,
                 savePath as string,
-                process.name,
-                () => {}
+                exportSingleProcess.name,
+                () => {},
+                currentProject?.apiVersion,
+                exportSingleVersion
             );
             
             toast({ title: lang === 'zh' ? `导出成功` : `Export Success`, variant: 'success' });
+            setExportSingleProcess(null);
         } catch (err: any) {
             toast({ title: lang === 'zh' ? '导出失败' : 'Export Failed', description: err.message, variant: 'destructive' });
+        } finally {
+            setExportingSingle(false);
         }
     };
 
@@ -732,6 +754,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                 projectCode={projectCode}
                 baseUrl={baseUrl}
                 token={token}
+                apiVersion={currentProject?.apiVersion}
                 onClose={() => setShowBatchPublish(false)}
                 onSuccess={handleRefresh}
             />
@@ -744,6 +767,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                 projectName={currentProject?.projectName || currentProject?.name || ''}
                 baseUrl={baseUrl}
                 token={token}
+                apiVersion={currentProject?.apiVersion}
                 onClose={() => setShowExport(false)}
             />
             
@@ -764,8 +788,67 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                 projectCode={projectCode}
                 baseUrl={baseUrl}
                 token={token}
+                apiVersion={currentProject?.apiVersion}
                 onClose={() => setShowLog(false)}
             />
+            
+            {/* 单个导出版本选择对话框 */}
+            {exportSingleProcess && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in" onClick={() => setExportSingleProcess(null)}>
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden border border-slate-200 dark:border-slate-700" onClick={e => e.stopPropagation()}>
+                        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80">
+                            <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center">
+                                <Download size={20} className="mr-2 text-purple-500" />
+                                {lang === 'zh' ? '导出工作流' : 'Export Workflow'}
+                            </h3>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div>
+                                <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">
+                                    {lang === 'zh' ? '工作流' : 'Workflow'}
+                                </label>
+                                <div className="px-3 py-2 bg-slate-100 dark:bg-slate-900 rounded-lg text-sm text-slate-600 dark:text-slate-400 truncate">
+                                    {exportSingleProcess.name}
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">
+                                    {lang === 'zh' ? '导出版本' : 'Export Version'}
+                                </label>
+                                <select
+                                    value={exportSingleVersion}
+                                    onChange={e => setExportSingleVersion(e.target.value as DolphinSchedulerApiVersion)}
+                                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 outline-none"
+                                >
+                                    <option value="v3.2">v3.2.x / v3.3.x</option>
+                                    <option value="v3.4">v3.4.x+</option>
+                                </select>
+                                <p className="mt-1 text-xs text-slate-400">
+                                    {currentProject?.apiVersion === exportSingleVersion 
+                                        ? (lang === 'zh' ? '当前连接版本' : 'Current connection version')
+                                        : (lang === 'zh' ? '将转换为此版本格式' : 'Will convert to this version format')}
+                                </p>
+                            </div>
+                        </div>
+                        <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 flex justify-end space-x-3">
+                            <button 
+                                onClick={() => setExportSingleProcess(null)} 
+                                className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg"
+                            >
+                                {lang === 'zh' ? '取消' : 'Cancel'}
+                            </button>
+                            <button 
+                                onClick={doExportSingle} 
+                                disabled={exportingSingle}
+                                className="px-6 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg font-medium disabled:opacity-50 flex items-center"
+                            >
+                                {exportingSingle && <Loader2 size={16} className="animate-spin mr-2" />}
+                                {lang === 'zh' ? '选择目录并导出' : 'Select & Export'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
             
             {/* 任务编辑器 */}
             {editProcess && currentProject && (

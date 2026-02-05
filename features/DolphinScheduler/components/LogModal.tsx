@@ -4,6 +4,7 @@ import { httpFetch } from '../../../utils/http';
 import { useToast } from '../../../components/ui/Toast';
 import { Tooltip } from '../../../components/ui/Tooltip';
 import { Language, ProcessInstance } from '../types';
+import { DolphinSchedulerApiVersion } from '../../../types';
 
 interface LogModalProps {
     show: boolean;
@@ -11,10 +12,11 @@ interface LogModalProps {
     projectCode: string;
     baseUrl: string;
     token: string;
+    apiVersion?: DolphinSchedulerApiVersion;
     onClose: () => void;
 }
 
-export const LogModal: React.FC<LogModalProps> = ({ show, lang, projectCode, baseUrl, token, onClose }) => {
+export const LogModal: React.FC<LogModalProps> = ({ show, lang, projectCode, baseUrl, token, apiVersion, onClose }) => {
     const { toast } = useToast();
     const [loading, setLoading] = useState(false);
     const [instances, setInstances] = useState<ProcessInstance[]>([]);
@@ -65,7 +67,9 @@ export const LogModal: React.FC<LogModalProps> = ({ show, lang, projectCode, bas
     const fetchInstances = async () => {
         setLoading(true);
         try {
-            const url = `${baseUrl}/projects/${projectCode}/process-instances?pageNo=${pageNo}&pageSize=${pageSize}`;
+            // 3.4.0+ 版本使用 workflow-instances，旧版本使用 process-instances
+            const instancesPath = apiVersion === 'v3.4' ? 'workflow-instances' : 'process-instances';
+            const url = `${baseUrl}/projects/${projectCode}/${instancesPath}?pageNo=${pageNo}&pageSize=${pageSize}`;
             const response = await httpFetch(url, { headers: { 'token': token } });
             const result = await response.json();
             if (result.code === 0) {

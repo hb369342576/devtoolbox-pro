@@ -1,6 +1,16 @@
 import { save, open } from '@tauri-apps/plugin-dialog';
 import { mkdir, writeTextFile, readTextFile, readDir } from '@tauri-apps/plugin-fs';
 import { httpFetch } from '../../utils/http';
+import { DolphinSchedulerApiVersion } from '../../types';
+
+/**
+ * 根据 API 版本获取工作流定义的 API 路径
+ * - v3.2 及以下: process-definition
+ * - v3.4 及以上: workflow-definition
+ */
+export const getWorkflowApiPath = (apiVersion?: DolphinSchedulerApiVersion): string => {
+    return apiVersion === 'v3.4' ? 'workflow-definition' : 'process-definition';
+};
 
 // 导出核心逻辑
 export const exportWorkflowsToLocal = async (
@@ -10,10 +20,14 @@ export const exportWorkflowsToLocal = async (
     token: string,
     baseDir: string,
     batchName: string,
-    onProgress?: (current: number, total: number, name: string) => void
+    onProgress?: (current: number, total: number, name: string) => void,
+    apiVersion?: DolphinSchedulerApiVersion,
+    exportVersion?: DolphinSchedulerApiVersion  // 导出目标版本
 ) => {
     let successCount = 0;
     const isBatch = items.length > 1;
+    const apiPath = getWorkflowApiPath(apiVersion);
+    const targetVersion = exportVersion || apiVersion || 'v3.2';
     
     // 统一路径分隔符（Windows 使用反斜杠）
     const normalizePath = (path: string) => path.replace(/\//g, '\\');
@@ -35,14 +49,16 @@ export const exportWorkflowsToLocal = async (
         if (onProgress) onProgress(i + 1, items.length, item.name);
 
         try {
-            const url = `${baseUrl}/projects/${projectCode}/process-definition/${item.code}`;
+            const url = `${baseUrl}/projects/${projectCode}/${apiPath}/${item.code}`;
             const response = await httpFetch(url, { headers: { 'token': token } });
             const result = await response.json();
 
             if (result.code !== 0 || !result.data) continue;
 
             const workflowData = result.data;
-            const workflowName = workflowData.processDefinition?.name || item.name;
+            // 3.4.0 使用 workflowDefinition，旧版本使用 processDefinition
+            const definitionData = workflowData.workflowDefinition || workflowData.processDefinition;
+            const workflowName = definitionData?.name || item.name;
 
             // 目录结构：
             // 批量: {baseDir}/{batchName}/{workflowName}/
@@ -62,14 +78,18 @@ export const exportWorkflowsToLocal = async (
             const tasks = workflowData.taskDefinitionList || [];
             const taskRelations = workflowData.taskRelationList || [];
 
+            // 根据目标版本选择字段名
+            const defKey = targetVersion === 'v3.4' ? 'workflowDefinition' : 'processDefinition';
+
             const simplifiedWorkflow: any = {
                 name: workflowName,
-                description: workflowData.processDefinition?.description || '',
-                globalParams: workflowData.processDefinition?.globalParamList || [],
-                timeout: workflowData.processDefinition?.timeout || 0,
-                tenantCode: workflowData.processDefinition?.tenantCode || 'default',
-                executionType: workflowData.processDefinition?.executionType || 'PARALLEL',
-                processDefinition: workflowData.processDefinition, // 保留原始定义以防万一
+                description: definitionData?.description || '',
+                globalParams: definitionData?.globalParamList || [],
+                timeout: definitionData?.timeout || 0,
+                tenantCode: definitionData?.tenantCode || 'default',
+                executionType: definitionData?.executionType || 'PARALLEL',
+                [defKey]: definitionData, // 使用目标版本的字段名
+                exportVersion: targetVersion, // 标记导出版本
                 tasks: [],
                 relations: taskRelations
             };

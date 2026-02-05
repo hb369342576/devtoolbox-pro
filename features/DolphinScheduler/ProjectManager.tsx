@@ -44,7 +44,8 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({
             baseUrl: 'http://localhost:12345/dolphinscheduler',
             token: '',
             projectCode: '',
-            projectName: ''
+            projectName: '',
+            apiVersion: 'v3.2'
         });
         setTestStatus('none');
         setShowModal(true);
@@ -167,7 +168,6 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({
                 <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center">
                     <FolderKanban className="mr-3 text-blue-600" />
                     {lang === 'zh' ? '项目管理' : 'Project Manager'}
-                    <span className="ml-2 px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-xs font-medium rounded-full">v3.2.2</span>
                 </h2>
                 <div className="flex items-center space-x-3">
                     <ViewModeToggle />
@@ -220,6 +220,12 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({
                                             <span className="w-20 text-xs font-bold uppercase opacity-70">URL</span>
                                             <span className="truncate flex-1 text-xs">{config.baseUrl}</span>
                                         </div>
+                                        <div className="flex items-center text-sm text-slate-500 dark:text-slate-400">
+                                            <span className="w-20 text-xs font-bold uppercase opacity-70">API</span>
+                                            <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${config.apiVersion === 'v3.4' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'}`}>
+                                                {config.apiVersion || 'v3.2'}
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
                             </Tooltip>
@@ -238,9 +244,10 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({
                     <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
                         <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-500 uppercase tracking-wider sticky top-0 z-10">
                             <div className="col-span-3">{lang === 'zh' ? '名称' : 'Name'}</div>
-                            <div className="col-span-3">{lang === 'zh' ? '项目名称' : 'Project Name'}</div>
-                            <div className="col-span-2">{lang === 'zh' ? '编码' : 'Project Code'}</div>
+                            <div className="col-span-2">{lang === 'zh' ? '项目名称' : 'Project Name'}</div>
+                            <div className="col-span-2">{lang === 'zh' ? '编码' : 'Code'}</div>
                             <div className="col-span-3">Base URL</div>
+                            <div className="col-span-1">API</div>
                             <div className="col-span-1 text-right">{t.common.actions}</div>
                         </div>
                         <div className="divide-y divide-slate-100 dark:divide-slate-700">
@@ -256,14 +263,19 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({
                                         </div>
                                         <span className="font-medium text-slate-800 dark:text-white truncate">{config.name}</span>
                                     </div>
-                                    <div className="col-span-3 text-sm text-slate-600 dark:text-slate-300 truncate">
+                                    <div className="col-span-2 text-sm text-slate-600 dark:text-slate-300 truncate">
                                         {config.projectName || '-'}
                                     </div>
-                                    <div className="col-span-2 text-sm font-mono text-slate-500 dark:text-slate-400">
+                                    <div className="col-span-2 text-sm font-mono text-slate-500 dark:text-slate-400 truncate">
                                         {config.projectCode || '-'}
                                     </div>
                                     <div className="col-span-3 text-sm text-slate-500 dark:text-slate-400 truncate text-xs">
                                         {config.baseUrl}
+                                    </div>
+                                    <div className="col-span-1">
+                                        <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${config.apiVersion === 'v3.4' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'}`}>
+                                            {config.apiVersion || 'v3.2'}
+                                        </span>
                                     </div>
                                     <div className="col-span-1 flex justify-end space-x-1">
                                         <Tooltip content={lang === 'zh' ? '进入项目' : 'Enter Project'}>
@@ -369,6 +381,24 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({
                                         placeholder="123456789"
                                     />
                                 </div>
+                            </div>
+
+                            {/* API Version */}
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                                    {lang === 'zh' ? 'API 版本' : 'API Version'}
+                                </label>
+                                <select
+                                    value={editingConfig.apiVersion || 'v3.2'}
+                                    onChange={e => setEditingConfig({ ...editingConfig, apiVersion: e.target.value as 'v3.2' | 'v3.4' })}
+                                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white"
+                                >
+                                    <option value="v3.2">v3.2.x / v3.3.x</option>
+                                    <option value="v3.4">v3.4.x+</option>
+                                </select>
+                                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                    {lang === 'zh' ? '3.4.0 及以上版本使用新的 API 路径' : '3.4.0+ uses new API paths'}
+                                </p>
                             </div>
                         </div>
 
