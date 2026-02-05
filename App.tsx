@@ -19,6 +19,7 @@ import { DataSourceManager } from './features/DataSourceManager';
 import { DataCompareTool } from './features/DataCompareTool';
 import { ProjectManager } from './features/DolphinScheduler/ProjectManager';
 import { TaskManager } from './features/DolphinScheduler/TaskManager';
+import { DSManager } from './features/DolphinScheduler/DSManager';
 import { SeaTunnelManager } from './features/SeaTunnelManager';
 import { Language, Theme, User, DbConnection, DolphinSchedulerConfig } from './types';
 import { NAV_ITEMS } from './constants';
@@ -376,7 +377,7 @@ export default function App() {
       case 'field-mapping': return <FieldMappingTool lang={lang} connections={connections} onNavigate={handleNavigate} />;
 
       // DolphinScheduler Routes
-      case 'dolphin-project': return <ProjectManager lang={lang} configs={dolphinConfigs} onAdd={handleAddDolphinConfig} onUpdate={handleUpdateDolphinConfig} onDelete={handleDeleteDolphinConfig} onNavigate={handleNavigate} onSelectProject={handleSelectProject} />;
+      case 'dolphin-project': return <DSManager lang={lang} onNavigate={handleNavigate} />;
       case 'dolphin-task': return <TaskManager lang={lang} currentProject={currentProject} configs={dolphinConfigs} onSelectProject={handleSelectProject} onNavigate={handleNavigate} />;
 
       // SeaTunnel Routes

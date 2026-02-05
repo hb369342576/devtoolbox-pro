@@ -24,6 +24,7 @@ interface TaskManagerProps {
     configs: DolphinSchedulerConfig[];
     onSelectProject: (config: DolphinSchedulerConfig) => void;
     onNavigate: (id: string) => void;
+    onBack?: () => void; // 可选：返回上级（DS管理模式）
 }
 
 export const TaskManager: React.FC<TaskManagerProps> = ({
@@ -31,7 +32,8 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
     currentProject,
     configs,
     onSelectProject,
-    onNavigate
+    onNavigate,
+    onBack
 }) => {
     const t = getTexts(lang);
     const { toast } = useToast();
@@ -457,7 +459,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
             <div className="flex justify-between items-center mb-6 pt-1.5">
                 <div className="flex items-center space-x-3">
                     <button
-                        onClick={() => onSelectProject(null as any)}
+                        onClick={() => onBack ? onBack() : onSelectProject(null as any)}
                         className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors text-slate-500"
                         title={lang === 'zh' ? '返回项目列表' : 'Back to Projects'}
                     >

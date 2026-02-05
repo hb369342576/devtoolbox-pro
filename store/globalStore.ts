@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { DolphinSchedulerConnection } from '../types';
 
 /**
  * 全局应用状态Store
@@ -19,6 +20,9 @@ interface GlobalState {
     // 应用状态
     activeTab: string;
 
+    // DS 连接管理
+    dsConnections: DolphinSchedulerConnection[];
+    
     // Actions
     setTheme: (theme: 'light' | 'dark') => void;
     setLanguage: (lang: 'zh' | 'en') => void;
@@ -26,11 +30,16 @@ interface GlobalState {
     login: (username: string) => void;
     logout: () => void;
     setActiveTab: (tab: string) => void;
+    
+    // DS 连接操作
+    addDsConnection: (conn: Omit<DolphinSchedulerConnection, 'id'>) => void;
+    updateDsConnection: (conn: DolphinSchedulerConnection) => void;
+    deleteDsConnection: (id: string) => void;
 }
 
 export const useGlobalStore = create<GlobalState>()(
     persist(
-        (set) => ({
+        (set, get) => ({
             // 初始状态
             theme: 'light',
             language: 'zh',
@@ -38,6 +47,7 @@ export const useGlobalStore = create<GlobalState>()(
             isLoggedIn: false,
             currentUser: null,
             activeTab: 'dashboard',
+            dsConnections: [],
 
             // Actions
             setTheme: (theme) => set({ theme }),
@@ -46,6 +56,17 @@ export const useGlobalStore = create<GlobalState>()(
             login: (username) => set({ isLoggedIn: true, currentUser: username }),
             logout: () => set({ isLoggedIn: false, currentUser: null }),
             setActiveTab: (tab) => set({ activeTab: tab }),
+            
+            // DS 连接操作
+            addDsConnection: (conn) => set((state) => ({
+                dsConnections: [...state.dsConnections, { ...conn, id: crypto.randomUUID() }]
+            })),
+            updateDsConnection: (conn) => set((state) => ({
+                dsConnections: state.dsConnections.map(c => c.id === conn.id ? conn : c)
+            })),
+            deleteDsConnection: (id) => set((state) => ({
+                dsConnections: state.dsConnections.filter(c => c.id !== id)
+            })),
         }),
         {
             name: 'devtoolbox-global-state',

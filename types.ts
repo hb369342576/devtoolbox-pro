@@ -228,6 +228,45 @@ export interface CompareResultRow {
 // DolphinScheduler API 版本
 export type DolphinSchedulerApiVersion = 'v3.2' | 'v3.4';
 
+// DS 服务器连接配置（简化版，用于 DS 管理）
+export interface DolphinSchedulerConnection {
+  id: string;
+  name: string;
+  baseUrl: string;    // API 地址，例如 http://localhost:12345/dolphinscheduler
+  token: string;      // API Token
+  apiVersion?: DolphinSchedulerApiVersion; // API 版本，默认 v3.2
+}
+
+// DS 项目（从 API 获取）
+export interface DSProject {
+  id: number;
+  code: number;
+  name: string;
+  description?: string;
+  createTime?: string;
+  updateTime?: string;
+  userName?: string;
+  perm?: number;
+}
+
+// DS 资源文件
+export interface DSResource {
+  id: number;
+  pid: number;
+  alias: string;          // 文件/文件夹名
+  fullName: string;       // 完整路径
+  type: 'FILE' | 'UDF';
+  directory: boolean;
+  fileName?: string;
+  size?: number;
+  description?: string;
+  createTime?: string;
+  updateTime?: string;
+  userId?: number;
+  userName?: string;
+}
+
+// 兼容旧版项目配置（保留原有结构）
 export interface DolphinSchedulerConfig {
   id: string;
   name: string;
