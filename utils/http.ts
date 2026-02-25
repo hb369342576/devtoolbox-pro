@@ -55,4 +55,40 @@ export async function httpFetch(url: string, options: RequestOptions = {}): Prom
     }
 }
 
+/**
+ * 发送文件上传请求 (Multipart/form-data，通过 Rust 后端)
+ */
+export async function httpUpload(
+    url: string, 
+    options: {
+        headers?: Record<string, string>;
+        fileName: string;
+        fileData: Uint8Array | number[];
+        formFields?: Record<string, string>;
+    }
+): Promise<Response> {
+    const { headers, fileName, fileData, formFields } = options;
+    
+    try {
+        const result = await invoke<HttpResponse>('http_upload', {
+            url,
+            headers: headers || null,
+            fileName,
+            fileData: Array.from(fileData), // 确保是数组格式传给 Rust
+            formFields: formFields || null,
+        });
+        
+        return {
+            ok: result.status >= 200 && result.status < 300,
+            status: result.status,
+            statusText: '',
+            headers: new Headers(result.headers),
+            json: async () => JSON.parse(result.body),
+            text: async () => result.body,
+        } as Response;
+    } catch (error) {
+        throw new Error(`HTTP upload failed: ${error}`);
+    }
+}
+
 export default httpFetch;

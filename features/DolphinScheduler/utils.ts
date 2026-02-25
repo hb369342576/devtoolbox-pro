@@ -1,6 +1,6 @@
 import { save, open } from '@tauri-apps/plugin-dialog';
 import { mkdir, writeTextFile, readTextFile, readDir } from '@tauri-apps/plugin-fs';
-import { httpFetch } from '../../utils/http';
+import { httpFetch, httpUpload } from '../../utils/http';
 import { DolphinSchedulerApiVersion } from '../../types';
 
 /**
@@ -74,9 +74,62 @@ export const exportWorkflowsToLocal = async (
                 console.log('[Export] mkdir result:', e);
             }
 
-            const tasks = workflowData.taskDefinitionList || [];
-            // DS 3.4 返回 processTaskRelationList，旧版本返回 taskRelationList
-            const taskRelations = workflowData.processTaskRelationList || workflowData.taskRelationList || [];
+            // === 诊断日志：输出 3.4.0 API 原始响应结构 ===
+            console.log(`[Export][${item.name}] workflowData keys:`, Object.keys(workflowData));
+            console.log(`[Export][${item.name}] taskDefinitionList:`, workflowData.taskDefinitionList?.length ?? 'undefined');
+            console.log(`[Export][${item.name}] taskDefinitions:`, workflowData.taskDefinitions?.length ?? 'undefined');
+            if (workflowData.workflowDefinition) {
+                console.log(`[Export][${item.name}] workflowDefinition keys:`, Object.keys(workflowData.workflowDefinition));
+                console.log(`[Export][${item.name}] workflowDefinition.taskDefinitionList:`, workflowData.workflowDefinition.taskDefinitionList?.length ?? 'undefined');
+            }
+            // 输出原始数据的前 2000 字符用于深度诊断
+            console.log(`[Export][${item.name}] RAW DATA (first 2000 chars):`, JSON.stringify(workflowData).substring(0, 2000));
+
+            // 深度探测任务列表：优先使用非空数组，适配 3.4.0 的结构差异
+            let tasks: any[] = 
+                (workflowData.taskDefinitionList?.length > 0 ? workflowData.taskDefinitionList : null) || 
+                (workflowData.taskDefinitions?.length > 0 ? workflowData.taskDefinitions : null) || 
+                (workflowData.workflowDefinition?.taskDefinitionList?.length > 0 ? workflowData.workflowDefinition.taskDefinitionList : null) || 
+                [];
+
+            // === 3.4.0 补偿逻辑：如果 tasks 仍为空，从 locations 取 taskCode 并逐一拉取 ===
+            if (tasks.length === 0 && definitionData?.locations) {
+                console.log(`[Export][${item.name}] taskDefinitionList is empty, fetching tasks from locations...`);
+                try {
+                    const locations = typeof definitionData.locations === 'string' 
+                        ? JSON.parse(definitionData.locations) 
+                        : definitionData.locations;
+                    
+                    if (Array.isArray(locations) && locations.length > 0) {
+                        const taskCodes = locations.map((loc: any) => loc.taskCode).filter(Boolean);
+                        console.log(`[Export][${item.name}] Found ${taskCodes.length} taskCodes from locations:`, taskCodes);
+                        
+                        for (const taskCode of taskCodes) {
+                            try {
+                                const taskUrl = `${baseUrl}/projects/${projectCode}/task-definition/${taskCode}`;
+                                const taskRes = await httpFetch(taskUrl, { headers: { 'token': token } });
+                                const taskResult = await taskRes.json();
+                                if (taskResult.code === 0 && taskResult.data) {
+                                    tasks.push(taskResult.data);
+                                }
+                            } catch (e) {
+                                console.warn(`[Export] Failed to fetch task ${taskCode}:`, e);
+                            }
+                        }
+                        console.log(`[Export][${item.name}] Fetched ${tasks.length} tasks via individual API calls`);
+                    }
+                } catch (e) {
+                    console.warn(`[Export][${item.name}] Failed to parse locations:`, e);
+                }
+            }
+
+            // 深度探测连线关系：优先使用非空数组
+            const taskRelations = 
+                (workflowData.workflowTaskRelationList?.length > 0 ? workflowData.workflowTaskRelationList : null) || 
+                (workflowData.processTaskRelationList?.length > 0 ? workflowData.processTaskRelationList : null) || 
+                (workflowData.taskRelationList?.length > 0 ? workflowData.taskRelationList : null) || 
+                workflowData.workflowTaskRelationList ||
+                [];
 
             // 根据目标版本选择字段名
             const defKey = targetVersion === 'v3.4' ? 'workflowDefinition' : 'processDefinition';
@@ -180,18 +233,11 @@ export const importWorkflowToDS = async (
     apiVersion?: DolphinSchedulerApiVersion,
     existingCode?: number
 ): Promise<{ success: boolean; msg?: string }> => {
-    const apiPath = getWorkflowApiPath(apiVersion);
-    const tasks = workflow.tasks || [];
-    const relations = workflow.relations || [];
-    const defData = workflow.workflowDefinition || workflow.processDefinition || {};
-    const globalParams = workflow.globalParams || defData.globalParamList || [];
-    const isUpdate = !!existingCode;
+    const isV34 = apiVersion === 'v3.4';
+    const workflowName = workflow.name;
 
     // ================================================================
-    // 辅助：将 taskParams 统一转为 JSON 字符串
-    // 关键：DS 3.4 的 TaskDefinitionLog.taskParams 字段类型是 String
-    // JSONUtils.toList 反序列化时遇到 JSON 对象会失败 → 报 10001 错误
-    // 必须传 JSON 字符串格式（如 "{\"localParams\":[],...}"）
+    // 助手函数：构建任务参数字符串
     // ================================================================
     const buildTaskParamsStr = (task: any): string => {
         let obj: any;
@@ -211,156 +257,237 @@ export const importWorkflowToDS = async (
         } else if (typeof obj.rawScript === 'string' && obj.rawScript.startsWith('Ref:') && task.rawScript) {
             obj.rawScript = task.rawScript;
         }
-        return JSON.stringify(obj);  // 必须返回字符串！
+
+        // 修复依赖任务中的 projectCode (如果是 Dependent 任务)
+        if (task.taskType === 'DEPENDENT' && obj.dependence && Array.isArray(obj.dependence.dependTaskList)) {
+            obj.dependence.dependTaskList.forEach((list: any) => {
+                if (Array.isArray(list.dependItemList)) {
+                    list.dependItemList.forEach((item: any) => {
+                        if (item.projectCode) {
+                            item.projectCode = Number(projectCode);
+                        }
+                    });
+                }
+            });
+        }
+        return JSON.stringify(obj);
     };
 
-    // ================================================================
-    // 枚举整数转换（DS 3.4 所有枚举字段使用 @JsonValue 返回整数）
-    // Jackson 反序列化时期望整数，发送字符串会导致 NumberFormatException
-    // → JSONUtils.toList 返回空列表 → REQUEST_PARAMS_NOT_VALID_ERROR (10001)
-    // ================================================================
-    const flagToInt = (v: any) => {
-        if (typeof v === 'number') return v;
-        return v === 'YES' ? 1 : 0;  // YES=1, NO=0
-    };
-    const priorityToInt = (v: any) => {
-        if (typeof v === 'number') return v;
-        const m: Record<string, number> = { HIGHEST: 0, HIGH: 1, MEDIUM: 2, LOW: 3, LOWEST: 4 };
-        return m[v] ?? 2;  // 默认 MEDIUM=2
-    };
-    const timeoutFlagToInt = (v: any) => {
-        if (typeof v === 'number') return v;
-        return v === 'OPEN' ? 1 : 0;  // CLOSE=0, OPEN=1
-    };
-    const timeoutStrategyToInt = (v: any) => {
-        if (typeof v === 'number') return v;
-        const m: Record<string, number> = { WARN: 0, FAILED: 1, WARN_FAILED: 2 };
-        return m[v] ?? 0;  // 默认 WARN=0
-    };
+    try {
+        // ================================================================
+        // 1. 探测是否存在同名工作流 (逻辑：按名对齐原地更新)
+        // ================================================================
+        let targetWorkflowCode = existingCode;
+        let remoteTasks: any[] = [];
+        
+        if (!targetWorkflowCode) {
+            const queryUrl = `${baseUrl}/projects/${projectCode}/${getWorkflowApiPath(apiVersion)}/query-by-name?searchVal=${encodeURIComponent(workflowName)}`;
+            const queryRes = await httpFetch(queryUrl, { headers: { token } });
+            const queryResult = await queryRes.json();
+            
+            if (queryResult.code === 0 && queryResult.data) {
+                targetWorkflowCode = queryResult.data.code;
+                console.log(`[Import] Found existing workflow: ${workflowName} (code: ${targetWorkflowCode})`);
+            }
+        }
 
-    // ================================================================
-    // 构建 taskDefinitionJson
-    // taskParams 使用 JSON 字符串格式（DS 3.4 JSONUtils.toList 要求）
-    // 枚举字段使用整数（DS 3.4 @JsonValue 返回整数，Jackson 反序列化期望整数）
-    // ================================================================
-    const taskDefinitionJson = tasks.map((task: any) => ({
-        code: task.code,
-        version: task.version || 1,
-        name: task.name,
-        description: task.description || '',
-        taskType: task.taskType,
-        taskParams: buildTaskParamsStr(task),          // JSON 字符串
-        flag: flagToInt(task.flag ?? 'YES'),           // 整数！1=YES, 0=NO
-        taskPriority: priorityToInt(task.taskPriority ?? 'MEDIUM'),  // 整数！
-        workerGroup: task.workerGroup || 'default',
-        environmentCode: task.environmentCode ?? -1,
-        failRetryTimes: task.failRetryTimes ?? 0,
-        failRetryInterval: task.failRetryInterval ?? 1,
-        timeout: task.timeout ?? 0,
-        timeoutFlag: timeoutFlagToInt(task.timeoutFlag ?? 'CLOSE'),  // 整数！
-        timeoutNotifyStrategy: timeoutStrategyToInt(task.timeoutNotifyStrategy ?? 'WARN'),  // 整数！
-        delayTime: task.delayTime ?? 0,
-    }));
+        // ================================================================
+        // 2. 如果存在冲突，获取当前详情以对齐 Task Code
+        // ================================================================
+        if (targetWorkflowCode) {
+            const detailUrl = `${baseUrl}/projects/${projectCode}/${getWorkflowApiPath(apiVersion)}/${targetWorkflowCode}`;
+            const detailRes = await httpFetch(detailUrl, { headers: { token } });
+            const detailResult = await detailRes.json();
+            
+            if (detailResult.code === 0 && detailResult.data) {
+                // 探测远程任务列表
+                const remoteData = detailResult.data;
+                remoteTasks = 
+                    (remoteData.taskDefinitionList?.length > 0 ? remoteData.taskDefinitionList : null) || 
+                    (remoteData.taskDefinitions?.length > 0 ? remoteData.taskDefinitions : null) || 
+                    (remoteData.workflowDefinition?.taskDefinitionList?.length > 0 ? remoteData.workflowDefinition.taskDefinitionList : null) || 
+                    [];
+                
+                // === 3.4.0 补偿逻辑：从 locations 逐一拉取远程任务定义 ===
+                if (remoteTasks.length === 0) {
+                    const remoteDef = remoteData.workflowDefinition || remoteData.processDefinition;
+                    const remoteLocations = remoteDef?.locations;
+                    if (remoteLocations) {
+                        try {
+                            const locArray = typeof remoteLocations === 'string' ? JSON.parse(remoteLocations) : remoteLocations;
+                            if (Array.isArray(locArray) && locArray.length > 0) {
+                                const taskCodes = locArray.map((loc: any) => loc.taskCode).filter(Boolean);
+                                console.log(`[Import] Fetching ${taskCodes.length} remote tasks from locations...`);
+                                for (const taskCode of taskCodes) {
+                                    try {
+                                        const taskUrl = `${baseUrl}/projects/${projectCode}/task-definition/${taskCode}`;
+                                        const taskRes = await httpFetch(taskUrl, { headers: { token } });
+                                        const taskResult = await taskRes.json();
+                                        if (taskResult.code === 0 && taskResult.data) {
+                                            remoteTasks.push(taskResult.data);
+                                        }
+                                    } catch (e) {
+                                        console.warn(`[Import] Failed to fetch remote task ${taskCode}:`, e);
+                                    }
+                                }
+                                console.log(`[Import] Fetched ${remoteTasks.length} remote tasks for code alignment`);
+                            }
+                        } catch (e) {
+                            console.warn('[Import] Failed to parse remote locations:', e);
+                        }
+                    }
+                }
+            }
+        }
 
-    // ================================================================
-    // 构建 taskRelationJson
-    // conditionType 也是 @JsonValue 整数枚举（NONE=0, AND=1, OR=2）
-    // conditionParams 是 String 类型，使用 JSON 字符串
-    // ================================================================
-    const conditionTypeToInt = (v: any) => {
-        if (typeof v === 'number') return v;
-        const m: Record<string, number> = { NONE: 0, AND: 1, OR: 2 };
-        return m[v] ?? 0;  // 默认 NONE=0
-    };
-    const buildConditionParamsStr = (r: any): string => {
-        if (typeof r.conditionParams === 'string') return r.conditionParams || '{}';
-        return JSON.stringify(r.conditionParams || {});
-    };
+        // ================================================================
+        // 3. 构建任务/关系数据并进行“名称对齐”
+        // ================================================================
+        const tasks = workflow.tasks || [];
+        const relations = workflow.relations || [];
+        const defData = workflow.workflowDefinition || workflow.processDefinition || {};
+        const globalParams = workflow.globalParams || defData.globalParamList || [];
 
-    let taskRelationJson: any[] = relations.map((r: any) => ({
-        preTaskCode: r.preTaskCode ?? 0,
-        postTaskCode: r.postTaskCode,
-        name: r.name || '',
-        preTaskVersion: r.preTaskVersion ?? 0,
-        postTaskVersion: r.postTaskVersion ?? 1,
-        conditionType: conditionTypeToInt(r.conditionType ?? 'NONE'),  // 整数！NONE=0
-        conditionParams: buildConditionParamsStr(r),   // 字符串！
-    }));
+        // 对齐任务：如果存在远程任务（更新模式），使用远程的 code；否则保留原始 code
+        const taskDefinitionList = tasks.map((task: any) => {
+            const remoteTask = remoteTasks.find(t => t.name === task.name);
+            const taskParamsStr = buildTaskParamsStr(task);
+            return {
+                code: remoteTask ? remoteTask.code : (task.code || 0),
+                version: remoteTask ? remoteTask.version : (task.version || 0),
+                name: task.name,
+                description: task.description || '',
+                taskType: task.taskType,
+                taskParams: taskParamsStr,
+                flag: task.flag || 'YES',
+                taskPriority: task.taskPriority || 'MEDIUM',
+                workerGroup: task.workerGroup || 'default',
+                environmentCode: task.environmentCode ?? -1,
+                failRetryTimes: task.failRetryTimes ?? 0,
+                failRetryInterval: task.failRetryInterval ?? 1,
+                timeout: task.timeout ?? 0,
+                timeoutFlag: task.timeoutFlag || 'CLOSE',
+                timeoutNotifyStrategy: task.timeoutNotifyStrategy || 'WARN',
+                delayTime: task.delayTime ?? 0,
+                taskExecuteType: task.taskExecuteType || 'BATCH',
+                isCache: task.isCache || 'NO',
+            };
+        });
+        console.log(`[Import] Built taskDefinitionList: count=${taskDefinitionList.length}, codes=${taskDefinitionList.map(t => t.code).join(',')}`);
 
-    // 如果 relations 为空，为所有任务补充根节点关系
-    if (taskRelationJson.length === 0 && tasks.length > 0) {
-        taskRelationJson = tasks.map((t: any) => ({
-            preTaskCode: 0,
-            postTaskCode: t.code,
-            name: '',
-            preTaskVersion: 0,
-            postTaskVersion: 1,
-            conditionType: 0,   // 整数！NONE=0
-            conditionParams: '{}',
+        // 对齐关系：关系不需要对齐 code，如果是更新模式，后端会自动处理
+        let workflowTaskRelationList = relations.map((r: any) => ({
+            preTaskCode: r.preTaskCode ?? 0,
+            postTaskCode: r.postTaskCode,
+            name: r.name || '',
+            conditionType: r.conditionType || 'NONE',
+            conditionParams: typeof r.conditionParams === 'string' ? r.conditionParams : JSON.stringify(r.conditionParams || {}),
         }));
+
+        // 如果没有显式关系，构造默认关系
+        if (workflowTaskRelationList.length === 0 && tasks.length > 0) {
+            workflowTaskRelationList = taskDefinitionList.map((t: any) => ({
+                preTaskCode: 0,
+                postTaskCode: t.code, // 这里可能是 0，但 3.4 原生导入可以选填
+                name: '',
+                conditionType: 'NONE',
+                conditionParams: '{}',
+            }));
+        }
+
+        // ================================================================
+        // 4. 执行更新 (PUT) 或 导入 (POST)
+        // ================================================================
+        if (targetWorkflowCode) {
+            // 直接更新模式：名称不会改变
+            console.log(`[Import] Overwrite via PUT: ${workflowName}`);
+            const updateUrl = `${baseUrl}/projects/${projectCode}/${getWorkflowApiPath(apiVersion)}/${targetWorkflowCode}`;
+            
+            // 构建更新参数
+            const params = new URLSearchParams();
+            params.append('name', workflowName);
+            params.append('description', workflow.description || defData.description || '');
+            params.append('globalParams', JSON.stringify((Array.isArray(globalParams) ? globalParams : []).map((p: any) => ({
+                prop: p.prop,
+                direct: p.direct || 'IN',
+                type: p.type || 'VARCHAR',
+                value: p.value || ''
+            }))));
+            params.append('timeout', (workflow.timeout ?? defData.timeout ?? 0).toString());
+            params.append('executionType', workflow.executionType || defData.executionType || 'PARALLEL');
+            params.append('taskDefinitionJson', JSON.stringify(taskDefinitionList));
+            params.append('taskRelationJson', JSON.stringify(workflowTaskRelationList));
+            params.append('locations', JSON.stringify(tasks.map((orig: any, i: number) => ({
+                taskCode: taskDefinitionList.find(td => td.name === orig.name)?.code || 0,
+                x: orig.x || 150 + (i % 3) * 250,
+                y: orig.y || 100 + Math.floor(i / 3) * 150,
+            }))));
+            params.append('otherParamsJson', '{}');
+
+            const response = await httpFetch(updateUrl, {
+                method: 'PUT',
+                headers: { 
+                    'token': token,
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: params.toString()
+            });
+
+            const result = await response.json();
+            if (result.code === 0) {
+                console.log('[Import] Update Success:', workflowName);
+                return { success: true };
+            } else {
+                console.error('[Import] Update Failed:', result.code, result.msg);
+                return { success: false, msg: `[${result.code}] ${result.msg}` };
+            }
+
+        } else {
+            // 直接创建模式：全新的工作流（不再使用原生 import 接口，避免 50018 错误）
+            console.log(`[Import] Create via POST: ${workflowName}`);
+            const createUrl = `${baseUrl}/projects/${projectCode}/${getWorkflowApiPath(apiVersion)}`;
+            
+            // 使用与 PUT 更新相同的参数格式
+            const params = new URLSearchParams();
+            params.append('name', workflowName);
+            params.append('description', workflow.description || defData.description || '');
+            params.append('globalParams', JSON.stringify((Array.isArray(globalParams) ? globalParams : []).map((p: any) => ({
+                prop: p.prop,
+                direct: p.direct || 'IN',
+                type: p.type || 'VARCHAR',
+                value: p.value || ''
+            }))));
+            params.append('timeout', (workflow.timeout ?? defData.timeout ?? 0).toString());
+            params.append('executionType', workflow.executionType || defData.executionType || 'PARALLEL');
+            params.append('taskDefinitionJson', JSON.stringify(taskDefinitionList));
+            params.append('taskRelationJson', JSON.stringify(workflowTaskRelationList));
+            params.append('locations', JSON.stringify(tasks.map((orig: any, i: number) => ({
+                taskCode: taskDefinitionList.find(td => td.name === orig.name)?.code || orig.code || 0,
+                x: orig.x || 150 + (i % 3) * 250,
+                y: orig.y || 100 + Math.floor(i / 3) * 150,
+            }))));
+            params.append('tenantCode', workflow.tenantCode || defData.tenantCode || 'default');
+
+            const response = await httpFetch(createUrl, {
+                method: 'POST',
+                headers: { 
+                    'token': token,
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: params.toString()
+            });
+
+            const result = await response.json();
+            if (result.code === 0) {
+                console.log('[Import] Create Success:', workflowName);
+                return { success: true };
+            } else {
+                console.error('[Import] Create Failed:', result.code, result.msg);
+                return { success: false, msg: `[${result.code}] ${result.msg}` };
+            }
+        }
+    } catch (error: any) {
+        console.error('[Import] Error:', error);
+        return { success: false, msg: error.message };
     }
-
-    // ================================================================
-    // 构建 locations
-    // ================================================================
-    const locations = taskDefinitionJson.map((td: any, i: number) => {
-        const orig = tasks[i];
-        return {
-            taskCode: td.code,
-            x: orig?.x || 150 + (i % 3) * 250,
-            y: orig?.y || 100 + Math.floor(i / 3) * 150,
-        };
-    });
-
-    // ================================================================
-    // 提交 POST（新建）/ PUT（更新）请求
-    // 关键：不发送 executionType 参数
-    // DS 3.4 的 WorkflowExecutionTypeEnum 使用自定义 Spring MVC 转换器
-    // 字符串 "PARALLEL" 无法正确绑定，会导致 MethodArgumentTypeMismatchException → 10001
-    // defaultValue = "PARALLEL" 将由 DS 端点自动使用
-    // ================================================================
-    const url = isUpdate
-        ? `${baseUrl}/projects/${projectCode}/${apiPath}/${existingCode}`
-        : `${baseUrl}/projects/${projectCode}/${apiPath}`;
-
-    const formData = new URLSearchParams();
-    formData.append('name', workflow.name);
-    formData.append('description', workflow.description || defData.description || '');
-    formData.append('globalParams', JSON.stringify(Array.isArray(globalParams) ? globalParams : []));
-    formData.append('locations', JSON.stringify(locations));
-    formData.append('timeout', String(workflow.timeout ?? defData.timeout ?? 0));
-    formData.append('taskRelationJson', JSON.stringify(taskRelationJson));
-    formData.append('taskDefinitionJson', JSON.stringify(taskDefinitionJson));
-    // executionType 是 @RequestParam，Spring MVC 用 Enum.valueOf() 解析
-    // 必须发送枚举名称字符串（如 "PARALLEL"），不是整数
-    const executionTypeStr = workflow.executionType || defData.executionType || 'PARALLEL';
-    formData.append('executionType', String(executionTypeStr));
-
-    const bodyStr = formData.toString();
-    console.log('[Import] taskDef[0] FULL:', JSON.stringify(taskDefinitionJson[0], null, 2));
-    console.log('[Import] taskRelation[0] FULL:', JSON.stringify(taskRelationJson[0], null, 2));
-    console.log(`[Import] ${isUpdate ? 'PUT' : 'POST'} workflow:`, workflow.name);
-    console.log('[Import] URL:', url);
-    console.log('[Import] tasks:', taskDefinitionJson.length, 'relations:', taskRelationJson.length);
-    console.log('[Import] taskParams[0] type:', typeof taskDefinitionJson[0]?.taskParams, '(should be string)');
-    console.log('[Import] flag[0]:', taskDefinitionJson[0]?.flag, '(should be int, 1=YES)');
-    console.log('[Import] executionType:', executionTypeStr, '(should be PARALLEL)');
-    console.log('[Import] conditionType[0]:', taskRelationJson[0]?.conditionType, '(should be 0=NONE)');
-    console.log('[Import] conditionParams[0] type:', typeof taskRelationJson[0]?.conditionParams, '(should be string)');
-    console.log('[Import] body (2000):', bodyStr.substring(0, 2000));
-
-    const response = await httpFetch(url, {
-        method: isUpdate ? 'PUT' : 'POST',
-        headers: { 'token': token, 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: bodyStr,
-    });
-
-    const responseText = await response.text();
-    console.log('[Import] Response:', responseText.substring(0, 500));
-
-    if (responseText.trim().startsWith('<')) {
-        return { success: false, msg: 'API 返回 HTML，请检查 API 地址' };
-    }
-    const result = JSON.parse(responseText);
-    return result.code === 0 ? { success: true } : { success: false, msg: result.msg || 'Unknown error' };
 };

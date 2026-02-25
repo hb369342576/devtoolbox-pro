@@ -175,12 +175,62 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                 
                 if (result.code === 0 && result.data) {
                     const workflowData = result.data;
-                    const taskDefinitionList = workflowData.taskDefinitionList || [];
-                    // 注意：API 返回的是 processTaskRelationList 不是 taskRelationList
-                    const taskRelationList = workflowData.processTaskRelationList || [];
-                    const locations = workflowData.processDefinition?.locations;
                     
-                    console.log('TaskEditor - processTaskRelationList:', taskRelationList);
+                    // 深度探测任务列表：适配 3.2, 3.3, 3.4 及其潜在的变体名
+                    // 修正：使用 .length > 0 判定，避免被 3.4.0 返回的空数组 placeholder 干扰
+                    let taskDefinitionList: any[] = 
+                        (workflowData.taskDefinitionList?.length > 0 ? workflowData.taskDefinitionList : null) || 
+                        (workflowData.taskDefinitions?.length > 0 ? workflowData.taskDefinitions : null) || 
+                        (workflowData.workflowDefinition?.taskDefinitionList?.length > 0 ? workflowData.workflowDefinition.taskDefinitionList : null) || 
+                        [];
+                    
+                    // === 3.4.0 补偿逻辑：如果 tasks 仍为空，从 locations 取 taskCode 并逐一拉取 ===
+                    const definitionData = workflowData.workflowDefinition || workflowData.processDefinition;
+                    const rawLocations = definitionData?.locations;
+                    if (taskDefinitionList.length === 0 && rawLocations) {
+                        console.log('TaskEditor - taskDefinitionList is empty, fetching tasks from locations...');
+                        try {
+                            const locArray = typeof rawLocations === 'string' ? JSON.parse(rawLocations) : rawLocations;
+                            if (Array.isArray(locArray) && locArray.length > 0) {
+                                const taskCodes = locArray.map((loc: any) => loc.taskCode).filter(Boolean);
+                                console.log('TaskEditor - Found taskCodes from locations:', taskCodes);
+                                
+                                const fetchedTasks: any[] = [];
+                                for (const taskCode of taskCodes) {
+                                    try {
+                                        const taskUrl = `${projectConfig.baseUrl}/projects/${projectConfig.projectCode}/task-definition/${taskCode}`;
+                                        const taskRes = await httpFetch(taskUrl, { headers: { 'token': projectConfig.token } });
+                                        const taskResult = await taskRes.json();
+                                        if (taskResult.code === 0 && taskResult.data) {
+                                            fetchedTasks.push(taskResult.data);
+                                        }
+                                    } catch (e) {
+                                        console.warn(`TaskEditor - Failed to fetch task ${taskCode}:`, e);
+                                    }
+                                }
+                                if (fetchedTasks.length > 0) {
+                                    taskDefinitionList = fetchedTasks;
+                                    console.log(`TaskEditor - Fetched ${fetchedTasks.length} tasks via individual API calls`);
+                                }
+                            }
+                        } catch (e) {
+                            console.warn('TaskEditor - Failed to parse locations for task fetching:', e);
+                        }
+                    }
+                    
+                    // 深度探测连线关系
+                    const taskRelationList = 
+                        (workflowData.workflowTaskRelationList?.length > 0 ? workflowData.workflowTaskRelationList : null) || 
+                        (workflowData.processTaskRelationList?.length > 0 ? workflowData.processTaskRelationList : null) || 
+                        (workflowData.taskRelationList?.length > 0 ? workflowData.taskRelationList : null) || 
+                        workflowData.workflowTaskRelationList ||
+                        [];
+                    
+                    const locations = workflowData.processDefinition?.locations || workflowData.workflowDefinition?.locations;
+                    
+                    console.log('TaskEditor - Raw workflowData keys:', Object.keys(workflowData));
+                    console.log('TaskEditor - Final nodes count:', taskDefinitionList.length);
+                    console.log('TaskEditor - Final relations count:', taskRelationList.length);
                     
                     let locationMap: Record<string, { x: number; y: number }> = {};
                     try {
@@ -226,13 +276,20 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                         };
                     });
                     
-                    const relations: TaskRelation[] = taskRelationList
+                    let relations: TaskRelation[] = (taskRelationList || [])
                         .filter((r: any) => r.preTaskCode !== 0)
                         .map((r: any) => ({
                             preTaskCode: r.preTaskCode,
                             postTaskCode: r.postTaskCode
                         }));
                     
+                    // 关键适配：如果 API 返回的关系列表为空，但存在任务列表，
+                    // 说明可能是 3.4.0 的详情接口结构变动，我们需要显式设置节点，
+                    // 即使没有连线也应该让节点显示出来。
+                    if (nodes.length > 0 && relations.length === 0) {
+                        console.log('TaskEditor - No valid relations found, but nodes exist. Displaying nodes with default layout.');
+                    }
+
                     console.log('TaskEditor - Loaded nodes:', nodes.length, nodes.map(n => ({ code: n.code, name: n.name })));
                     console.log('TaskEditor - Loaded relations:', relations.length, relations);
                     
@@ -321,17 +378,52 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
         // 加载告警组列表
         const loadAlertGroups = async () => {
             try {
-                const url = `${projectConfig.baseUrl}/alert-groups/normal-list`;
-                const response = await httpFetch(url, {
-                    method: 'GET',
-                    headers: { 'token': projectConfig.token }
-                });
-                const result = await response.json();
-                if (result.code === 0 && result.data) {
-                    setAlertGroups(result.data.map((g: any) => ({
-                        id: g.id,
-                        groupName: g.groupName
-                    })));
+                const isV34 = projectConfig.apiVersion === 'v3.4';
+                // v3.4 路径探测：尝试多个可能的官方及非官方路径
+                const urls = isV34 
+                    ? [
+                        `${projectConfig.baseUrl}/alert-group/query-list`,
+                        `${projectConfig.baseUrl}/alert-group/list`,
+                        `${projectConfig.baseUrl}/alert-group/query-list-paging?pageNo=1&pageSize=100`
+                      ]
+                    : [`${projectConfig.baseUrl}/alert-groups/normal-list`];
+                
+                let lastResponse;
+                let finalUrl = urls[0];
+
+                // 简单的多路径尝试逻辑
+                for (const url of urls) {
+                    finalUrl = url;
+                    lastResponse = await httpFetch(url, {
+                        method: 'GET',
+                        headers: { 'token': projectConfig.token }
+                    });
+                    if (lastResponse.status === 200) {
+                        const contentType = lastResponse.headers['content-type'] || '';
+                        if (contentType.includes('application/json')) break;
+                    }
+                }
+
+                const text = await lastResponse!.text();
+                // 防御性处理：如果返回的是 HTML 代码
+                if (text.trim().startsWith('<')) {
+                    console.warn(`[AlertGroup] All probed URLs returned HTML or error from: ${finalUrl}`);
+                    setAlertGroups([]);
+                    return;
+                }
+
+                try {
+                    const result = JSON.parse(text);
+                    if (result.code === 0 && result.data) {
+                        const list = Array.isArray(result.data) ? result.data : (result.data.totalList || []);
+                        setAlertGroups(list.map((g: any) => ({
+                            id: g.id,
+                            groupName: g.groupName
+                        })));
+                    }
+                } catch (e) {
+                    console.error('[AlertGroup] Failed to parse JSON:', e);
+                    setAlertGroups([]);
                 }
             } catch (error) {
                 console.error('Failed to load alert groups:', error);

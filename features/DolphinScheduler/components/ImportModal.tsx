@@ -127,23 +127,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({ show, lang, projectCod
                 let existingCode: number | undefined;
                 
                 if (existingProcess) {
-                    // 检查是否上线状态
-                    if (existingProcess.releaseState === 'ONLINE') {
-                        const confirmed = window.confirm(
-                            lang === 'zh' 
-                                ? `工作流 "${workflowName}" 已上线，无法更新。是否创建新工作流？` 
-                                : `Workflow "${workflowName}" is online. Create a new one?`
-                        );
-                        if (!confirmed) {
-                            skipCount++;
-                            continue;
-                        }
-                        // 创建新工作流（改名）
-                        workflow.name = `${workflowName}_imported_${Date.now()}`;
-                    } else {
-                        // OFFLINE 状态，更新已有工作流
-                        existingCode = existingProcess.code;
-                    }
+                    existingCode = existingProcess.code;
                 }
                 
                 toast({ 
