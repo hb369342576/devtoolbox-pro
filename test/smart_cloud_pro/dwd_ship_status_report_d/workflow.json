@@ -1,0 +1,757 @@
+{
+  "name": "dwd_ship_status_report_d",
+  "description": "",
+  "globalParams": [],
+  "timeout": 0,
+  "tenantCode": "default",
+  "executionType": "PARALLEL",
+  "workflowDefinition": {
+    "id": 1034,
+    "code": 163208742963040,
+    "name": "dwd_ship_status_report_d",
+    "version": 15,
+    "releaseState": "ONLINE",
+    "projectCode": 163199116863328,
+    "description": "",
+    "globalParams": "[]",
+    "globalParamList": [],
+    "globalParamMap": {},
+    "createTime": "2026-01-19 17:12:18",
+    "updateTime": "2026-02-04 15:15:23",
+    "flag": "YES",
+    "userId": 1,
+    "userName": null,
+    "projectName": null,
+    "locations": "[{\"taskCode\":163208715744096,\"x\":1030,\"y\":489},{\"taskCode\":163208970325856,\"x\":150,\"y\":147},{\"taskCode\":163209009530720,\"x\":150,\"y\":245},{\"taskCode\":163209012872032,\"x\":150,\"y\":343},{\"taskCode\":163209015796576,\"x\":150,\"y\":441},{\"taskCode\":163209026315104,\"x\":150,\"y\":539},{\"taskCode\":163209029141344,\"x\":150,\"y\":637},{\"taskCode\":163209030188896,\"x\":150,\"y\":735},{\"taskCode\":163209082960736,\"x\":150,\"y\":841},{\"taskCode\":163209084524384,\"x\":150,\"y\":939},{\"taskCode\":163209923657568,\"x\":150,\"y\":1042},{\"taskCode\":163209976247136,\"x\":150,\"y\":1160}]",
+    "scheduleReleaseState": null,
+    "schedule": null,
+    "timeout": 0,
+    "modifyBy": null,
+    "warningGroupId": null,
+    "executionType": "PARALLEL"
+  },
+  "exportVersion": "v3.4",
+  "tasks": [
+    {
+      "id": 2672,
+      "code": 163208715744096,
+      "name": "dwd_ship_status_report_d",
+      "version": 10,
+      "description": "",
+      "projectCode": 163199116863328,
+      "userId": 1,
+      "taskType": "SQL",
+      "taskParams": {
+        "localParams": [],
+        "resourceList": [],
+        "type": "MYSQL",
+        "datasource": 10,
+        "sql": "Ref: dwd_ship_status_report_d.sql",
+        "sqlType": "1",
+        "preStatements": [],
+        "postStatements": [],
+        "displayRows": 10
+      },
+      "taskParamList": [],
+      "taskParamMap": null,
+      "flag": "YES",
+      "isCache": "NO",
+      "taskPriority": "MEDIUM",
+      "userName": null,
+      "projectName": null,
+      "workerGroup": "default",
+      "environmentCode": -1,
+      "failRetryTimes": 0,
+      "failRetryInterval": 1,
+      "timeoutFlag": "CLOSE",
+      "timeoutNotifyStrategy": "WARN",
+      "timeout": 0,
+      "delayTime": 0,
+      "resourceIds": null,
+      "createTime": "2026-01-19 17:12:18",
+      "updateTime": "2026-02-04 11:52:20",
+      "modifyBy": null,
+      "taskGroupId": 0,
+      "taskGroupPriority": 0,
+      "cpuQuota": -1,
+      "memoryMax": -1,
+      "taskExecuteType": "BATCH",
+      "operator": 1,
+      "operateTime": "2026-02-04 11:52:20",
+      "dependence": "",
+      "sqlFile": "dwd_ship_status_report_d.sql"
+    },
+    {
+      "id": 2737,
+      "code": 163208970325856,
+      "name": "dep_syn_ods_cii_ship_cabin_information_d",
+      "version": 6,
+      "description": "",
+      "projectCode": 163199116863328,
+      "userId": 1,
+      "taskType": "DEPENDENT",
+      "taskParams": {
+        "localParams": [],
+        "resourceList": [],
+        "dependence": {
+          "checkInterval": 10,
+          "relation": "AND",
+          "dependTaskList": [
+            {
+              "relation": "AND",
+              "dependItemList": [
+                {
+                  "projectCode": 163199116863328,
+                  "definitionCode": 163208081460065,
+                  "depTaskCode": 0,
+                  "cycle": "hour",
+                  "dateValue": "currentHour",
+                  "dependentType": "DEPENDENT_ON_WORKFLOW",
+                  "parameterPassing": false
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "taskParamList": [],
+      "taskParamMap": null,
+      "flag": "YES",
+      "isCache": "NO",
+      "taskPriority": "MEDIUM",
+      "userName": null,
+      "projectName": null,
+      "workerGroup": "default",
+      "environmentCode": -1,
+      "failRetryTimes": 0,
+      "failRetryInterval": 1,
+      "timeoutFlag": "CLOSE",
+      "timeoutNotifyStrategy": null,
+      "timeout": 0,
+      "delayTime": 0,
+      "resourceIds": null,
+      "createTime": "2026-01-19 17:22:10",
+      "updateTime": "2026-02-04 15:15:23",
+      "modifyBy": null,
+      "taskGroupId": 0,
+      "taskGroupPriority": 0,
+      "cpuQuota": -1,
+      "memoryMax": -1,
+      "taskExecuteType": "BATCH",
+      "operator": 1,
+      "operateTime": "2026-02-04 15:15:23",
+      "dependence": "{\"checkInterval\":10,\"relation\":\"AND\",\"dependTaskList\":[{\"relation\":\"AND\",\"dependItemList\":[{\"projectCode\":163199116863328,\"definitionCode\":163208081460065,\"depTaskCode\":0,\"cycle\":\"hour\",\"dateValue\":\"currentHour\",\"dependentType\":\"DEPENDENT_ON_WORKFLOW\",\"parameterPassing\":false}]}]}"
+    },
+    {
+      "id": 2738,
+      "code": 163209009530720,
+      "name": "dep_syn_ods_cii_ship_dictionary_d",
+      "version": 6,
+      "description": "",
+      "projectCode": 163199116863328,
+      "userId": 1,
+      "taskType": "DEPENDENT",
+      "taskParams": {
+        "localParams": [],
+        "resourceList": [],
+        "dependence": {
+          "checkInterval": 10,
+          "relation": "AND",
+          "dependTaskList": [
+            {
+              "relation": "AND",
+              "dependItemList": [
+                {
+                  "projectCode": 163199116863328,
+                  "definitionCode": 163208081466209,
+                  "depTaskCode": 0,
+                  "cycle": "hour",
+                  "dateValue": "currentHour",
+                  "dependentType": "DEPENDENT_ON_WORKFLOW",
+                  "parameterPassing": false
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "taskParamList": [],
+      "taskParamMap": null,
+      "flag": "YES",
+      "isCache": "NO",
+      "taskPriority": "MEDIUM",
+      "userName": null,
+      "projectName": null,
+      "workerGroup": "default",
+      "environmentCode": -1,
+      "failRetryTimes": 0,
+      "failRetryInterval": 1,
+      "timeoutFlag": "CLOSE",
+      "timeoutNotifyStrategy": null,
+      "timeout": 0,
+      "delayTime": 0,
+      "resourceIds": null,
+      "createTime": "2026-01-19 17:22:10",
+      "updateTime": "2026-02-04 15:15:23",
+      "modifyBy": null,
+      "taskGroupId": 0,
+      "taskGroupPriority": 0,
+      "cpuQuota": -1,
+      "memoryMax": -1,
+      "taskExecuteType": "BATCH",
+      "operator": 1,
+      "operateTime": "2026-02-04 15:15:23",
+      "dependence": "{\"checkInterval\":10,\"relation\":\"AND\",\"dependTaskList\":[{\"relation\":\"AND\",\"dependItemList\":[{\"projectCode\":163199116863328,\"definitionCode\":163208081466209,\"depTaskCode\":0,\"cycle\":\"hour\",\"dateValue\":\"currentHour\",\"dependentType\":\"DEPENDENT_ON_WORKFLOW\",\"parameterPassing\":false}]}]}"
+    },
+    {
+      "id": 2739,
+      "code": 163209012872032,
+      "name": "dep_syn_ods_cii_ship_fuel_statistics_information_d",
+      "version": 6,
+      "description": "",
+      "projectCode": 163199116863328,
+      "userId": 1,
+      "taskType": "DEPENDENT",
+      "taskParams": {
+        "localParams": [],
+        "resourceList": [],
+        "dependence": {
+          "checkInterval": 10,
+          "relation": "AND",
+          "dependTaskList": [
+            {
+              "relation": "AND",
+              "dependItemList": [
+                {
+                  "projectCode": 163199116863328,
+                  "definitionCode": 163208138685281,
+                  "depTaskCode": 0,
+                  "cycle": "hour",
+                  "dateValue": "currentHour",
+                  "dependentType": "DEPENDENT_ON_WORKFLOW",
+                  "parameterPassing": false
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "taskParamList": [],
+      "taskParamMap": null,
+      "flag": "YES",
+      "isCache": "NO",
+      "taskPriority": "MEDIUM",
+      "userName": null,
+      "projectName": null,
+      "workerGroup": "default",
+      "environmentCode": -1,
+      "failRetryTimes": 0,
+      "failRetryInterval": 1,
+      "timeoutFlag": "CLOSE",
+      "timeoutNotifyStrategy": null,
+      "timeout": 0,
+      "delayTime": 0,
+      "resourceIds": null,
+      "createTime": "2026-01-19 17:22:10",
+      "updateTime": "2026-02-04 15:15:23",
+      "modifyBy": null,
+      "taskGroupId": 0,
+      "taskGroupPriority": 0,
+      "cpuQuota": -1,
+      "memoryMax": -1,
+      "taskExecuteType": "BATCH",
+      "operator": 1,
+      "operateTime": "2026-02-04 15:15:23",
+      "dependence": "{\"checkInterval\":10,\"relation\":\"AND\",\"dependTaskList\":[{\"relation\":\"AND\",\"dependItemList\":[{\"projectCode\":163199116863328,\"definitionCode\":163208138685281,\"depTaskCode\":0,\"cycle\":\"hour\",\"dateValue\":\"currentHour\",\"dependentType\":\"DEPENDENT_ON_WORKFLOW\",\"parameterPassing\":false}]}]}"
+    },
+    {
+      "id": 2740,
+      "code": 163209015796576,
+      "name": "dep_syn_ods_cii_ship_loading_information_d",
+      "version": 6,
+      "description": "",
+      "projectCode": 163199116863328,
+      "userId": 1,
+      "taskType": "DEPENDENT",
+      "taskParams": {
+        "localParams": [],
+        "resourceList": [],
+        "dependence": {
+          "checkInterval": 10,
+          "relation": "AND",
+          "dependTaskList": [
+            {
+              "relation": "AND",
+              "dependItemList": [
+                {
+                  "projectCode": 163199116863328,
+                  "definitionCode": 163208081472353,
+                  "depTaskCode": 0,
+                  "cycle": "hour",
+                  "dateValue": "currentHour",
+                  "dependentType": "DEPENDENT_ON_WORKFLOW",
+                  "parameterPassing": false
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "taskParamList": [],
+      "taskParamMap": null,
+      "flag": "YES",
+      "isCache": "NO",
+      "taskPriority": "MEDIUM",
+      "userName": null,
+      "projectName": null,
+      "workerGroup": "default",
+      "environmentCode": -1,
+      "failRetryTimes": 0,
+      "failRetryInterval": 1,
+      "timeoutFlag": "CLOSE",
+      "timeoutNotifyStrategy": null,
+      "timeout": 0,
+      "delayTime": 0,
+      "resourceIds": null,
+      "createTime": "2026-01-19 17:22:10",
+      "updateTime": "2026-02-04 15:15:23",
+      "modifyBy": null,
+      "taskGroupId": 0,
+      "taskGroupPriority": 0,
+      "cpuQuota": -1,
+      "memoryMax": -1,
+      "taskExecuteType": "BATCH",
+      "operator": 1,
+      "operateTime": "2026-02-04 15:15:23",
+      "dependence": "{\"checkInterval\":10,\"relation\":\"AND\",\"dependTaskList\":[{\"relation\":\"AND\",\"dependItemList\":[{\"projectCode\":163199116863328,\"definitionCode\":163208081472353,\"depTaskCode\":0,\"cycle\":\"hour\",\"dateValue\":\"currentHour\",\"dependentType\":\"DEPENDENT_ON_WORKFLOW\",\"parameterPassing\":false}]}]}"
+    },
+    {
+      "id": 2741,
+      "code": 163209026315104,
+      "name": "dep_syn_ods_cii_ship_status_report_d",
+      "version": 6,
+      "description": "",
+      "projectCode": 163199116863328,
+      "userId": 1,
+      "taskType": "DEPENDENT",
+      "taskParams": {
+        "localParams": [],
+        "resourceList": [],
+        "dependence": {
+          "checkInterval": 10,
+          "relation": "AND",
+          "dependTaskList": [
+            {
+              "relation": "AND",
+              "dependItemList": [
+                {
+                  "projectCode": 163199116863328,
+                  "definitionCode": 163208081436514,
+                  "depTaskCode": 0,
+                  "cycle": "hour",
+                  "dateValue": "currentHour",
+                  "dependentType": "DEPENDENT_ON_WORKFLOW",
+                  "parameterPassing": false
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "taskParamList": [],
+      "taskParamMap": null,
+      "flag": "YES",
+      "isCache": "NO",
+      "taskPriority": "MEDIUM",
+      "userName": null,
+      "projectName": null,
+      "workerGroup": "default",
+      "environmentCode": -1,
+      "failRetryTimes": 0,
+      "failRetryInterval": 1,
+      "timeoutFlag": "CLOSE",
+      "timeoutNotifyStrategy": null,
+      "timeout": 0,
+      "delayTime": 0,
+      "resourceIds": null,
+      "createTime": "2026-01-19 17:22:10",
+      "updateTime": "2026-02-04 15:15:23",
+      "modifyBy": null,
+      "taskGroupId": 0,
+      "taskGroupPriority": 0,
+      "cpuQuota": -1,
+      "memoryMax": -1,
+      "taskExecuteType": "BATCH",
+      "operator": 1,
+      "operateTime": "2026-02-04 15:15:23",
+      "dependence": "{\"checkInterval\":10,\"relation\":\"AND\",\"dependTaskList\":[{\"relation\":\"AND\",\"dependItemList\":[{\"projectCode\":163199116863328,\"definitionCode\":163208081436514,\"depTaskCode\":0,\"cycle\":\"hour\",\"dateValue\":\"currentHour\",\"dependentType\":\"DEPENDENT_ON_WORKFLOW\",\"parameterPassing\":false}]}]}"
+    },
+    {
+      "id": 2742,
+      "code": 163209029141344,
+      "name": "dep_syn_ods_cii_ship_status_report_fuel_information_d",
+      "version": 6,
+      "description": "",
+      "projectCode": 163199116863328,
+      "userId": 1,
+      "taskType": "DEPENDENT",
+      "taskParams": {
+        "localParams": [],
+        "resourceList": [],
+        "dependence": {
+          "checkInterval": 10,
+          "relation": "AND",
+          "dependTaskList": [
+            {
+              "relation": "AND",
+              "dependItemList": [
+                {
+                  "projectCode": 163199116863328,
+                  "definitionCode": 163208109961057,
+                  "depTaskCode": 0,
+                  "cycle": "hour",
+                  "dateValue": "currentHour",
+                  "dependentType": "DEPENDENT_ON_WORKFLOW",
+                  "parameterPassing": false
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "taskParamList": [],
+      "taskParamMap": null,
+      "flag": "YES",
+      "isCache": "NO",
+      "taskPriority": "MEDIUM",
+      "userName": null,
+      "projectName": null,
+      "workerGroup": "default",
+      "environmentCode": -1,
+      "failRetryTimes": 0,
+      "failRetryInterval": 1,
+      "timeoutFlag": "CLOSE",
+      "timeoutNotifyStrategy": null,
+      "timeout": 0,
+      "delayTime": 0,
+      "resourceIds": null,
+      "createTime": "2026-01-19 17:22:10",
+      "updateTime": "2026-02-04 15:15:23",
+      "modifyBy": null,
+      "taskGroupId": 0,
+      "taskGroupPriority": 0,
+      "cpuQuota": -1,
+      "memoryMax": -1,
+      "taskExecuteType": "BATCH",
+      "operator": 1,
+      "operateTime": "2026-02-04 15:15:23",
+      "dependence": "{\"checkInterval\":10,\"relation\":\"AND\",\"dependTaskList\":[{\"relation\":\"AND\",\"dependItemList\":[{\"projectCode\":163199116863328,\"definitionCode\":163208109961057,\"depTaskCode\":0,\"cycle\":\"hour\",\"dateValue\":\"currentHour\",\"dependentType\":\"DEPENDENT_ON_WORKFLOW\",\"parameterPassing\":false}]}]}"
+    },
+    {
+      "id": 2743,
+      "code": 163209030188896,
+      "name": "dep_syn_ods_t_mdm_ship_d",
+      "version": 6,
+      "description": "",
+      "projectCode": 163199116863328,
+      "userId": 1,
+      "taskType": "DEPENDENT",
+      "taskParams": {
+        "localParams": [],
+        "resourceList": [],
+        "dependence": {
+          "checkInterval": 10,
+          "relation": "AND",
+          "dependTaskList": [
+            {
+              "relation": "AND",
+              "dependItemList": [
+                {
+                  "projectCode": 163199116863328,
+                  "definitionCode": 163208081477473,
+                  "depTaskCode": 0,
+                  "cycle": "hour",
+                  "dateValue": "currentHour",
+                  "dependentType": "DEPENDENT_ON_WORKFLOW",
+                  "parameterPassing": false
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "taskParamList": [],
+      "taskParamMap": null,
+      "flag": "YES",
+      "isCache": "NO",
+      "taskPriority": "MEDIUM",
+      "userName": null,
+      "projectName": null,
+      "workerGroup": "default",
+      "environmentCode": -1,
+      "failRetryTimes": 0,
+      "failRetryInterval": 1,
+      "timeoutFlag": "CLOSE",
+      "timeoutNotifyStrategy": null,
+      "timeout": 0,
+      "delayTime": 0,
+      "resourceIds": null,
+      "createTime": "2026-01-19 17:22:10",
+      "updateTime": "2026-02-04 15:15:23",
+      "modifyBy": null,
+      "taskGroupId": 0,
+      "taskGroupPriority": 0,
+      "cpuQuota": -1,
+      "memoryMax": -1,
+      "taskExecuteType": "BATCH",
+      "operator": 1,
+      "operateTime": "2026-02-04 15:15:23",
+      "dependence": "{\"checkInterval\":10,\"relation\":\"AND\",\"dependTaskList\":[{\"relation\":\"AND\",\"dependItemList\":[{\"projectCode\":163199116863328,\"definitionCode\":163208081477473,\"depTaskCode\":0,\"cycle\":\"hour\",\"dateValue\":\"currentHour\",\"dependentType\":\"DEPENDENT_ON_WORKFLOW\",\"parameterPassing\":false}]}]}"
+    },
+    {
+      "id": 2744,
+      "code": 163209082960736,
+      "name": "dep_syn_ods_t_voyage_base_info_d",
+      "version": 6,
+      "description": "",
+      "projectCode": 163199116863328,
+      "userId": 1,
+      "taskType": "DEPENDENT",
+      "taskParams": {
+        "localParams": [],
+        "resourceList": [],
+        "dependence": {
+          "checkInterval": 10,
+          "relation": "AND",
+          "dependTaskList": [
+            {
+              "relation": "AND",
+              "dependItemList": [
+                {
+                  "projectCode": 163199116863328,
+                  "definitionCode": 163208081452898,
+                  "depTaskCode": 0,
+                  "cycle": "hour",
+                  "dateValue": "currentHour",
+                  "dependentType": "DEPENDENT_ON_WORKFLOW",
+                  "parameterPassing": false
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "taskParamList": [],
+      "taskParamMap": null,
+      "flag": "YES",
+      "isCache": "NO",
+      "taskPriority": "MEDIUM",
+      "userName": null,
+      "projectName": null,
+      "workerGroup": "default",
+      "environmentCode": -1,
+      "failRetryTimes": 0,
+      "failRetryInterval": 1,
+      "timeoutFlag": "CLOSE",
+      "timeoutNotifyStrategy": null,
+      "timeout": 0,
+      "delayTime": 0,
+      "resourceIds": null,
+      "createTime": "2026-01-19 17:22:10",
+      "updateTime": "2026-02-04 15:15:23",
+      "modifyBy": null,
+      "taskGroupId": 0,
+      "taskGroupPriority": 0,
+      "cpuQuota": -1,
+      "memoryMax": -1,
+      "taskExecuteType": "BATCH",
+      "operator": 1,
+      "operateTime": "2026-02-04 15:15:23",
+      "dependence": "{\"checkInterval\":10,\"relation\":\"AND\",\"dependTaskList\":[{\"relation\":\"AND\",\"dependItemList\":[{\"projectCode\":163199116863328,\"definitionCode\":163208081452898,\"depTaskCode\":0,\"cycle\":\"hour\",\"dateValue\":\"currentHour\",\"dependentType\":\"DEPENDENT_ON_WORKFLOW\",\"parameterPassing\":false}]}]}"
+    },
+    {
+      "id": 2745,
+      "code": 163209084524384,
+      "name": "dep_syn_ods_t_voyage_ex_info_d",
+      "version": 6,
+      "description": "",
+      "projectCode": 163199116863328,
+      "userId": 1,
+      "taskType": "DEPENDENT",
+      "taskParams": {
+        "localParams": [],
+        "resourceList": [],
+        "dependence": {
+          "checkInterval": 10,
+          "relation": "AND",
+          "dependTaskList": [
+            {
+              "relation": "AND",
+              "dependItemList": [
+                {
+                  "projectCode": 163199116863328,
+                  "definitionCode": 163208081443682,
+                  "depTaskCode": 0,
+                  "cycle": "hour",
+                  "dateValue": "currentHour",
+                  "dependentType": "DEPENDENT_ON_WORKFLOW",
+                  "parameterPassing": false
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "taskParamList": [],
+      "taskParamMap": null,
+      "flag": "YES",
+      "isCache": "NO",
+      "taskPriority": "MEDIUM",
+      "userName": null,
+      "projectName": null,
+      "workerGroup": "default",
+      "environmentCode": -1,
+      "failRetryTimes": 0,
+      "failRetryInterval": 1,
+      "timeoutFlag": "CLOSE",
+      "timeoutNotifyStrategy": null,
+      "timeout": 0,
+      "delayTime": 0,
+      "resourceIds": null,
+      "createTime": "2026-01-19 17:22:10",
+      "updateTime": "2026-02-04 15:15:23",
+      "modifyBy": null,
+      "taskGroupId": 0,
+      "taskGroupPriority": 0,
+      "cpuQuota": -1,
+      "memoryMax": -1,
+      "taskExecuteType": "BATCH",
+      "operator": 1,
+      "operateTime": "2026-02-04 15:15:23",
+      "dependence": "{\"checkInterval\":10,\"relation\":\"AND\",\"dependTaskList\":[{\"relation\":\"AND\",\"dependItemList\":[{\"projectCode\":163199116863328,\"definitionCode\":163208081443682,\"depTaskCode\":0,\"cycle\":\"hour\",\"dateValue\":\"currentHour\",\"dependentType\":\"DEPENDENT_ON_WORKFLOW\",\"parameterPassing\":false}]}]}"
+    },
+    {
+      "id": 2746,
+      "code": 163209923657568,
+      "name": "dep_syn_ods_t_mdm_ship_type_d",
+      "version": 6,
+      "description": "",
+      "projectCode": 163199116863328,
+      "userId": 1,
+      "taskType": "DEPENDENT",
+      "taskParams": {
+        "localParams": [],
+        "resourceList": [],
+        "dependence": {
+          "checkInterval": 10,
+          "relation": "AND",
+          "dependTaskList": [
+            {
+              "relation": "AND",
+              "dependItemList": [
+                {
+                  "projectCode": 163199116863328,
+                  "definitionCode": 163208081483617,
+                  "depTaskCode": 0,
+                  "cycle": "hour",
+                  "dateValue": "currentHour",
+                  "dependentType": "DEPENDENT_ON_WORKFLOW",
+                  "parameterPassing": false
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "taskParamList": [],
+      "taskParamMap": null,
+      "flag": "YES",
+      "isCache": "NO",
+      "taskPriority": "MEDIUM",
+      "userName": null,
+      "projectName": null,
+      "workerGroup": "default",
+      "environmentCode": -1,
+      "failRetryTimes": 0,
+      "failRetryInterval": 1,
+      "timeoutFlag": "CLOSE",
+      "timeoutNotifyStrategy": null,
+      "timeout": 0,
+      "delayTime": 0,
+      "resourceIds": null,
+      "createTime": "2026-01-19 17:33:53",
+      "updateTime": "2026-02-04 15:15:23",
+      "modifyBy": null,
+      "taskGroupId": 0,
+      "taskGroupPriority": 0,
+      "cpuQuota": -1,
+      "memoryMax": -1,
+      "taskExecuteType": "BATCH",
+      "operator": 1,
+      "operateTime": "2026-02-04 15:15:23",
+      "dependence": "{\"checkInterval\":10,\"relation\":\"AND\",\"dependTaskList\":[{\"relation\":\"AND\",\"dependItemList\":[{\"projectCode\":163199116863328,\"definitionCode\":163208081483617,\"depTaskCode\":0,\"cycle\":\"hour\",\"dateValue\":\"currentHour\",\"dependentType\":\"DEPENDENT_ON_WORKFLOW\",\"parameterPassing\":false}]}]}"
+    },
+    {
+      "id": 2747,
+      "code": 163209976247136,
+      "name": "dep_syn_ods_t_ship_fuel_information_d",
+      "version": 6,
+      "description": "",
+      "projectCode": 163199116863328,
+      "userId": 1,
+      "taskType": "DEPENDENT",
+      "taskParams": {
+        "localParams": [],
+        "resourceList": [],
+        "dependence": {
+          "checkInterval": 10,
+          "relation": "AND",
+          "dependTaskList": [
+            {
+              "relation": "AND",
+              "dependItemList": [
+                {
+                  "projectCode": 163199116863328,
+                  "definitionCode": 163208138691425,
+                  "depTaskCode": 0,
+                  "cycle": "hour",
+                  "dateValue": "currentHour",
+                  "dependentType": "DEPENDENT_ON_WORKFLOW",
+                  "parameterPassing": false
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "taskParamList": [],
+      "taskParamMap": null,
+      "flag": "YES",
+      "isCache": "NO",
+      "taskPriority": "MEDIUM",
+      "userName": null,
+      "projectName": null,
+      "workerGroup": "default",
+      "environmentCode": -1,
+      "failRetryTimes": 0,
+      "failRetryInterval": 1,
+      "timeoutFlag": "CLOSE",
+      "timeoutNotifyStrategy": null,
+      "timeout": 0,
+      "delayTime": 0,
+      "resourceIds": null,
+      "createTime": "2026-01-19 17:33:53",
+      "updateTime": "2026-02-04 15:15:23",
+      "modifyBy": null,
+      "taskGroupId": 0,
+      "taskGroupPriority": 0,
+      "cpuQuota": -1,
+      "memoryMax": -1,
+      "taskExecuteType": "BATCH",
+      "operator": 1,
+      "operateTime": "2026-02-04 15:15:23",
+      "dependence": "{\"checkInterval\":10,\"relation\":\"AND\",\"dependTaskList\":[{\"relation\":\"AND\",\"dependItemList\":[{\"projectCode\":163199116863328,\"definitionCode\":163208138691425,\"depTaskCode\":0,\"cycle\":\"hour\",\"dateValue\":\"currentHour\",\"dependentType\":\"DEPENDENT_ON_WORKFLOW\",\"parameterPassing\":false}]}]}"
+    }
+  ],
+  "relations": []
+}

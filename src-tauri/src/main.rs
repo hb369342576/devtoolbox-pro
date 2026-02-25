@@ -2,6 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use serde::{Deserialize, Serialize};
+use base64::Engine as _;
 
 use std::time::Duration;
 use sysinfo::System;
@@ -539,6 +540,88 @@ async fn http_request(
     })
 }
 
+// 文件上传命令 - 通过 Rust 后端发送 multipart 请求，绕过 CORS
+#[tauri::command]
+async fn http_upload(
+    url: String,
+    headers: Option<std::collections::HashMap<String, String>>,
+    file_name: String,
+    file_data: Vec<u8>,
+    form_fields: Option<std::collections::HashMap<String, String>>,
+) -> Result<HttpResponse, String> {
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(120))
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let file_part = reqwest::multipart::Part::bytes(file_data)
+        .file_name(file_name)
+        .mime_str("application/octet-stream")
+        .map_err(|e| e.to_string())?;
+
+    let mut form = reqwest::multipart::Form::new()
+        .part("file", file_part);
+
+    // 添加额外的表单字段
+    if let Some(fields) = form_fields {
+        for (key, value) in fields {
+            form = form.text(key, value);
+        }
+    }
+
+    let mut request = client.post(&url).multipart(form);
+
+    // 添加请求头
+    if let Some(hdrs) = headers {
+        for (key, value) in hdrs {
+            request = request.header(&key, &value);
+        }
+    }
+
+    let response = request.send().await.map_err(|e| e.to_string())?;
+
+    let status = response.status().as_u16();
+    let mut resp_headers = std::collections::HashMap::new();
+    for (key, value) in response.headers() {
+        if let Ok(v) = value.to_str() {
+            resp_headers.insert(key.to_string(), v.to_string());
+        }
+    }
+
+    let body = response.text().await.map_err(|e| e.to_string())?;
+
+    Ok(HttpResponse {
+        status,
+        body,
+        headers: resp_headers,
+    })
+}
+
+// 二进制文件下载命令 - 返回 base64 编码的文件内容
+#[tauri::command]
+async fn http_download(
+    url: String,
+    headers: Option<std::collections::HashMap<String, String>>,
+) -> Result<String, String> {
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(120))
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let mut request = client.get(&url);
+
+    if let Some(hdrs) = headers {
+        for (key, value) in hdrs {
+            request = request.header(&key, &value);
+        }
+    }
+
+    let response = request.send().await.map_err(|e| e.to_string())?;
+    let bytes = response.bytes().await.map_err(|e| e.to_string())?;
+
+    Ok(base64::engine::general_purpose::STANDARD.encode(&bytes))
+}
+
 fn main() {
     let state = AppState {
         sys: Mutex::new(System::new_all()),
@@ -565,7 +648,9 @@ fn main() {
             save_file,
             open_explorer,
             get_download_dir,
-            http_request
+            http_request,
+            http_upload,
+            http_download
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -16,16 +16,22 @@ interface ToastContextType {
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
+let toastCounter = 0;
+
 export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [toasts, setToasts] = useState<Toast[]>([]);
 
     const toast = useCallback(({ title, description, variant = 'default' }: { title?: string; description?: string; variant?: Toast['variant'] }) => {
-        const id = Date.now();
-        setToasts((prev) => [...prev, { id, title, description, variant }]);
+        const id = ++toastCounter;
+        setToasts((prev) => {
+            // 最多同时显示 3 条，超出时移除最旧的
+            const list = prev.length >= 3 ? prev.slice(1) : prev;
+            return [...list, { id, title, description, variant }];
+        });
 
         setTimeout(() => {
             setToasts((prev) => prev.filter((t) => t.id !== id));
-        }, 3000);
+        }, 5000);
     }, []);
 
     const removeToast = (id: number) => {

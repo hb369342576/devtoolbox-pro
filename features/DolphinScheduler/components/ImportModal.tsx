@@ -3,8 +3,9 @@ import { Upload, XCircle, Search, Loader2, Folder } from 'lucide-react';
 import { useToast } from '../../../components/ui/Toast';
 import { open } from '@tauri-apps/plugin-dialog';
 import { readDir } from '@tauri-apps/plugin-fs';
-import { readWorkflowFromDir } from '../utils';
+import { readWorkflowFromDir, importWorkflowToDS } from '../utils';
 import { Language, ProcessDefinition } from '../types';
+import { DolphinSchedulerApiVersion } from '../../../types';
 
 interface ImportModalProps {
     show: boolean;
@@ -13,11 +14,12 @@ interface ImportModalProps {
     baseUrl: string;
     token: string;
     processes: ProcessDefinition[];
+    apiVersion?: DolphinSchedulerApiVersion;
     onClose: () => void;
     onSuccess: () => void;
 }
 
-export const ImportModal: React.FC<ImportModalProps> = ({ show, lang, projectCode, baseUrl, token, processes, onClose, onSuccess }) => {
+export const ImportModal: React.FC<ImportModalProps> = ({ show, lang, projectCode, baseUrl, token, processes, apiVersion, onClose, onSuccess }) => {
     const { toast } = useToast();
     const [importing, setImporting] = useState(false);
     const [workflows, setWorkflows] = useState<any[]>([]);
@@ -112,14 +114,17 @@ export const ImportModal: React.FC<ImportModalProps> = ({ show, lang, projectCod
         setImporting(true);
         let successCount = 0;
         let skipCount = 0;
+        let failCount = 0;
         
         try {
             for (const index of selectedIndices) {
-                const workflow = workflows[index];
+                const workflow = { ...workflows[index] };
                 const workflowName = workflow.name;
                 
                 // 检查是否存在同名工作流
                 const existingProcess = processes.find(p => p.name === workflowName);
+                
+                let existingCode: number | undefined;
                 
                 if (existingProcess) {
                     // 检查是否上线状态
@@ -133,31 +138,63 @@ export const ImportModal: React.FC<ImportModalProps> = ({ show, lang, projectCod
                             skipCount++;
                             continue;
                         }
-                        // 创建新工作流
+                        // 创建新工作流（改名）
                         workflow.name = `${workflowName}_imported_${Date.now()}`;
+                    } else {
+                        // OFFLINE 状态，更新已有工作流
+                        existingCode = existingProcess.code;
                     }
                 }
                 
-                // 上传逻辑 (这里简化为 Log)
                 toast({ 
                     title: lang === 'zh' ? `正在导入: ${workflow.name}` : `Importing: ${workflow.name}`, 
                     variant: 'default' 
                 });
                 
-                // 模拟 API 延迟
-                await new Promise(r => setTimeout(r, 500));
-                
-                successCount++;
+                try {
+                    const result = await importWorkflowToDS(
+                        workflow,
+                        projectCode,
+                        baseUrl,
+                        token,
+                        apiVersion,
+                        existingCode
+                    );
+                    
+                    if (result.success) {
+                        successCount++;
+                    } else {
+                        failCount++;
+                        console.error(`[Import] Failed: ${workflow.name}:`, result.msg);
+                        toast({
+                            title: lang === 'zh' ? `导入失败: ${workflow.name}` : `Import failed: ${workflow.name}`,
+                            description: result.msg,
+                            variant: 'destructive'
+                        });
+                    }
+                } catch (err: any) {
+                    failCount++;
+                    console.error(`[Import] Error for ${workflow.name}:`, err);
+                    toast({
+                        title: lang === 'zh' ? `导入出错: ${workflow.name}` : `Import error: ${workflow.name}`,
+                        description: err.message,
+                        variant: 'destructive'
+                    });
+                }
             }
             
+            const summary = lang === 'zh' 
+                ? `导入完成：成功 ${successCount}，跳过 ${skipCount}${failCount > 0 ? `，失败 ${failCount}` : ''}`
+                : `Import done: ${successCount} success, ${skipCount} skipped${failCount > 0 ? `, ${failCount} failed` : ''}`;
+            
             toast({ 
-                title: lang === 'zh' 
-                    ? `导入完成，成功 ${successCount} 个，跳过 ${skipCount} 个` 
-                    : `Import complete: ${successCount} success, ${skipCount} skipped`, 
-                variant: 'success' 
+                title: summary, 
+                variant: failCount > 0 ? 'destructive' : 'success' 
             });
             
-            onSuccess();
+            if (successCount > 0) {
+                onSuccess();
+            }
             onClose();
         } catch (err: any) {
             console.error('[Import] Error:', err);

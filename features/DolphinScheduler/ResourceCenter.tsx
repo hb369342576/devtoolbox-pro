@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { Language, DolphinSchedulerConnection, DSResource } from '../../types';
 import { httpFetch } from '../../utils/http';
+import { invoke } from '@tauri-apps/api/core';
 import { useToast } from '../../components/ui/Toast';
 import { Tooltip } from '../../components/ui/Tooltip';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
@@ -161,26 +162,25 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
         }
         setCreating(true);
         try {
-            const formData = new FormData();
-            formData.append('file', new Blob([fileContent], { type: 'text/plain' }), newName);
-            formData.append('type', 'FILE');
-            formData.append('currentDir', currentPath || '');
-
+            const encoder = new TextEncoder();
+            const fileData = Array.from(encoder.encode(fileContent));
             const url = `${connection.baseUrl}/resources`;
-            const response = await fetch(url, {
-                method: 'POST',
+            const result: any = await invoke('http_upload', {
+                url,
                 headers: { 'token': connection.token },
-                body: formData
+                fileName: newName,
+                fileData,
+                formFields: { type: 'FILE', currentDir: currentPath || '' }
             });
-            const result = await response.json();
-            if (result.code === 0) {
+            const parsed = JSON.parse(result.body);
+            if (parsed.code === 0) {
                 toast({ title: lang === 'zh' ? '创建成功' : 'Created successfully', variant: 'success' });
                 setCreateModal({ isOpen: false, type: 'file' });
                 setNewName('');
                 setFileContent('');
                 fetchResources();
             } else {
-                toast({ title: lang === 'zh' ? '创建失败' : 'Create failed', description: result.msg, variant: 'destructive' });
+                toast({ title: lang === 'zh' ? '创建失败' : 'Create failed', description: parsed.msg, variant: 'destructive' });
             }
         } catch (err: any) {
             toast({ title: lang === 'zh' ? '创建失败' : 'Create failed', description: err.message, variant: 'destructive' });
@@ -207,24 +207,22 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
                 try {
                     const fileName = filePath.split(/[/\\]/).pop() || 'file';
                     const content = await readFile(filePath);
-                    
-                    const formData = new FormData();
-                    formData.append('file', new Blob([content]), fileName);
-                    formData.append('type', 'FILE');
-                    formData.append('currentDir', currentPath || '');
+                    const fileData = Array.from(content);
                     
                     const url = `${connection.baseUrl}/resources`;
-                    const response = await fetch(url, {
-                        method: 'POST',
+                    const result: any = await invoke('http_upload', {
+                        url,
                         headers: { 'token': connection.token },
-                        body: formData
+                        fileName,
+                        fileData,
+                        formFields: { type: 'FILE', currentDir: currentPath || '' }
                     });
-                    const result = await response.json();
+                    const parsed = JSON.parse(result.body);
                     
-                    if (result.code === 0) {
+                    if (parsed.code === 0) {
                         successCount++;
                     } else {
-                        toast({ title: `${fileName} ${lang === 'zh' ? '上传失败' : 'upload failed'}`, description: result.msg, variant: 'destructive' });
+                        toast({ title: `${fileName} ${lang === 'zh' ? '上传失败' : 'upload failed'}`, description: parsed.msg, variant: 'destructive' });
                     }
                 } catch (err: any) {
                     console.error('Upload error:', err);
@@ -256,31 +254,37 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
             setUploading(true);
             const filePath = Array.isArray(files) ? files[0] : files;
             const content = await readFile(filePath);
-            
-            const formData = new FormData();
-            formData.append('file', new Blob([content]), resource.alias);
-            formData.append('type', 'FILE');
-            formData.append('currentDir', currentPath || '');
+            const fileData = Array.from(content);
             
             const url = `${connection.baseUrl}/resources`;
-            const response = await fetch(url, {
-                method: 'POST',
+            const result: any = await invoke('http_upload', {
+                url,
                 headers: { 'token': connection.token },
-                body: formData
+                fileName: resource.alias,
+                fileData,
+                formFields: { type: 'FILE', currentDir: currentPath || '' }
             });
-            const result = await response.json();
+            const parsed = JSON.parse(result.body);
             
-            if (result.code === 0) {
+            if (parsed.code === 0) {
                 toast({ title: lang === 'zh' ? '上传成功' : 'Uploaded successfully', variant: 'success' });
                 fetchResources();
             } else {
-                toast({ title: lang === 'zh' ? '上传失败' : 'Upload failed', description: result.msg, variant: 'destructive' });
+                toast({ title: lang === 'zh' ? '上传失败' : 'Upload failed', description: parsed.msg, variant: 'destructive' });
             }
         } catch (err: any) {
             toast({ title: lang === 'zh' ? '上传失败' : 'Upload Failed', description: err.message, variant: 'destructive' });
         } finally {
             setUploading(false);
         }
+    };
+
+    // base64 解码为 Uint8Array
+    const base64ToUint8Array = (base64: string): Uint8Array => {
+        const binary = atob(base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        return bytes;
     };
 
     // 下载单个文件
@@ -297,12 +301,11 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
 
             setDownloading(true);
             const url = `${connection.baseUrl}/resources/${resource.id}/download`;
-            const response = await httpFetch(url, {
-                method: 'GET',
+            const base64Data: string = await invoke('http_download', {
+                url,
                 headers: { 'token': connection.token }
             });
-            const content = await response.arrayBuffer();
-            await writeFile(savePath, new Uint8Array(content));
+            await writeFile(savePath, base64ToUint8Array(base64Data));
             toast({ title: lang === 'zh' ? '下载成功' : 'Downloaded successfully', variant: 'success' });
         } catch (err: any) {
             toast({ title: lang === 'zh' ? '下载失败' : 'Download Failed', description: err.message, variant: 'destructive' });
@@ -331,12 +334,11 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
             for (const res of resourcesToDownload) {
                 try {
                     const url = `${connection.baseUrl}/resources/${res.id}/download`;
-                    const response = await httpFetch(url, {
-                        method: 'GET',
+                    const base64Data: string = await invoke('http_download', {
+                        url,
                         headers: { 'token': connection.token }
                     });
-                    const content = await response.arrayBuffer();
-                    await writeFile(`${savePath}/${res.alias}`, new Uint8Array(content));
+                    await writeFile(`${savePath}/${res.alias}`, base64ToUint8Array(base64Data));
                     successCount++;
                 } catch (err) {
                     console.error('Download error:', err);
@@ -436,10 +438,8 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
         setEditFileModal(prev => ({ ...prev, saving: true }));
         
         try {
-            const formData = new FormData();
-            formData.append('file', new Blob([editFileModal.content], { type: 'text/plain' }), editFileModal.resource.alias);
-            formData.append('type', 'FILE');
-            formData.append('currentDir', currentPath || '');
+            const encoder = new TextEncoder();
+            const fileData = Array.from(encoder.encode(editFileModal.content));
 
             // 先删除旧文件
             const deleteUrl = `${connection.baseUrl}/resources/${editFileModal.resource.id}`;
@@ -450,19 +450,21 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
 
             // 上传新文件
             const uploadUrl = `${connection.baseUrl}/resources`;
-            const response = await fetch(uploadUrl, {
-                method: 'POST',
+            const result: any = await invoke('http_upload', {
+                url: uploadUrl,
                 headers: { 'token': connection.token },
-                body: formData
+                fileName: editFileModal.resource.alias,
+                fileData,
+                formFields: { type: 'FILE', currentDir: currentPath || '' }
             });
-            const result = await response.json();
+            const parsed = JSON.parse(result.body);
             
-            if (result.code === 0) {
+            if (parsed.code === 0) {
                 toast({ title: lang === 'zh' ? '保存成功' : 'Saved successfully', variant: 'success' });
                 setEditFileModal({ isOpen: false, resource: null, content: '', loading: false, saving: false });
                 fetchResources();
             } else {
-                toast({ title: lang === 'zh' ? '保存失败' : 'Save failed', description: result.msg, variant: 'destructive' });
+                toast({ title: lang === 'zh' ? '保存失败' : 'Save failed', description: parsed.msg, variant: 'destructive' });
                 setEditFileModal(prev => ({ ...prev, saving: false }));
             }
         } catch (err: any) {

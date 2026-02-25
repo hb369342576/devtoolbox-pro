@@ -20,7 +20,8 @@ dirs = "5.0"
 mysql = "24.0"
 calamine = "0.24"
 lopdf = "0.32"
-reqwest = { version = "0.12", features = ["json", "blocking"] }
+reqwest = { version = "0.12", features = ["json", "blocking", "multipart"] }
+base64 = "0.22"
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
 

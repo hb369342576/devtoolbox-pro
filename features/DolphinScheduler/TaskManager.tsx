@@ -11,7 +11,7 @@ import { useToast } from '../../components/ui/Toast';
 import { save, open } from '@tauri-apps/plugin-dialog';
 import { httpFetch } from '../../utils/http';
 import { readDir } from '@tauri-apps/plugin-fs';
-import { exportWorkflowsToLocal, readWorkflowFromDir, getWorkflowApiPath } from './utils';
+import { exportWorkflowsToLocal, readWorkflowFromDir, getWorkflowApiPath, importWorkflowToDS } from './utils';
 import { ProcessDefinition } from './types';
 import {
     DetailModal, RunModal, ScheduleModal, BatchRunModal, 
@@ -376,8 +376,23 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                 return;
             }
             
-            toast({ title: lang === 'zh' ? '导入功能开发中...' : 'Import feature coming soon...', variant: 'default' });
+            toast({ title: lang === 'zh' ? `正在导入到 ${process.name}...` : `Importing to ${process.name}...`, variant: 'default' });
             
+            const result = await importWorkflowToDS(
+                workflow,
+                projectCode,
+                baseUrl,
+                token,
+                currentProject?.apiVersion,
+                process.code
+            );
+            
+            if (result.success) {
+                toast({ title: lang === 'zh' ? '导入成功' : 'Import Success', variant: 'success' });
+                handleRefresh();
+            } else {
+                toast({ title: lang === 'zh' ? '导入失败' : 'Import Failed', description: result.msg, variant: 'destructive' });
+            }
         } catch (err: any) {
             toast({ title: lang === 'zh' ? '导入失败' : 'Import Failed', description: err.message, variant: 'destructive' });
         }
@@ -780,6 +795,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                 baseUrl={baseUrl}
                 token={token}
                 processes={processes}
+                apiVersion={currentProject?.apiVersion}
                 onClose={() => setShowImport(false)}
                 onSuccess={handleRefresh}
             />
