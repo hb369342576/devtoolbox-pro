@@ -617,6 +617,12 @@ async fn http_download(
     }
 
     let response = request.send().await.map_err(|e| e.to_string())?;
+    let status = response.status();
+    if !status.is_success() {
+        let body = response.text().await.unwrap_or_default();
+        let preview: String = body.chars().take(500).collect();
+        return Err(format!("HTTP {}: {}", status.as_u16(), preview));
+    }
     let bytes = response.bytes().await.map_err(|e| e.to_string())?;
 
     Ok(base64::engine::general_purpose::STANDARD.encode(&bytes))

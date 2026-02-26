@@ -34,10 +34,10 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
     const [currentPath, setCurrentPath] = useState<string>('');
     const [pathHistory, setPathHistory] = useState<Array<{ fullName: string; name: string }>>([{ fullName: '', name: '根目录' }]);
     const [searchTerm, setSearchTerm] = useState('');
-    const [selectedIds, setSelectedIds] = useState<number[]>([]);
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [uploading, setUploading] = useState(false);
     const [downloading, setDownloading] = useState(false);
-    const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean, ids: number[], names: string[] }>({ isOpen: false, ids: [], names: [] });
+    const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean, ids: string[], names: string[] }>({ isOpen: false, ids: [], names: [] });
     const [pageNo, setPageNo] = useState(1);
     const [total, setTotal] = useState(0);
     const pageSize = 50;
@@ -82,6 +82,7 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
             const result = JSON.parse(responseText);
             if (result.code === 0) {
                 const resourceList = result.data?.totalList || result.data || [];
+                console.log('[ResourceCenter] Raw first resource:', JSON.stringify(resourceList[0]));
                 setResources(Array.isArray(resourceList) ? resourceList : []);
                 setTotal(result.data?.total || resourceList.length || 0);
             } else {
@@ -108,12 +109,12 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
         if (selectedIds.length === resources.length) {
             setSelectedIds([]);
         } else {
-            setSelectedIds(resources.map(r => r.id));
+            setSelectedIds(resources.map(r => r.fullName));
         }
     };
 
-    const handleSelect = (id: number) => {
-        setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+    const handleSelect = (key: string) => {
+        setSelectedIds(prev => prev.includes(key) ? prev.filter(i => i !== key) : [...prev, key]);
     };
 
     // 判断文件是否可编辑（文本格式）
@@ -170,7 +171,7 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
                 headers: { 'token': connection.token },
                 fileName: newName,
                 fileData,
-                formFields: { type: 'FILE', currentDir: currentPath || '' }
+                formFields: { type: 'FILE', name: newName, currentDir: currentPath || '' }
             });
             const parsed = JSON.parse(result.body);
             if (parsed.code === 0) {
@@ -209,13 +210,27 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
                     const content = await readFile(filePath);
                     const fileData = Array.from(content);
                     
+                    // 覆盖逻辑：先检查同名文件是否存在，存在则先删除
+                    const existing = resources.find(r => r.alias === fileName && !r.directory);
+                    if (existing) {
+                        try {
+                            const deleteUrl = existing.id
+                                ? `${connection.baseUrl}/resources/${existing.id}`
+                                : `${connection.baseUrl}/resources?fullName=${encodeURIComponent(existing.fullName)}`;
+                            console.log(`[Upload] Overwrite: deleting existing ${fileName}`);
+                            await httpFetch(deleteUrl, { method: 'DELETE', headers: { 'token': connection.token } });
+                        } catch (e) {
+                            console.warn(`[Upload] Failed to delete existing ${fileName}:`, e);
+                        }
+                    }
+                    
                     const url = `${connection.baseUrl}/resources`;
                     const result: any = await invoke('http_upload', {
                         url,
                         headers: { 'token': connection.token },
                         fileName,
                         fileData,
-                        formFields: { type: 'FILE', currentDir: currentPath || '' }
+                        formFields: { type: 'FILE', name: fileName, currentDir: currentPath || '' }
                     });
                     const parsed = JSON.parse(result.body);
                     
@@ -256,13 +271,24 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
             const content = await readFile(filePath);
             const fileData = Array.from(content);
             
+            // 先删除旧文件再上传（覆盖）
+            try {
+                const deleteUrl = resource.id != null
+                    ? `${connection.baseUrl}/resources/${resource.id}`
+                    : `${connection.baseUrl}/resources?fullName=${encodeURIComponent(resource.fullName)}`;
+                console.log(`[UploadReplace] Deleting existing: ${resource.alias}`);
+                await httpFetch(deleteUrl, { method: 'DELETE', headers: { 'token': connection.token } });
+            } catch (e) {
+                console.warn(`[UploadReplace] Failed to delete existing:`, e);
+            }
+            
             const url = `${connection.baseUrl}/resources`;
             const result: any = await invoke('http_upload', {
                 url,
                 headers: { 'token': connection.token },
                 fileName: resource.alias,
                 fileData,
-                formFields: { type: 'FILE', currentDir: currentPath || '' }
+                formFields: { type: 'FILE', name: resource.alias, currentDir: currentPath || '' }
             });
             const parsed = JSON.parse(result.body);
             
@@ -300,14 +326,22 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
             if (!savePath) return;
 
             setDownloading(true);
-            const url = `${connection.baseUrl}/resources/${resource.id}/download`;
+            
+            // 构建下载 URL
+            const downloadUrl = resource.id != null
+                ? `${connection.baseUrl}/resources/${resource.id}/download`
+                : `${connection.baseUrl}/resources/download?fullName=${encodeURIComponent(resource.fullName)}`;
+            console.log(`[Download] url: ${downloadUrl}`);
+            
+            // 使用 Rust http_download（返回 base64），httpFetch 不支持二进制下载
             const base64Data: string = await invoke('http_download', {
-                url,
+                url: downloadUrl,
                 headers: { 'token': connection.token }
             });
             await writeFile(savePath, base64ToUint8Array(base64Data));
             toast({ title: lang === 'zh' ? '下载成功' : 'Downloaded successfully', variant: 'success' });
         } catch (err: any) {
+            console.error('[Download] Error:', err);
             toast({ title: lang === 'zh' ? '下载失败' : 'Download Failed', description: err.message, variant: 'destructive' });
         } finally {
             setDownloading(false);
@@ -316,7 +350,7 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
 
     // 批量下载
     const handleBatchDownload = async () => {
-        const resourcesToDownload = resources.filter(r => selectedIds.includes(r.id) && !r.directory);
+        const resourcesToDownload = resources.filter(r => selectedIds.includes(r.fullName) && !r.directory);
         if (resourcesToDownload.length === 0) {
             toast({ title: lang === 'zh' ? '请选择要下载的文件' : 'Please select files to download', variant: 'destructive' });
             return;
@@ -333,9 +367,11 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
             let successCount = 0;
             for (const res of resourcesToDownload) {
                 try {
-                    const url = `${connection.baseUrl}/resources/${res.id}/download`;
+                    const downloadUrl = res.id != null
+                        ? `${connection.baseUrl}/resources/${res.id}/download`
+                        : `${connection.baseUrl}/resources/download?fullName=${encodeURIComponent(res.fullName)}`;
                     const base64Data: string = await invoke('http_download', {
-                        url,
+                        url: downloadUrl,
                         headers: { 'token': connection.token }
                     });
                     await writeFile(`${savePath}/${res.alias}`, base64ToUint8Array(base64Data));
@@ -360,16 +396,44 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
         setConfirmDelete({ isOpen: false, ids: [], names: [] });
     };
 
-    const handleDelete = async (ids: number[]) => {
+    const handleDelete = async (ids: string[]) => {
+        let successCount = 0;
+        let failMsg = '';
         try {
-            for (const id of ids) {
-                const url = `${connection.baseUrl}/resources/${id}`;
-                await httpFetch(url, {
-                    method: 'DELETE',
+            for (const fullName of ids) {
+                // 根据 fullName 找到对应的 resource，优先用 id（3.2/3.3），否则用 fullName（3.4）
+                const res = resources.find(r => r.fullName === fullName);
+                const deleteId = res?.id;
+                const url = deleteId
+                    ? `${connection.baseUrl}/resources/${deleteId}`
+                    : `${connection.baseUrl}/resources?fullName=${encodeURIComponent(fullName)}`;
+                const method = deleteId ? 'DELETE' : 'DELETE';
+                console.log(`[ResourceCenter] DELETE ${url}`);
+                const response = await httpFetch(url, {
+                    method,
                     headers: { 'token': connection.token }
                 });
+                const responseText = await response.text();
+                console.log(`[ResourceCenter] DELETE response:`, responseText);
+                try {
+                    const result = JSON.parse(responseText);
+                    if (result.code === 0) {
+                        successCount++;
+                    } else {
+                        failMsg = result.msg || `code: ${result.code}`;
+                        console.error(`[ResourceCenter] Delete failed for ${fullName}:`, result.msg);
+                    }
+                } catch {
+                    failMsg = responseText.substring(0, 200);
+                    console.error(`[ResourceCenter] Delete returned non-JSON for ${fullName}`);
+                }
             }
-            toast({ title: lang === 'zh' ? '删除成功' : 'Deleted successfully', variant: 'success' });
+            if (successCount > 0) {
+                toast({ title: lang === 'zh' ? `成功删除 ${successCount} 项` : `Deleted ${successCount} items`, variant: 'success' });
+            }
+            if (failMsg) {
+                toast({ title: lang === 'zh' ? '部分删除失败' : 'Some deletes failed', description: failMsg, variant: 'destructive' });
+            }
             setSelectedIds([]);
             fetchResources();
         } catch (err: any) {
@@ -380,27 +444,40 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
     // 删除单个
     const handleDeleteSingle = (resource: DSResource, e: React.MouseEvent) => {
         e.stopPropagation();
-        setConfirmDelete({ isOpen: true, ids: [resource.id], names: [resource.alias] });
+        setConfirmDelete({ isOpen: true, ids: [resource.fullName], names: [resource.alias] });
     };
 
     // 重命名
     const handleRename = async () => {
         if (!renameModal.resource || !renameName.trim()) return;
         try {
-            const url = `${connection.baseUrl}/resources/${renameModal.resource.id}`;
+            const res = renameModal.resource;
+            // 3.2/3.3 用 /resources/{id}; 3.4.0 用 /resources 且 fullName 放 body 里
+            const url = res.id != null
+                ? `${connection.baseUrl}/resources/${res.id}`
+                : `${connection.baseUrl}/resources`;
+            const bodyParts = `name=${encodeURIComponent(renameName)}&type=FILE`;
+            const body = res.id != null ? bodyParts : `${bodyParts}&fullName=${encodeURIComponent(res.fullName)}`;
+            console.log(`[Rename] PUT ${url}, body=${body}`);
             const response = await httpFetch(url, {
                 method: 'PUT',
                 headers: { 'token': connection.token, 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `name=${encodeURIComponent(renameName)}&type=FILE`
+                body
             });
-            const result = await response.json();
-            if (result.code === 0) {
-                toast({ title: lang === 'zh' ? '重命名成功' : 'Renamed successfully', variant: 'success' });
-                setRenameModal({ isOpen: false, resource: null });
-                setRenameName('');
-                fetchResources();
-            } else {
-                toast({ title: lang === 'zh' ? '重命名失败' : 'Rename failed', description: result.msg, variant: 'destructive' });
+            const responseText = await response.text();
+            console.log(`[Rename] response:`, responseText);
+            try {
+                const result = JSON.parse(responseText);
+                if (result.code === 0) {
+                    toast({ title: lang === 'zh' ? '重命名成功' : 'Renamed successfully', variant: 'success' });
+                    setRenameModal({ isOpen: false, resource: null });
+                    setRenameName('');
+                    fetchResources();
+                } else {
+                    toast({ title: lang === 'zh' ? '重命名失败' : 'Rename failed', description: result.msg, variant: 'destructive' });
+                }
+            } catch {
+                toast({ title: lang === 'zh' ? '重命名失败' : 'Rename failed', description: responseText.substring(0, 200), variant: 'destructive' });
             }
         } catch (err: any) {
             toast({ title: lang === 'zh' ? '重命名失败' : 'Rename failed', description: err.message, variant: 'destructive' });
@@ -414,16 +491,32 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
         
         try {
             // 获取文件内容
-            const url = `${connection.baseUrl}/resources/${resource.id}/view-content?skipLineNum=0&limit=100000`;
-            const response = await httpFetch(url, {
-                method: 'GET',
-                headers: { 'token': connection.token }
-            });
-            const result = await response.json();
-            if (result.code === 0) {
-                setEditFileModal(prev => ({ ...prev, content: result.data || '', loading: false }));
+            let viewUrl: string;
+            let viewContent = '';
+            if (resource.id != null) {
+                viewUrl = `${connection.baseUrl}/resources/${resource.id}/view-content?skipLineNum=0&limit=100000`;
+                const response = await httpFetch(viewUrl, { method: 'GET', headers: { 'token': connection.token } });
+                const result = await response.json();
+                if (result.code === 0) {
+                    viewContent = typeof result.data === 'string' ? result.data : (result.data?.content ?? '');
+                }
             } else {
-                toast({ title: lang === 'zh' ? '获取内容失败' : 'Failed to get content', description: result.msg, variant: 'destructive' });
+                // 3.4.0：使用与原生 DS UI 完全一致的请求参数
+                // tenantCode= (空值), limit=-1 (无限制), fullName=原始路径
+                const viewUrl = `${connection.baseUrl}/resources/view?skipLineNum=0&limit=-1&fullName=${encodeURIComponent(resource.fullName)}&tenantCode=`;
+                console.log(`[ViewContent] url: ${viewUrl}`);
+                const response = await httpFetch(viewUrl, { method: 'GET', headers: { 'token': connection.token } });
+                const responseText = await response.text();
+                console.log(`[ViewContent] Response:`, responseText.substring(0, 300));
+                const result = JSON.parse(responseText);
+                if (result.code === 0) {
+                    viewContent = typeof result.data === 'string' ? result.data : (result.data?.content ?? '');
+                }
+            }
+            if (viewContent || viewContent === '') {
+                setEditFileModal(prev => ({ ...prev, content: viewContent, loading: false }));
+            } else {
+                toast({ title: lang === 'zh' ? '获取内容失败' : 'Failed to get content', description: '所有 API 端点均无法获取文件内容', variant: 'destructive' });
                 setEditFileModal({ isOpen: false, resource: null, content: '', loading: false, saving: false });
             }
         } catch (err: any) {
@@ -442,7 +535,8 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
             const fileData = Array.from(encoder.encode(editFileModal.content));
 
             // 先删除旧文件
-            const deleteUrl = `${connection.baseUrl}/resources/${editFileModal.resource.id}`;
+            const resId = editFileModal.resource.id ?? encodeURIComponent(editFileModal.resource.fullName);
+            const deleteUrl = `${connection.baseUrl}/resources/${resId}`;
             await httpFetch(deleteUrl, {
                 method: 'DELETE',
                 headers: { 'token': connection.token }
@@ -455,7 +549,7 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
                 headers: { 'token': connection.token },
                 fileName: editFileModal.resource.alias,
                 fileData,
-                formFields: { type: 'FILE', currentDir: currentPath || '' }
+                formFields: { type: 'FILE', name: editFileModal.resource.alias, currentDir: currentPath || '' }
             });
             const parsed = JSON.parse(result.body);
             
@@ -718,7 +812,7 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
                                 {lang === 'zh' ? '批量下载' : 'Download'}
                             </button>
                             <button
-                                onClick={() => setConfirmDelete({ isOpen: true, ids: selectedIds, names: resources.filter(r => selectedIds.includes(r.id)).map(r => r.alias) })}
+                                onClick={() => setConfirmDelete({ isOpen: true, ids: selectedIds, names: resources.filter(r => selectedIds.includes(r.fullName)).map(r => r.alias) })}
                                 className="px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium flex items-center text-sm transition-colors"
                             >
                                 <Trash2 size={16} className="mr-1" />
@@ -775,13 +869,13 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
                             <tbody>
                                 {resources.map((resource, idx) => (
                                     <tr
-                                        key={resource.id}
-                                        className={`hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors cursor-pointer ${selectedIds.includes(resource.id) ? 'bg-amber-50 dark:bg-amber-900/20' : idx % 2 === 1 ? 'bg-slate-50/50 dark:bg-slate-800/50' : ''}`}
+                                        key={resource.fullName}
+                                        className={`hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors cursor-pointer ${selectedIds.includes(resource.fullName) ? 'bg-amber-50 dark:bg-amber-900/20' : idx % 2 === 1 ? 'bg-slate-50/50 dark:bg-slate-800/50' : ''}`}
                                         onClick={() => handleNavigate(resource)}
                                     >
                                         <td className="px-3 py-3 border-r border-slate-100 dark:border-slate-700" onClick={(e) => e.stopPropagation()}>
-                                            <button onClick={(e) => { e.stopPropagation(); handleSelect(resource.id); }} className="text-slate-400 hover:text-amber-500">
-                                                {selectedIds.includes(resource.id) ? <CheckSquare size={18} className="text-amber-500" /> : <Square size={18} />}
+                                            <button onClick={(e) => { e.stopPropagation(); handleSelect(resource.fullName); }} className="text-slate-400 hover:text-amber-500">
+                                                {selectedIds.includes(resource.fullName) ? <CheckSquare size={18} className="text-amber-500" /> : <Square size={18} />}
                                             </button>
                                         </td>
                                         <td className="px-3 py-3 border-r border-slate-100 dark:border-slate-700">
