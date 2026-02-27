@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import {
     ListTodo, ArrowLeft, Search, Folder, Calendar, AlertCircle,
     PlayCircle, Settings, RefreshCw, CalendarClock, Plus, CheckCircle2, XCircle, Timer, User, Loader2,
-    Eye, Download, Upload, Power, Clock, ChevronLeft, ChevronRight, MoreHorizontal, Tag, Copy, Edit
+    Eye, Download, Upload, Power, Clock, ChevronLeft, ChevronRight, MoreHorizontal, Tag, Copy, Edit, Container
 } from 'lucide-react';
 import { Language, DolphinSchedulerConfig, DolphinSchedulerApiVersion } from '../../types';
 import { getTexts } from '../../locales';
@@ -11,7 +11,7 @@ import { useToast } from '../../components/ui/Toast';
 import { save, open } from '@tauri-apps/plugin-dialog';
 import { httpFetch } from '../../utils/http';
 import { readDir } from '@tauri-apps/plugin-fs';
-import { exportWorkflowsToLocal, readWorkflowFromDir, getWorkflowApiPath, importWorkflowToDS } from './utils';
+import { exportWorkflowsToLocal, readWorkflowFromDir, getWorkflowApiPath, importWorkflowToDS, createK8sWorkflow } from './utils';
 import { ProcessDefinition } from './types';
 import {
     DetailModal, RunModal, ScheduleModal, BatchRunModal, 
@@ -50,6 +50,31 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
     const [showImport, setShowImport] = useState(false);
     const [showLog, setShowLog] = useState(false);
     const [editProcess, setEditProcess] = useState<ProcessDefinition | null>(null);
+    const [showCreateMenu, setShowCreateMenu] = useState(false);
+    
+    // 新建 K8S 工作流
+    const [showCreateK8s, setShowCreateK8s] = useState(false);
+    const [createK8sName, setCreateK8sName] = useState('');
+    const [createK8sConfigPath, setCreateK8sConfigPath] = useState('smart_cloud_pro/');
+    const [createK8sDatasource, setCreateK8sDatasource] = useState(1);
+    const [createK8sImage, setCreateK8sImage] = useState('registry-vpc.cn-shenzhen.aliyuncs.com/zdiai-library/apache_seatunnel-k8s:2.3.12-20260204');
+    const [createK8sNamespace, setCreateK8sNamespace] = useState('{"name":"default","cluster":"k8s-Security-Cluster-admin"}');
+    const [createK8sEnvCode, setCreateK8sEnvCode] = useState(164447603311488);
+    const [createK8sTimeoutFlag, setCreateK8sTimeoutFlag] = useState(true);
+    const [createK8sTimeout, setCreateK8sTimeout] = useState(10);
+    const [createK8sTimeoutWarn, setCreateK8sTimeoutWarn] = useState(false);
+    const [createK8sTimeoutFail, setCreateK8sTimeoutFail] = useState(true);
+    const [createK8sRetryTimes, setCreateK8sRetryTimes] = useState(3);
+    const [createK8sRetryInterval, setCreateK8sRetryInterval] = useState(1);
+    const [creatingK8s, setCreatingK8s] = useState(false);
+
+    // 资源中心文件浏览
+    const [showResourceBrowser, setShowResourceBrowser] = useState(false);
+    const [resourceBrowserPath, setResourceBrowserPath] = useState('');
+    const [resourceBrowserFiles, setResourceBrowserFiles] = useState<any[]>([]);
+    const [resourceBrowserLoading, setResourceBrowserLoading] = useState(false);
+    const [resourceBrowserHistory, setResourceBrowserHistory] = useState<{name: string; path: string}[]>([{name: '根目录', path: ''}]);
+    const [resourceBrowserSearch, setResourceBrowserSearch] = useState('');
     
     // 单个导出版本选择
     const [exportSingleProcess, setExportSingleProcess] = useState<ProcessDefinition | null>(null);
@@ -227,6 +252,44 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
             fetchProcessDefinitions(projectCode);
         } else {
             resolveProjectCodeAndFetch();
+        }
+    };
+
+    // 新建 K8S 工作流
+    const handleCreateK8s = async () => {
+        if (!createK8sName.trim() || !createK8sConfigPath.trim()) return;
+        setCreatingK8s(true);
+        try {
+            const result = await createK8sWorkflow(
+                createK8sName.trim(),
+                createK8sConfigPath.trim(),
+                createK8sDatasource,
+                createK8sImage,
+                createK8sNamespace,
+                createK8sEnvCode,
+                createK8sTimeoutFlag,
+                createK8sTimeout,
+                createK8sTimeoutWarn && createK8sTimeoutFail ? 'WARNFAILED' : createK8sTimeoutWarn ? 'WARN' : 'FAILED',
+                createK8sRetryTimes,
+                createK8sRetryInterval,
+                projectCode,
+                baseUrl,
+                token,
+                currentProject?.apiVersion
+            );
+            if (result.success) {
+                toast({ title: lang === 'zh' ? '创建成功' : 'Created', variant: 'success' });
+                setShowCreateK8s(false);
+                setCreateK8sName('');
+                setCreateK8sConfigPath('smart_cloud_pro/');
+                handleRefresh();
+            } else {
+                toast({ title: lang === 'zh' ? '创建失败' : 'Failed', description: result.msg, variant: 'destructive' });
+            }
+        } catch (err: any) {
+            toast({ title: lang === 'zh' ? '创建失败' : 'Failed', description: err.message, variant: 'destructive' });
+        } finally {
+            setCreatingK8s(false);
         }
     };
 
@@ -492,6 +555,45 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                 
                 {/* 操作按钮和搜索框 */}
                 <div className="flex items-center space-x-3">
+                    <div className="relative">
+                        <Tooltip content={lang === 'zh' ? '快速创建' : 'Quick Create'} position="bottom">
+                            <button onClick={() => setShowCreateMenu(!showCreateMenu)} className="p-2 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 rounded-lg text-emerald-600">
+                                <Plus size={18} />
+                            </button>
+                        </Tooltip>
+                        {showCreateMenu && (
+                            <>
+                                <div className="fixed inset-0 z-40" onClick={() => setShowCreateMenu(false)} />
+                                <div className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 py-1 w-52 overflow-hidden">
+                                    <button
+                                        onClick={() => { setShowCreateMenu(false); setShowCreateK8s(true); }}
+                                        className="w-full flex items-center px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-700 text-left transition-colors"
+                                    >
+                                        <div className="p-1.5 rounded-md bg-purple-500 text-white mr-3"><Container size={14} /></div>
+                                        <span className="text-sm font-medium text-slate-700 dark:text-slate-200">K8S</span>
+                                    </button>
+                                    {[
+                                        { name: 'SeaTunnel', color: 'bg-blue-500' },
+                                        { name: 'SQL', color: 'bg-green-500' },
+                                        { name: 'Shell', color: 'bg-slate-500' },
+                                        { name: 'Java', color: 'bg-red-500' },
+                                        { name: 'Python', color: 'bg-yellow-500' },
+                                    ].map(t => (
+                                        <button
+                                            key={t.name}
+                                            disabled
+                                            className="w-full flex items-center px-4 py-2.5 text-left opacity-40 cursor-not-allowed"
+                                        >
+                                            <div className={`p-1.5 rounded-md ${t.color} text-white mr-3`}><Container size={14} /></div>
+                                            <span className="text-sm font-medium text-slate-400 dark:text-slate-500">{t.name}</span>
+                                            <span className="ml-auto text-[10px] text-slate-400">{lang === 'zh' ? '即将支持' : 'Soon'}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </>
+                        )}
+                    </div>
+                    <div className="w-px h-6 bg-slate-200 dark:bg-slate-700" />
                     {/* 搜索框 */}
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
@@ -868,6 +970,337 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                 </div>
             )}
             
+            {/* 新建 K8S 工作流对话框 */}
+            {showCreateK8s && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in">
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200 dark:border-slate-700">
+                        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80">
+                            <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center">
+                                <Plus size={20} className="mr-2 text-emerald-500" />
+                                {lang === 'zh' ? '新建 K8S 工作流' : 'New K8S Workflow'}
+                            </h3>
+                        </div>
+                        <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+                            {/* 工作流名称 */}
+                            <div>
+                                <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">
+                                    {lang === 'zh' ? '工作流名称' : 'Workflow Name'} <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    value={createK8sName}
+                                    onChange={e => setCreateK8sName(e.target.value)}
+                                    placeholder="syn_ods_t_table_name_d"
+                                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+                                />
+                                <p className="mt-1 text-xs text-slate-400">
+                                    {lang === 'zh' ? '节点名称自动转换' : 'Node name auto-converted'}
+                                    {createK8sName && <span className="ml-1 text-emerald-500 font-mono">{`→ ${createK8sName.replace(/_/g, '-')}`}</span>}
+                                </p>
+                            </div>
+
+                            {/* 配置文件路径 */}
+                            <div>
+                                <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">
+                                    {lang === 'zh' ? '配置文件路径' : 'Config Path'} <span className="text-red-500">*</span>
+                                </label>
+                                <div className="flex space-x-2">
+                                    <input
+                                        type="text"
+                                        value={createK8sConfigPath}
+                                        onChange={e => setCreateK8sConfigPath(e.target.value)}
+                                        placeholder="smart_cloud_pro/syn_ods_t_table_name_d.conf"
+                                        className="flex-1 px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-mono focus:ring-2 focus:ring-emerald-500 outline-none"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={async () => {
+                                            setShowResourceBrowser(true);
+                                            setResourceBrowserPath('');
+                                            setResourceBrowserHistory([{name: '根目录', path: ''}]);
+                                            setResourceBrowserLoading(true);
+                                            try {
+                                                const url = `${currentProject!.baseUrl}/resources?fullName=&tenantCode=&type=FILE&searchVal=&pageNo=1&pageSize=200`;
+                                                const resp = await httpFetch(url, { method: 'GET', headers: { 'token': currentProject!.token } });
+                                                const result = await resp.json();
+                                                if (result.code === 0) {
+                                                    setResourceBrowserFiles(result.data?.totalList || result.data || []);
+                                                }
+                                            } catch (e) { console.error(e); }
+                                            finally { setResourceBrowserLoading(false); }
+                                        }}
+                                        className="px-3 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 rounded-lg text-sm text-slate-600 dark:text-slate-300 transition-colors whitespace-nowrap"
+                                    >
+                                        📂 {lang === 'zh' ? '浏览' : 'Browse'}
+                                    </button>
+                                </div>
+                                <p className="mt-1 text-xs text-slate-400">
+                                    {lang === 'zh' ? '最终命令：' : 'Final command: '}
+                                    <span className="font-mono text-slate-500">./bin/seatunnel.sh --config {createK8sConfigPath || '...'}</span>
+                                </p>
+                                {/* 资源中心文件浏览器 */}
+                                {showResourceBrowser && (() => {
+                                    return (
+                                    <div className="mt-2 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden bg-white dark:bg-slate-900">
+                                        <div className="px-3 py-2 bg-slate-100 dark:bg-slate-800 flex items-center justify-between">
+                                            <div className="flex items-center space-x-1 text-xs overflow-x-auto">
+                                                {resourceBrowserHistory.map((h, i) => (
+                                                    <React.Fragment key={i}>
+                                                        {i > 0 && <span className="text-slate-400">/</span>}
+                                                        <button
+                                                            onClick={async () => {
+                                                                setResourceBrowserPath(h.path);
+                                                                setResourceBrowserHistory(resourceBrowserHistory.slice(0, i + 1));
+                                                                setResourceBrowserSearch('');
+                                                                setResourceBrowserLoading(true);
+                                                                try {
+                                                                    const url = `${currentProject!.baseUrl}/resources?fullName=${encodeURIComponent(h.path)}&tenantCode=&type=FILE&searchVal=&pageNo=1&pageSize=200`;
+                                                                    const resp = await httpFetch(url, { method: 'GET', headers: { 'token': currentProject!.token } });
+                                                                    const result = await resp.json();
+                                                                    if (result.code === 0) setResourceBrowserFiles(result.data?.totalList || result.data || []);
+                                                                } catch (e) { console.error(e); }
+                                                                finally { setResourceBrowserLoading(false); }
+                                                            }}
+                                                            className="text-blue-500 hover:underline"
+                                                        >
+                                                            {h.name}
+                                                        </button>
+                                                    </React.Fragment>
+                                                ))}
+                                            </div>
+                                            <button onClick={() => setShowResourceBrowser(false)} className="text-slate-400 hover:text-slate-600 ml-2">
+                                                ✕
+                                            </button>
+                                        </div>
+                                        {/* 全局搜索框 */}
+                                        <div className="px-3 py-1.5 border-b border-slate-100 dark:border-slate-800">
+                                            <input
+                                                type="text"
+                                                value={resourceBrowserSearch}
+                                                onChange={e => setResourceBrowserSearch(e.target.value)}
+                                                onKeyDown={async (e) => {
+                                                    if (e.key === 'Enter') {
+                                                        setResourceBrowserLoading(true);
+                                                        try {
+                                                            const searchVal = resourceBrowserSearch ? encodeURIComponent(resourceBrowserSearch) : '';
+                                                            const url = `${currentProject!.baseUrl}/resources?fullName=&tenantCode=&type=FILE&searchVal=${searchVal}&pageNo=1&pageSize=200`;
+                                                            const resp = await httpFetch(url, { method: 'GET', headers: { 'token': currentProject!.token } });
+                                                            const result = await resp.json();
+                                                            if (result.code === 0) setResourceBrowserFiles(result.data?.totalList || result.data || []);
+                                                        } catch (e) { console.error(e); }
+                                                        finally { setResourceBrowserLoading(false); }
+                                                    }
+                                                }}
+                                                placeholder={lang === 'zh' ? '🔍 全局搜索，回车搜索...' : '🔍 Global search, press Enter...'}
+                                                className="w-full px-2 py-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs focus:ring-1 focus:ring-emerald-500 outline-none"
+                                            />
+                                        </div>
+                                        <div className="max-h-48 overflow-y-auto">
+                                            {resourceBrowserLoading ? (
+                                                <div className="flex items-center justify-center py-4">
+                                                    <Loader2 size={16} className="animate-spin text-slate-400" />
+                                                </div>
+                                            ) : resourceBrowserFiles.length === 0 ? (
+                                                <div className="text-center py-4 text-xs text-slate-400">{lang === 'zh' ? '无匹配文件' : 'No matching files'}</div>
+                                            ) : (
+                                                resourceBrowserFiles.map((f: any, i: number) => (
+                                                    <button
+                                                        key={i}
+                                                        onClick={async () => {
+                                                            if (f.directory) {
+                                                                setResourceBrowserPath(f.fullName);
+                                                                setResourceBrowserHistory([...resourceBrowserHistory, { name: (f.alias || f.fileName || '').replace(/\/$/, ''), path: f.fullName }]);
+                                                                setResourceBrowserSearch('');
+                                                                setResourceBrowserLoading(true);
+                                                                try {
+                                                                    const url = `${currentProject!.baseUrl}/resources?fullName=${encodeURIComponent(f.fullName)}&tenantCode=&type=FILE&searchVal=&pageNo=1&pageSize=200`;
+                                                                    const resp = await httpFetch(url, { method: 'GET', headers: { 'token': currentProject!.token } });
+                                                                    const result = await resp.json();
+                                                                    if (result.code === 0) setResourceBrowserFiles(result.data?.totalList || result.data || []);
+                                                                } catch (e) { console.error(e); }
+                                                                finally { setResourceBrowserLoading(false); }
+                                                            } else {
+                                                                // 选择文件 — 去掉开头 /
+                                                                const path = (f.fullName || '').replace(/^.*\/resources\//, '');
+                                                                setCreateK8sConfigPath(path);
+                                                                setShowResourceBrowser(false);
+                                                            }
+                                                        }}
+                                                        className="w-full flex items-center px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-800 text-left text-sm border-b border-slate-100 dark:border-slate-800 last:border-0"
+                                                    >
+                                                        <span className="mr-2">{f.directory ? '📁' : '📄'}</span>
+                                                        <span className="truncate text-slate-700 dark:text-slate-300">{(f.alias || f.fileName || '').replace(/\/$/, '')}</span>
+                                                    </button>
+                                                ))
+                                            )}
+                                        </div>
+                                    </div>
+                                    );
+                                })()}
+                            </div>
+
+                            {/* 数据源实例和镜像 */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">
+                                        {lang === 'zh' ? '数据源实例' : 'Datasource'}
+                                    </label>
+                                    <select
+                                        value={createK8sDatasource}
+                                        onChange={e => setCreateK8sDatasource(Number(e.target.value))}
+                                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+                                    >
+                                        <option value={1}>k8s-user</option>
+                                        <option value={2}>k8s-admin</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">
+                                        {lang === 'zh' ? '镜像' : 'Image'}
+                                    </label>
+                                    <select
+                                        value={createK8sImage}
+                                        onChange={e => setCreateK8sImage(e.target.value)}
+                                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+                                    >
+                                        <option value="registry-vpc.cn-shenzhen.aliyuncs.com/zdiai-library/apache_seatunnel-k8s:2.3.12-20260204">seatunnel-k8s:2.3.12-20260204</option>
+                                        <option value="registry-vpc.cn-shenzhen.aliyuncs.com/zdiai-library/apache_seatunnel-k8s:latest">seatunnel-k8s:latest</option>
+                                    </select>
+                                    <p className="mt-1 text-xs text-slate-400 font-mono truncate">{createK8sImage}</p>
+                                </div>
+                            </div>
+
+                            {/* 命名空间和环境 */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">
+                                        {lang === 'zh' ? '命名空间' : 'Namespace'}
+                                    </label>
+                                    <select
+                                        value={createK8sNamespace}
+                                        onChange={e => setCreateK8sNamespace(e.target.value)}
+                                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+                                    >
+                                        <option value='{"name":"default","cluster":"k8s-Security-Cluster-admin"}'>default (k8s-Security-Cluster-admin)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">
+                                        {lang === 'zh' ? '环境名称' : 'Environment'}
+                                    </label>
+                                    <select
+                                        value={createK8sEnvCode}
+                                        onChange={e => setCreateK8sEnvCode(Number(e.target.value))}
+                                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+                                    >
+                                        <option value={164447603311488}>JAVA_HOME</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* 超时设置 */}
+                            <div>
+                                <div className="flex items-center mb-2">
+                                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mr-3">
+                                        {lang === 'zh' ? '超时告警' : 'Timeout'}
+                                    </label>
+                                    <button
+                                        type="button"
+                                        onClick={() => setCreateK8sTimeoutFlag(!createK8sTimeoutFlag)}
+                                        className={`relative w-10 h-5 rounded-full transition-colors ${createK8sTimeoutFlag ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                                    >
+                                        <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${createK8sTimeoutFlag ? 'translate-x-5' : ''}`} />
+                                    </button>
+                                </div>
+                                {createK8sTimeoutFlag && (
+                                    <div className="space-y-2">
+                                        <div className="flex items-center space-x-4">
+                                            <span className="text-xs text-slate-500">{lang === 'zh' ? '超时策略' : 'Strategy'}</span>
+                                            <label className="flex items-center space-x-1.5 text-sm text-slate-600 dark:text-slate-300 cursor-pointer">
+                                                <input type="checkbox" checked={createK8sTimeoutWarn} onChange={e => setCreateK8sTimeoutWarn(e.target.checked)} className="rounded border-slate-300" />
+                                                <span className="text-xs">{lang === 'zh' ? '超时告警' : 'Warn'}</span>
+                                            </label>
+                                            <label className="flex items-center space-x-1.5 text-sm text-slate-600 dark:text-slate-300 cursor-pointer">
+                                                <input type="checkbox" checked={createK8sTimeoutFail} onChange={e => setCreateK8sTimeoutFail(e.target.checked)} className="rounded border-slate-300" />
+                                                <span className="text-xs">{lang === 'zh' ? '超时失败' : 'Fail'}</span>
+                                            </label>
+                                        </div>
+                                        <div className="flex items-center space-x-3">
+                                            <span className="text-xs text-slate-500">{lang === 'zh' ? '超时时长' : 'Duration'}</span>
+                                            <input
+                                                type="number"
+                                                value={createK8sTimeout}
+                                                onChange={e => setCreateK8sTimeout(Number(e.target.value))}
+                                                min={1}
+                                                className="w-20 px-2 py-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded text-sm text-center focus:ring-2 focus:ring-emerald-500 outline-none"
+                                            />
+                                            <span className="text-xs text-slate-400">{lang === 'zh' ? '分钟' : 'min'}</span>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* 失败重试 */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">
+                                        {lang === 'zh' ? '失败重试次数' : 'Retry Times'}
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={createK8sRetryTimes}
+                                        onChange={e => setCreateK8sRetryTimes(Number(e.target.value))}
+                                        min={0}
+                                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">
+                                        {lang === 'zh' ? '失败重试间隔' : 'Retry Interval'}
+                                    </label>
+                                    <div className="flex items-center space-x-2">
+                                        <input
+                                            type="number"
+                                            value={createK8sRetryInterval}
+                                            onChange={e => setCreateK8sRetryInterval(Number(e.target.value))}
+                                            min={1}
+                                            className="flex-1 px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+                                        />
+                                        <span className="text-xs text-slate-400 whitespace-nowrap">{lang === 'zh' ? '分钟' : 'min'}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* 完整容器命令预览 */}
+                            <div className="bg-slate-100 dark:bg-slate-900/50 rounded-lg p-3">
+                                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
+                                    {lang === 'zh' ? '容器执行命令' : 'Container Command'}
+                                </p>
+                                <p className="text-xs font-mono text-slate-600 dark:text-slate-300 break-all">
+                                    {`["./bin/seatunnel.sh", "--config", "${createK8sConfigPath || '...'}", "--download_url", "http://10.0.1.10:82", "-m", "local"]`}
+                                </p>
+                            </div>
+                        </div>
+                        <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 flex justify-end space-x-3">
+                            <button 
+                                onClick={() => setShowCreateK8s(false)} 
+                                className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg"
+                            >
+                                {lang === 'zh' ? '取消' : 'Cancel'}
+                            </button>
+                            <button 
+                                onClick={handleCreateK8s} 
+                                disabled={creatingK8s || !createK8sName.trim() || !createK8sConfigPath.trim()}
+                                className="px-6 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-medium disabled:opacity-50 flex items-center"
+                            >
+                                {creatingK8s && <Loader2 size={16} className="animate-spin mr-2" />}
+                                {lang === 'zh' ? '创建' : 'Create'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* 任务编辑器 */}
             {editProcess && currentProject && (
                 <TaskEditor

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import { Layout } from './components/ui/Layout';
 import { ToastProvider } from './components/ui/Toast';
 import { UpdateChecker } from './components/UpdateChecker';
@@ -197,7 +198,7 @@ export default function App() {
     return (saved as Theme) || 'light';
   });
   
-  // 主题切换函数：同时更新状态、localStorage 和 DOM
+  // 主题切换函数：同时更新状态、localStorage、DOM 和窗口标题栏
   const setTheme = (newTheme: Theme) => {
     setThemeState(newTheme);
     localStorage.setItem('theme', newTheme);
@@ -207,6 +208,10 @@ export default function App() {
     } else {
       root.classList.remove('dark');
     }
+    // 同步更新 Tauri 窗口标题栏主题
+    invoke('set_window_theme', { theme: newTheme }).catch((e: any) =>
+      console.warn('Failed to set window theme:', e)
+    );
   };
   const [monitorEnabled, setMonitorEnabled] = useState<boolean>(() => {
     const saved = localStorage.getItem('monitorEnabled');
@@ -241,6 +246,13 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('visitedTabs', JSON.stringify(visitedTabs));
   }, [visitedTabs]);
+
+  // 初始化时同步窗口标题栏主题
+  useEffect(() => {
+    invoke('set_window_theme', { theme }).catch((e: any) =>
+      console.warn('Failed to set initial window theme:', e)
+    );
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Persist language
   useEffect(() => {

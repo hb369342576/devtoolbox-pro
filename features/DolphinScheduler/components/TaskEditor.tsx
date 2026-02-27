@@ -68,7 +68,12 @@ interface TaskNode {
         // K8S 节点
         namespace?: string;
         image?: string;
+        imagePullPolicy?: string;
         command?: string;
+        type?: string;
+        kubeConfig?: string;
+        customizedLabels?: any[];
+        nodeSelectors?: any[];
         // 通用
         workerGroup?: string;
         environmentCode?: number;
@@ -156,6 +161,29 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
     const [showExitConfirm, setShowExitConfirm] = useState(false);
     const [originalSnapshot, setOriginalSnapshot] = useState('');
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+    // K8S 节点配置弹窗
+    const [showK8sNodeDialog, setShowK8sNodeDialog] = useState(false);
+    const [pendingK8sNode, setPendingK8sNode] = useState<{ code: number; x: number; y: number } | null>(null);
+    const [editingK8sNodeId, setEditingK8sNodeId] = useState<string | null>(null);
+    const [k8sNodeConfigPath, setK8sNodeConfigPath] = useState('smart_cloud_pro/');
+    const [k8sNodeDatasource, setK8sNodeDatasource] = useState(1);
+    const [k8sNodeImage, setK8sNodeImage] = useState('registry-vpc.cn-shenzhen.aliyuncs.com/zdiai-library/apache_seatunnel-k8s:2.3.12-20260204');
+    const [k8sNodeNamespace, setK8sNodeNamespace] = useState('{"name":"default","cluster":"k8s-Security-Cluster-admin"}');
+    const [k8sNodeEnvCode, setK8sNodeEnvCode] = useState(164447603311488);
+    const [k8sNodeTimeoutFlag, setK8sNodeTimeoutFlag] = useState(true);
+    const [k8sNodeTimeout, setK8sNodeTimeout] = useState(10);
+    const [k8sNodeTimeoutWarn, setK8sNodeTimeoutWarn] = useState(false);
+    const [k8sNodeTimeoutFail, setK8sNodeTimeoutFail] = useState(true);
+    const [k8sNodeRetryTimes, setK8sNodeRetryTimes] = useState(3);
+    const [k8sNodeRetryInterval, setK8sNodeRetryInterval] = useState(1);
+
+    // K8S 节点资源浏览
+    const [showK8sResourceBrowser, setShowK8sResourceBrowser] = useState(false);
+    const [k8sResourceFiles, setK8sResourceFiles] = useState<any[]>([]);
+    const [k8sResourceLoading, setK8sResourceLoading] = useState(false);
+    const [k8sResourceHistory, setK8sResourceHistory] = useState<{name: string; path: string}[]>([{name: '根目录', path: ''}]);
+    const [k8sResourceSearch, setK8sResourceSearch] = useState('');
 
     // 只读模式：上线状态不允许编辑
     const isReadOnly = process.releaseState === 'ONLINE';
@@ -495,8 +523,10 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                     workerGroup: taskParams?.workerGroup || 'default',
                     environmentCode: taskParams?.environmentCode || -1,
                     delayTime: 0,
-                    timeoutFlag: 'CLOSE',
-                    timeoutNotifyStrategy: ''
+                    taskExecuteType: 'BATCH',
+                    isCache: 'NO',
+                    timeoutFlag: (node.timeout && node.timeout > 0) ? 'OPEN' : 'CLOSE',
+                    timeoutNotifyStrategy: (node.timeout && node.timeout > 0) ? 'FAILED' : ''
                 };
             });
             
@@ -660,6 +690,33 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
 
     // 节点双击编辑/查看
     const handleNodeDoubleClick = (node: TaskNode) => {
+        // K8S 节点使用自定义弹窗
+        if (node.taskType === 'K8S') {
+            setEditingK8sNodeId(node.id);
+            // 从已有节点数据回填
+            const params = node.taskParams || {};
+            // 从 command 中提取配置路径
+            try {
+                const cmdArr = typeof params.command === 'string' ? JSON.parse(params.command) : [];
+                const configIdx = cmdArr.indexOf('--config');
+                setK8sNodeConfigPath(configIdx >= 0 && cmdArr[configIdx + 1] ? cmdArr[configIdx + 1] : 'smart_cloud_pro/');
+            } catch {
+                setK8sNodeConfigPath('smart_cloud_pro/');
+            }
+            setK8sNodeDatasource(params.datasource || 1);
+            setK8sNodeImage(params.image || 'registry-vpc.cn-shenzhen.aliyuncs.com/zdiai-library/apache_seatunnel-k8s:2.3.12-20260204');
+            setK8sNodeNamespace(params.namespace || '{"name":"default","cluster":"k8s-Security-Cluster-admin"}');
+            setK8sNodeEnvCode(params.environmentCode || 164447603311488);
+            setK8sNodeTimeoutFlag((node.timeout || 0) > 0);
+            setK8sNodeTimeout(node.timeout || 10);
+            setK8sNodeTimeoutWarn(false);
+            setK8sNodeTimeoutFail(true);
+            setK8sNodeRetryTimes(node.failRetryTimes || 3);
+            setK8sNodeRetryInterval(node.failRetryInterval || 1);
+            setPendingK8sNode(null);
+            setShowK8sNodeDialog(true);
+            return;
+        }
         // 只读模式也允许打开查看，但不能保存
         setEditingNode(node);
     };
@@ -702,6 +759,29 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
             console.error('Failed to generate task code:', error);
         }
         
+        // K8S 节点：打开配置弹窗，不立即添加
+        if (nodeType.id.toUpperCase() === 'K8S') {
+            setPendingK8sNode({
+                code: taskCode,
+                x: Math.max(0, x - NODE_WIDTH / 2),
+                y: Math.max(0, y - NODE_HEIGHT / 2)
+            });
+            // 重置表单到默认值
+            setK8sNodeConfigPath('smart_cloud_pro/');
+            setK8sNodeDatasource(1);
+            setK8sNodeImage('registry-vpc.cn-shenzhen.aliyuncs.com/zdiai-library/apache_seatunnel-k8s:2.3.12-20260204');
+            setK8sNodeNamespace('{"name":"default","cluster":"k8s-Security-Cluster-admin"}');
+            setK8sNodeEnvCode(164447603311488);
+            setK8sNodeTimeoutFlag(true);
+            setK8sNodeTimeout(10);
+            setK8sNodeTimeoutWarn(false);
+            setK8sNodeTimeoutFail(true);
+            setK8sNodeRetryTimes(3);
+            setK8sNodeRetryInterval(1);
+            setShowK8sNodeDialog(true);
+            return;
+        }
+        
         const newNode: TaskNode = {
             id: `new_${taskCode}`,
             code: taskCode,
@@ -721,6 +801,76 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
         setTaskNodes([...taskNodes, newNode]);
         setSelectedNode(newNode);
         setEditingNode(newNode);
+    };
+
+    // K8S 节点弹窗确认（新建 + 编辑）
+    const handleConfirmK8sNode = () => {
+        if (!k8sNodeConfigPath.trim()) return;
+        
+        const command = JSON.stringify([
+            "./bin/seatunnel.sh", "--config", k8sNodeConfigPath.trim(),
+            "--download_url", "http://10.0.1.10:82", "-m", "local"
+        ]);
+        
+        const nodeName = k8sNodeConfigPath.replace(/^.*\//, '').replace(/\.conf$/, '').replace(/_/g, '-') || `k8s-${taskNodes.length + 1}`;
+        
+        const k8sTaskParams = {
+            namespace: k8sNodeNamespace,
+            image: k8sNodeImage,
+            imagePullPolicy: 'IfNotPresent',
+            command: command,
+            datasource: k8sNodeDatasource,
+            type: 'K8S',
+            kubeConfig: '',
+            customizedLabels: [],
+            nodeSelectors: [],
+            localParams: [],
+            resourceList: [],
+            workerGroup: 'default',
+            environmentCode: k8sNodeEnvCode,
+        };
+        
+        if (editingK8sNodeId) {
+            // 编辑已有节点
+            setTaskNodes(nodes => nodes.map(n => 
+                n.id === editingK8sNodeId ? {
+                    ...n,
+                    name: nodeName,
+                    taskParams: k8sTaskParams,
+                    failRetryTimes: k8sNodeRetryTimes,
+                    failRetryInterval: k8sNodeRetryInterval,
+                    timeout: k8sNodeTimeoutFlag ? k8sNodeTimeout : 0,
+                } : n
+            ));
+        } else if (pendingK8sNode) {
+            // 新建节点
+            const newNode: TaskNode = {
+                id: `new_${pendingK8sNode.code}`,
+                code: pendingK8sNode.code,
+                name: nodeName,
+                taskType: 'K8S',
+                x: pendingK8sNode.x,
+                y: pendingK8sNode.y,
+                taskParams: k8sTaskParams,
+                failRetryTimes: k8sNodeRetryTimes,
+                failRetryInterval: k8sNodeRetryInterval,
+                timeout: k8sNodeTimeoutFlag ? k8sNodeTimeout : 0,
+                description: ''
+            };
+            setTaskNodes([...taskNodes, newNode]);
+            setSelectedNode(newNode);
+        }
+        
+        setShowK8sNodeDialog(false);
+        setPendingK8sNode(null);
+        setEditingK8sNodeId(null);
+    };
+
+    // K8S 节点弹窗取消
+    const handleCancelK8sNode = () => {
+        setShowK8sNodeDialog(false);
+        setPendingK8sNode(null);
+        setEditingK8sNodeId(null);
     };
 
     const handleDragOver = (e: React.DragEvent) => {
@@ -2036,6 +2186,313 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                     onClose();
                 }}
             />
+
+            {/* K8S 节点配置弹窗 */}
+            {showK8sNodeDialog && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200 dark:border-slate-700">
+                        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80">
+                            <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center">
+                                <Container size={20} className="mr-2 text-purple-500" />
+                                {lang === 'zh' ? (editingK8sNodeId ? '编辑 K8S 节点' : '新建 K8S 节点') : (editingK8sNodeId ? 'Edit K8S Node' : 'New K8S Node')}
+                            </h3>
+                        </div>
+                        <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+                            {/* 配置文件路径 */}
+                            <div>
+                                <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">
+                                    {lang === 'zh' ? '配置文件路径' : 'Config Path'} <span className="text-red-500">*</span>
+                                </label>
+                                <div className="flex space-x-2">
+                                    <input
+                                        type="text"
+                                        value={k8sNodeConfigPath}
+                                        onChange={e => setK8sNodeConfigPath(e.target.value)}
+                                        placeholder="smart_cloud_pro/syn_ods_t_table_name_d.conf"
+                                        className="flex-1 px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-mono focus:ring-2 focus:ring-purple-500 outline-none"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={async () => {
+                                            setShowK8sResourceBrowser(true);
+                                            setK8sResourceHistory([{name: '根目录', path: ''}]);
+                                            setK8sResourceSearch('');
+                                            setK8sResourceLoading(true);
+                                            try {
+                                                const url = `${projectConfig.baseUrl}/resources?fullName=&tenantCode=&type=FILE&searchVal=&pageNo=1&pageSize=200`;
+                                                const resp = await httpFetch(url, { method: 'GET', headers: { 'token': projectConfig.token } });
+                                                const result = await resp.json();
+                                                if (result.code === 0) setK8sResourceFiles(result.data?.totalList || result.data || []);
+                                            } catch (e) { console.error(e); }
+                                            finally { setK8sResourceLoading(false); }
+                                        }}
+                                        className="px-3 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 rounded-lg text-sm text-slate-600 dark:text-slate-300 transition-colors whitespace-nowrap"
+                                    >
+                                        📂 {lang === 'zh' ? '浏览' : 'Browse'}
+                                    </button>
+                                </div>
+                                <p className="mt-1 text-xs text-slate-400">
+                                    {lang === 'zh' ? '节点名称自动生成' : 'Node name auto-generated'}
+                                    {k8sNodeConfigPath && (
+                                        <span className="ml-1 text-purple-500 font-mono">
+                                            → {k8sNodeConfigPath.replace(/^.*\//, '').replace(/\.conf$/, '').replace(/_/g, '-') || '...'}
+                                        </span>
+                                    )}
+                                </p>
+                                {/* 资源中心文件浏览器 */}
+                                {showK8sResourceBrowser && (() => {
+                                    return (
+                                    <div className="mt-2 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden bg-white dark:bg-slate-900">
+                                        <div className="px-3 py-2 bg-slate-100 dark:bg-slate-800 flex items-center justify-between">
+                                            <div className="flex items-center space-x-1 text-xs overflow-x-auto">
+                                                {k8sResourceHistory.map((h, i) => (
+                                                    <React.Fragment key={i}>
+                                                        {i > 0 && <span className="text-slate-400">/</span>}
+                                                        <button
+                                                            onClick={async () => {
+                                                                setK8sResourceHistory(k8sResourceHistory.slice(0, i + 1));
+                                                                setK8sResourceSearch('');
+                                                                setK8sResourceLoading(true);
+                                                                try {
+                                                                    const url = `${projectConfig.baseUrl}/resources?fullName=${encodeURIComponent(h.path)}&tenantCode=&type=FILE&searchVal=&pageNo=1&pageSize=200`;
+                                                                    const resp = await httpFetch(url, { method: 'GET', headers: { 'token': projectConfig.token } });
+                                                                    const result = await resp.json();
+                                                                    if (result.code === 0) setK8sResourceFiles(result.data?.totalList || result.data || []);
+                                                                } catch (e) { console.error(e); }
+                                                                finally { setK8sResourceLoading(false); }
+                                                            }}
+                                                            className="text-blue-500 hover:underline"
+                                                        >
+                                                            {h.name}
+                                                        </button>
+                                                    </React.Fragment>
+                                                ))}
+                                            </div>
+                                            <button onClick={() => setShowK8sResourceBrowser(false)} className="text-slate-400 hover:text-slate-600 ml-2">✕</button>
+                                        </div>
+                                        {/* 全局搜索框 */}
+                                        <div className="px-3 py-1.5 border-b border-slate-100 dark:border-slate-800">
+                                            <input
+                                                type="text"
+                                                value={k8sResourceSearch}
+                                                onChange={e => setK8sResourceSearch(e.target.value)}
+                                                onKeyDown={async (e) => {
+                                                    if (e.key === 'Enter') {
+                                                        setK8sResourceLoading(true);
+                                                        try {
+                                                            const searchVal = k8sResourceSearch ? encodeURIComponent(k8sResourceSearch) : '';
+                                                            const url = `${projectConfig.baseUrl}/resources?fullName=&tenantCode=&type=FILE&searchVal=${searchVal}&pageNo=1&pageSize=200`;
+                                                            const resp = await httpFetch(url, { method: 'GET', headers: { 'token': projectConfig.token } });
+                                                            const result = await resp.json();
+                                                            if (result.code === 0) setK8sResourceFiles(result.data?.totalList || result.data || []);
+                                                        } catch (e) { console.error(e); }
+                                                        finally { setK8sResourceLoading(false); }
+                                                    }
+                                                }}
+                                                placeholder={lang === 'zh' ? '🔍 全局搜索，回车搜索...' : '🔍 Global search, press Enter...'}
+                                                className="w-full px-2 py-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs focus:ring-1 focus:ring-purple-500 outline-none"
+                                            />
+                                        </div>
+                                        <div className="max-h-48 overflow-y-auto">
+                                            {k8sResourceLoading ? (
+                                                <div className="flex items-center justify-center py-4"><Loader2 size={16} className="animate-spin text-slate-400" /></div>
+                                            ) : k8sResourceFiles.length === 0 ? (
+                                                <div className="text-center py-4 text-xs text-slate-400">{lang === 'zh' ? '无匹配文件' : 'No matching files'}</div>
+                                            ) : (
+                                                k8sResourceFiles.map((f: any, i: number) => (
+                                                    <button
+                                                        key={i}
+                                                        onClick={async () => {
+                                                            if (f.directory) {
+                                                                setK8sResourceHistory([...k8sResourceHistory, { name: (f.alias || f.fileName || '').replace(/\/$/, ''), path: f.fullName }]);
+                                                                setK8sResourceSearch('');
+                                                                setK8sResourceLoading(true);
+                                                                try {
+                                                                    const url = `${projectConfig.baseUrl}/resources?fullName=${encodeURIComponent(f.fullName)}&tenantCode=&type=FILE&searchVal=&pageNo=1&pageSize=200`;
+                                                                    const resp = await httpFetch(url, { method: 'GET', headers: { 'token': projectConfig.token } });
+                                                                    const result = await resp.json();
+                                                                    if (result.code === 0) setK8sResourceFiles(result.data?.totalList || result.data || []);
+                                                                } catch (e) { console.error(e); }
+                                                                finally { setK8sResourceLoading(false); }
+                                                            } else {
+                                                                const path = (f.fullName || '').replace(/^.*\/resources\//, '');
+                                                                setK8sNodeConfigPath(path);
+                                                                setShowK8sResourceBrowser(false);
+                                                            }
+                                                        }}
+                                                        className="w-full flex items-center px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-800 text-left text-sm border-b border-slate-100 dark:border-slate-800 last:border-0"
+                                                    >
+                                                        <span className="mr-2">{f.directory ? '📁' : '📄'}</span>
+                                                        <span className="truncate text-slate-700 dark:text-slate-300">{(f.alias || f.fileName || '').replace(/\/$/, '')}</span>
+                                                    </button>
+                                                ))
+                                            )}
+                                        </div>
+                                    </div>
+                                    );
+                                })()}
+                            </div>
+
+                            {/* 数据源实例和镜像 */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">
+                                        {lang === 'zh' ? '数据源实例' : 'Datasource'}
+                                    </label>
+                                    <select
+                                        value={k8sNodeDatasource}
+                                        onChange={e => setK8sNodeDatasource(Number(e.target.value))}
+                                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 outline-none"
+                                    >
+                                        <option value={1}>k8s-user</option>
+                                        <option value={2}>k8s-admin</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">
+                                        {lang === 'zh' ? '镜像' : 'Image'}
+                                    </label>
+                                    <select
+                                        value={k8sNodeImage}
+                                        onChange={e => setK8sNodeImage(e.target.value)}
+                                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 outline-none"
+                                    >
+                                        <option value="registry-vpc.cn-shenzhen.aliyuncs.com/zdiai-library/apache_seatunnel-k8s:2.3.12-20260204">seatunnel-k8s:2.3.12-20260204</option>
+                                        <option value="registry-vpc.cn-shenzhen.aliyuncs.com/zdiai-library/apache_seatunnel-k8s:latest">seatunnel-k8s:latest</option>
+                                    </select>
+                                    <p className="mt-1 text-xs text-slate-400 font-mono truncate">{k8sNodeImage}</p>
+                                </div>
+                            </div>
+
+                            {/* 命名空间和环境 */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">
+                                        {lang === 'zh' ? '命名空间' : 'Namespace'}
+                                    </label>
+                                    <select
+                                        value={k8sNodeNamespace}
+                                        onChange={e => setK8sNodeNamespace(e.target.value)}
+                                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 outline-none"
+                                    >
+                                        <option value='{"name":"default","cluster":"k8s-Security-Cluster-admin"}'>default (k8s-Security-Cluster-admin)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">
+                                        {lang === 'zh' ? '环境名称' : 'Environment'}
+                                    </label>
+                                    <select
+                                        value={k8sNodeEnvCode}
+                                        onChange={e => setK8sNodeEnvCode(Number(e.target.value))}
+                                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 outline-none"
+                                    >
+                                        <option value={164447603311488}>JAVA_HOME</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* 超时设置 */}
+                            <div>
+                                <div className="flex items-center mb-2">
+                                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mr-3">
+                                        {lang === 'zh' ? '超时告警' : 'Timeout'}
+                                    </label>
+                                    <button
+                                        type="button"
+                                        onClick={() => setK8sNodeTimeoutFlag(!k8sNodeTimeoutFlag)}
+                                        className={`relative w-10 h-5 rounded-full transition-colors ${k8sNodeTimeoutFlag ? 'bg-purple-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                                    >
+                                        <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${k8sNodeTimeoutFlag ? 'translate-x-5' : ''}`} />
+                                    </button>
+                                </div>
+                                {k8sNodeTimeoutFlag && (
+                                    <div className="space-y-2">
+                                        <div className="flex items-center space-x-4">
+                                            <span className="text-xs text-slate-500">{lang === 'zh' ? '超时策略' : 'Strategy'}</span>
+                                            <label className="flex items-center space-x-1.5 text-sm text-slate-600 dark:text-slate-300 cursor-pointer">
+                                                <input type="checkbox" checked={k8sNodeTimeoutWarn} onChange={e => setK8sNodeTimeoutWarn(e.target.checked)} className="rounded border-slate-300" />
+                                                <span className="text-xs">{lang === 'zh' ? '超时告警' : 'Warn'}</span>
+                                            </label>
+                                            <label className="flex items-center space-x-1.5 text-sm text-slate-600 dark:text-slate-300 cursor-pointer">
+                                                <input type="checkbox" checked={k8sNodeTimeoutFail} onChange={e => setK8sNodeTimeoutFail(e.target.checked)} className="rounded border-slate-300" />
+                                                <span className="text-xs">{lang === 'zh' ? '超时失败' : 'Fail'}</span>
+                                            </label>
+                                        </div>
+                                        <div className="flex items-center space-x-3">
+                                            <span className="text-xs text-slate-500">{lang === 'zh' ? '超时时长' : 'Duration'}</span>
+                                            <input
+                                                type="number"
+                                                value={k8sNodeTimeout}
+                                                onChange={e => setK8sNodeTimeout(Number(e.target.value))}
+                                                min={1}
+                                                className="w-20 px-2 py-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded text-sm text-center focus:ring-2 focus:ring-purple-500 outline-none"
+                                            />
+                                            <span className="text-xs text-slate-400">{lang === 'zh' ? '分钟' : 'min'}</span>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* 失败重试 */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">
+                                        {lang === 'zh' ? '失败重试次数' : 'Retry Times'}
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={k8sNodeRetryTimes}
+                                        onChange={e => setK8sNodeRetryTimes(Number(e.target.value))}
+                                        min={0}
+                                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 outline-none"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">
+                                        {lang === 'zh' ? '失败重试间隔' : 'Retry Interval'}
+                                    </label>
+                                    <div className="flex items-center space-x-2">
+                                        <input
+                                            type="number"
+                                            value={k8sNodeRetryInterval}
+                                            onChange={e => setK8sNodeRetryInterval(Number(e.target.value))}
+                                            min={1}
+                                            className="flex-1 px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 outline-none"
+                                        />
+                                        <span className="text-xs text-slate-400 whitespace-nowrap">{lang === 'zh' ? '分钟' : 'min'}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* 完整容器命令预览 */}
+                            <div className="bg-slate-100 dark:bg-slate-900/50 rounded-lg p-3">
+                                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
+                                    {lang === 'zh' ? '容器执行命令' : 'Container Command'}
+                                </p>
+                                <p className="text-xs font-mono text-slate-600 dark:text-slate-300 break-all">
+                                    {`["./bin/seatunnel.sh", "--config", "${k8sNodeConfigPath || '...'}", "--download_url", "http://10.0.1.10:82", "-m", "local"]`}
+                                </p>
+                            </div>
+                        </div>
+                        <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 flex justify-end space-x-3">
+                            <button 
+                                onClick={handleCancelK8sNode} 
+                                className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg"
+                            >
+                                {lang === 'zh' ? '取消' : 'Cancel'}
+                            </button>
+                            <button 
+                                onClick={handleConfirmK8sNode} 
+                                disabled={!k8sNodeConfigPath.trim()}
+                                className="px-6 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg font-medium disabled:opacity-50 flex items-center"
+                            >
+                                {lang === 'zh' ? (editingK8sNodeId ? '保存' : '添加节点') : (editingK8sNodeId ? 'Save' : 'Add Node')}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

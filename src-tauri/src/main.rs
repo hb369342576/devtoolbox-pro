@@ -649,6 +649,17 @@ async fn http_download(
     Ok(base64::engine::general_purpose::STANDARD.encode(&bytes))
 }
 
+// 设置窗口主题（标题栏颜色）
+#[tauri::command]
+fn set_window_theme(window: tauri::WebviewWindow, theme: String) -> Result<(), String> {
+    use tauri::Theme;
+    let t = match theme.as_str() {
+        "dark" => Theme::Dark,
+        _ => Theme::Light,
+    };
+    window.set_theme(Some(t)).map_err(|e| e.to_string())
+}
+
 fn main() {
     let state = AppState {
         sys: Mutex::new(System::new_all()),
@@ -677,7 +688,8 @@ fn main() {
             get_download_dir,
             http_request,
             http_upload,
-            http_download
+            http_download,
+            set_window_theme
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
