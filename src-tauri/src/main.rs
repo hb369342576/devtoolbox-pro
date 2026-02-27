@@ -200,20 +200,41 @@ async fn db_get_table_schema(id: String, db: String, table: String) -> Result<Ta
     
     match mysql::Conn::new(conn_str.as_str()) {
         Ok(mut conn) => {
-            // 获取列信息
+            // 获取列信息 - 两阶段查询确保类型准确
+            // 阶段1: 通过 DESC 获取准确的列类型（如 varchar(50)），避免 information_schema 的类型映射问题
+            let desc_query = format!("DESC `{}`", table);
+            let mut type_map: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+            if let Ok(desc_rows) = conn.query_map(&desc_query, |row: mysql::Row| {
+                let field: String = row.get(0).unwrap_or_default();
+                let col_type: String = row.get(1).unwrap_or_default();
+                (field, col_type)
+            }) {
+                for (f, t) in desc_rows {
+                    if !f.is_empty() && !t.is_empty() {
+                        type_map.insert(f, t);
+                    }
+                }
+                eprintln!("DESC succeeded for table '{}': {} columns", table, type_map.len());
+            } else {
+                eprintln!("DESC failed for table '{}', will fallback to information_schema", table);
+            }
+
+            // 阶段2: 通过 information_schema 获取完整的列元数据（注释、默认值、主键等）
             let column_query = format!(
-                "SELECT COLUMN_NAME, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH, NUMERIC_SCALE, IS_NULLABLE, COLUMN_KEY, COLUMN_DEFAULT, COLUMN_COMMENT \
+                "SELECT COLUMN_NAME, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH, NUMERIC_PRECISION, NUMERIC_SCALE, IS_NULLABLE, COLUMN_KEY, COLUMN_DEFAULT, COLUMN_COMMENT \
                 FROM information_schema.COLUMNS \
                 WHERE TABLE_SCHEMA = '{}' AND TABLE_NAME = '{}' \
                 ORDER BY ORDINAL_POSITION",
                 db, table
             );
             
-            let columns: Vec<ColumnInfo> = conn.query_map(&column_query, |(name, col_type, length, scale, nullable, key, default_val, comment): (String, String, Option<u64>, Option<u32>, String, String, Option<String>, Option<String>)| {
+            let columns: Vec<ColumnInfo> = conn.query_map(&column_query, |(name, data_type, char_max_len, num_precision, scale, nullable, key, default_val, comment): (String, String, Option<u64>, Option<u64>, Option<u32>, String, String, Option<String>, Option<String>)| {
+                // 优先使用 DESC 返回的类型（更准确，如 varchar(50)），回退到 DATA_TYPE
+                let actual_type = type_map.get(&name).cloned().unwrap_or(data_type);
                 ColumnInfo {
                     name,
-                    col_type,
-                    length: length.map(|l| l as u32),
+                    col_type: actual_type,
+                    length: char_max_len.or(num_precision).map(|l| l as u32),
                     scale,
                     nullable: nullable == "YES",
                     is_primary_key: key == "PRI",

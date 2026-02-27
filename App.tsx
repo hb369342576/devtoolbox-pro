@@ -65,7 +65,30 @@ const Dashboard: React.FC<{ onNavigate: (id: string) => void, lang: Language }> 
         en: 'Map source and target fields for data synchronization.',
         zh: '配置数据同步的源表和目标表字段映射关系'
       },
-
+      'task-dev': {
+        en: 'DolphinScheduler workflow and task management.',
+        zh: 'DolphinScheduler 工作流与任务调度管理'
+      },
+      'dolphin-project': {
+        en: 'Manage DolphinScheduler projects and workflows.',
+        zh: '管理 DolphinScheduler 项目和工作流'
+      },
+      'seatunnel-manager': {
+        en: 'SeaTunnel engine management, job monitoring, and config generation.',
+        zh: 'SeaTunnel 引擎管理、作业监控和配置生成'
+      },
+      'seatunnel-engine': {
+        en: 'Manage SeaTunnel engine instances and configurations.',
+        zh: '管理 SeaTunnel 引擎实例和配置'
+      },
+      'seatunnel-job': {
+        en: 'Monitor and manage SeaTunnel synchronization jobs.',
+        zh: '监控和管理 SeaTunnel 数据同步作业'
+      },
+      'tools': {
+        en: 'PDF processing, time utilities, and system monitoring.',
+        zh: 'PDF 处理、时间工具和系统监控等实用工具'
+      },
       'pdf-tools': {
         en: 'Merge, split, and compress PDF files.',
         zh: '提供PDF合并、分割、压缩等功能'
@@ -78,9 +101,17 @@ const Dashboard: React.FC<{ onNavigate: (id: string) => void, lang: Language }> 
         en: 'Real-time system resource monitoring.',
         zh: '系统资源实时监控'
       },
+      'system-management': {
+        en: 'User profile and system settings.',
+        zh: '用户中心和系统设置管理'
+      },
       'profile': {
         en: 'Manage your personal account information.',
         zh: '管理个人账户信息'
+      },
+      'settings': {
+        en: 'Language, theme, and system preferences.',
+        zh: '语言、主题和系统偏好设置'
       }
     };
     return descriptions[id]?.[lang] || '';

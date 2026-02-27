@@ -851,73 +851,76 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
                         <Loader2 size={32} className="animate-spin text-amber-500" />
                     </div>
                 ) : (
-                    <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-                        <table className="w-full table-fixed border-collapse">
+                    <div className="rounded-xl overflow-hidden border border-slate-200/60 dark:border-slate-700/50 shadow-sm">
+                        <table className="w-full table-fixed">
                             <thead>
-                                <tr className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
-                                    <th className="w-12 px-3 py-3 text-left border-r border-slate-200 dark:border-slate-600">
-                                        <button onClick={handleSelectAll} className="text-slate-400 hover:text-amber-500">
-                                            {selectedIds.length === resources.length && resources.length > 0 ? <CheckSquare size={16} className="text-amber-500" /> : <Square size={16} />}
+                                <tr className="bg-gradient-to-r from-slate-50 to-slate-100/80 dark:from-slate-800/80 dark:to-slate-800/60">
+                                    <th className="w-11 px-3 py-2.5 text-left">
+                                        <button onClick={handleSelectAll} className="text-slate-400 hover:text-amber-500 transition-colors">
+                                            {selectedIds.length === resources.length && resources.length > 0 ? <CheckSquare size={15} className="text-amber-500" /> : <Square size={15} />}
                                         </button>
                                     </th>
-                                    <th className="px-3 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider border-r border-slate-200 dark:border-slate-600">{lang === 'zh' ? '名称' : 'Name'}</th>
-                                    <th className="w-24 px-3 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider border-r border-slate-200 dark:border-slate-600">{lang === 'zh' ? '大小' : 'Size'}</th>
-                                    <th className="w-40 px-3 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider border-r border-slate-200 dark:border-slate-600">{lang === 'zh' ? '更新时间' : 'Updated'}</th>
-                                    <th className="w-40 px-3 py-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">{lang === 'zh' ? '操作' : 'Actions'}</th>
+                                    <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{lang === 'zh' ? '名称' : 'Name'}</th>
+                                    <th className="w-20 px-3 py-2.5 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{lang === 'zh' ? '大小' : 'Size'}</th>
+                                    <th className="w-44 px-3 py-2.5 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{lang === 'zh' ? '更新时间' : 'Updated'}</th>
+                                    <th className="w-40 px-3 py-2.5 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{lang === 'zh' ? '操作' : 'Actions'}</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody className="bg-white dark:bg-slate-800/40">
                                 {resources.map((resource, idx) => (
                                     <tr
                                         key={resource.fullName}
-                                        className={`hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors cursor-pointer ${selectedIds.includes(resource.fullName) ? 'bg-amber-50 dark:bg-amber-900/20' : idx % 2 === 1 ? 'bg-slate-50/50 dark:bg-slate-800/50' : ''}`}
+                                        className={`group border-b border-slate-100 dark:border-slate-700/40 last:border-b-0 transition-colors cursor-pointer
+                                            ${selectedIds.includes(resource.fullName)
+                                                ? 'bg-amber-50/80 dark:bg-amber-900/15 hover:bg-amber-100/70 dark:hover:bg-amber-900/25'
+                                                : 'hover:bg-slate-50 dark:hover:bg-slate-700/30'}`}
                                         onClick={() => handleNavigate(resource)}
                                     >
-                                        <td className="px-3 py-3 border-r border-slate-100 dark:border-slate-700" onClick={(e) => e.stopPropagation()}>
-                                            <button onClick={(e) => { e.stopPropagation(); handleSelect(resource.fullName); }} className="text-slate-400 hover:text-amber-500">
-                                                {selectedIds.includes(resource.fullName) ? <CheckSquare size={18} className="text-amber-500" /> : <Square size={18} />}
+                                        <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                                            <button onClick={(e) => { e.stopPropagation(); handleSelect(resource.fullName); }} className="text-slate-400 hover:text-amber-500 transition-colors">
+                                                {selectedIds.includes(resource.fullName) ? <CheckSquare size={16} className="text-amber-500" /> : <Square size={16} />}
                                             </button>
                                         </td>
-                                        <td className="px-3 py-3 border-r border-slate-100 dark:border-slate-700">
-                                            <div className="flex items-center space-x-3">
-                                                {getFileIcon(resource)}
-                                                <span className="font-medium text-slate-800 dark:text-white truncate">{resource.alias}</span>
+                                        <td className="px-3 py-2">
+                                            <div className="flex items-center space-x-2.5 min-w-0">
+                                                <span className="flex-shrink-0">{getFileIcon(resource)}</span>
+                                                <span className="font-medium text-sm text-slate-700 dark:text-slate-200 truncate">{resource.alias}</span>
                                             </div>
                                         </td>
-                                        <td className="px-3 py-3 text-sm text-slate-500 dark:text-slate-400 border-r border-slate-100 dark:border-slate-700">
+                                        <td className="px-3 py-2 text-xs text-slate-500 dark:text-slate-400 tabular-nums">
                                             {resource.directory ? '-' : formatSize(resource.size)}
                                         </td>
-                                        <td className="px-3 py-3 text-sm text-slate-400 border-r border-slate-100 dark:border-slate-700 whitespace-nowrap">
+                                        <td className="px-3 py-2 text-xs text-slate-400 dark:text-slate-500 whitespace-nowrap tabular-nums">
                                             {resource.updateTime || '-'}
                                         </td>
-                                        <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
-                                            <div className="flex items-center justify-end space-x-1">
+                                        <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                                            <div className="flex items-center justify-end space-x-0.5 opacity-60 group-hover:opacity-100 transition-opacity">
                                                 {!resource.directory && (
                                                     <>
                                                         <Tooltip content={lang === 'zh' ? '上传替换' : 'Upload Replace'} position="top">
                                                             <button
                                                                 onClick={(e) => handleUploadSingle(resource, e)}
-                                                                className="p-1.5 hover:bg-green-100 dark:hover:bg-green-900/30 rounded text-green-500"
+                                                                className="p-1 hover:bg-green-500/10 dark:hover:bg-green-500/15 rounded-md text-green-500 transition-colors"
                                                             >
-                                                                <Upload size={16} />
+                                                                <Upload size={15} />
                                                             </button>
                                                         </Tooltip>
                                                         {isTextFile(resource) && (
                                                             <Tooltip content={lang === 'zh' ? '编辑' : 'Edit'} position="top">
                                                                 <button
                                                                     onClick={(e) => handleOpenEditFile(resource, e)}
-                                                                    className="p-1.5 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded text-purple-500"
+                                                                    className="p-1 hover:bg-purple-500/10 dark:hover:bg-purple-500/15 rounded-md text-purple-400 transition-colors"
                                                                 >
-                                                                    <Edit size={16} />
+                                                                    <Edit size={15} />
                                                                 </button>
                                                             </Tooltip>
                                                         )}
                                                         <Tooltip content={lang === 'zh' ? '下载' : 'Download'} position="top">
                                                             <button
                                                                 onClick={(e) => handleDownloadSingle(resource, e)}
-                                                                className="p-1.5 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded text-blue-500"
+                                                                className="p-1 hover:bg-blue-500/10 dark:hover:bg-blue-500/15 rounded-md text-blue-400 transition-colors"
                                                             >
-                                                                <Download size={16} />
+                                                                <Download size={15} />
                                                             </button>
                                                         </Tooltip>
                                                     </>
@@ -925,17 +928,17 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
                                                 <Tooltip content={lang === 'zh' ? '重命名' : 'Rename'} position="top">
                                                     <button
                                                         onClick={(e) => { e.stopPropagation(); setRenameModal({ isOpen: true, resource }); setRenameName(resource.alias); }}
-                                                        className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500"
+                                                        className="p-1 hover:bg-slate-500/10 dark:hover:bg-slate-500/15 rounded-md text-slate-400 transition-colors"
                                                     >
-                                                        <Pencil size={16} />
+                                                        <Pencil size={15} />
                                                     </button>
                                                 </Tooltip>
                                                 <Tooltip content={lang === 'zh' ? '删除' : 'Delete'} position="top">
                                                     <button
                                                         onClick={(e) => handleDeleteSingle(resource, e)}
-                                                        className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/30 rounded text-red-500"
+                                                        className="p-1 hover:bg-red-500/10 dark:hover:bg-red-500/15 rounded-md text-red-400 transition-colors"
                                                     >
-                                                        <Trash2 size={16} />
+                                                        <Trash2 size={15} />
                                                     </button>
                                                 </Tooltip>
                                             </div>
@@ -944,7 +947,7 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
                                 ))}
                                 {resources.length === 0 && !loading && (
                                     <tr>
-                                        <td colSpan={5} className="px-6 py-8 text-center text-slate-400 text-sm italic">
+                                        <td colSpan={5} className="px-6 py-12 text-center text-slate-400 dark:text-slate-500 text-sm">
                                             {lang === 'zh' ? '暂无资源' : 'No resources found'}
                                         </td>
                                     </tr>

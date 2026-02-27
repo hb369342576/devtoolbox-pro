@@ -8,6 +8,8 @@ import {
   Workflow,
   UserCircle,
   ArrowRightLeft,
+  Wrench,
+  Settings,
 
   DatabaseZap,
   GitCompare,
@@ -29,15 +31,7 @@ export const NAV_ITEMS: NavItem[] = [
     order: 1,
     visible: true
   },
-  {
-    id: 'pdf-tools',
-    label: { en: 'PDF Tools', zh: 'PDF 工具箱' },
-    tooltip: { en: 'PDF merge, split and conversion tools', zh: 'PDF 合并、拆分和转换工具' },
-    icon: FileText,
-    category: 'office',
-    order: 8,
-    visible: true
-  },
+
   {
     id: 'data-source-manager',
     label: { en: 'Data Sources', zh: '数据中心' },
@@ -112,22 +106,13 @@ export const NAV_ITEMS: NavItem[] = [
         category: 'db',
         order: 1,
         visible: true
-      },
-      {
-        id: 'dolphin-task',
-        label: { en: 'Task Manager', zh: '任务管理' },
-        tooltip: { en: 'Manage DolphinScheduler tasks', zh: '管理 DolphinScheduler 任务' },
-        icon: ListTodo,
-        category: 'db',
-        order: 2,
-        visible: true
       }
     ]
   },
 
   {
     id: 'seatunnel-manager',
-    label: { en: 'SeaTunnel Manager', zh: 'SeaTunnel 管理' },
+    label: { en: 'SeaTunnel Manager', zh: '水滴管理' },
     tooltip: { en: 'SeaTunnel engine and job management', zh: 'SeaTunnel 引擎和作业管理' },
     icon: Server,
     category: 'db',
@@ -174,31 +159,71 @@ export const NAV_ITEMS: NavItem[] = [
   },
 
   {
-    id: 'time-tools',
-    label: { en: 'Time Utilities', zh: '时间工具' },
-    tooltip: { en: 'Timestamp conversion and timezone tools', zh: '时间戳转换和时区工具' },
-    icon: Clock,
+    id: 'tools',
+    label: { en: 'Toolbox', zh: '工具集合' },
+    tooltip: { en: 'Utility tools collection', zh: '实用工具集合' },
+    icon: Wrench,
     category: 'system',
-    order: 11,
-    visible: true
+    order: 10,
+    visible: true,
+    children: [
+      {
+        id: 'pdf-tools',
+        label: { en: 'PDF Tools', zh: 'PDF 工具箱' },
+        tooltip: { en: 'PDF merge, split and conversion tools', zh: 'PDF 合并、拆分和转换工具' },
+        icon: FileText,
+        category: 'system',
+        order: 1,
+        visible: true
+      },
+      {
+        id: 'time-tools',
+        label: { en: 'Time Utilities', zh: '时间工具' },
+        tooltip: { en: 'Timestamp conversion and timezone tools', zh: '时间戳转换和时区工具' },
+        icon: Clock,
+        category: 'system',
+        order: 2,
+        visible: true
+      },
+      {
+        id: 'monitor',
+        label: { en: 'System Monitor', zh: '系统监控' },
+        tooltip: { en: 'Monitor system performance and resources', zh: '监控系统性能和资源' },
+        icon: Cpu,
+        category: 'system',
+        order: 3,
+        visible: true
+      }
+    ]
   },
   {
-    id: 'monitor',
-    label: { en: 'System Monitor', zh: '系统监控' },
-    tooltip: { en: 'Monitor system performance and resources', zh: '监控系统性能和资源' },
-    icon: Cpu,
-    category: 'system',
-    order: 12,
-    visible: true
-  },
-  {
-    id: 'profile',
-    label: { en: 'User Profile', zh: '用户中心' },
-    tooltip: { en: 'Manage your profile and preferences', zh: '管理个人资料和偏好设置' },
-    icon: UserCircle,
+    id: 'system-management',
+    label: { en: 'System', zh: '系统管理' },
+    tooltip: { en: 'System management and settings', zh: '系统管理和设置' },
+    icon: Settings,
     category: 'user',
     order: 13,
-    visible: true
+    visible: true,
+    children: [
+      {
+        id: 'profile',
+        label: { en: 'User Profile', zh: '用户中心' },
+        tooltip: { en: 'Manage your profile and preferences', zh: '管理个人资料和偏好设置' },
+        icon: UserCircle,
+        category: 'user',
+        order: 1,
+        visible: true
+      },
+      {
+        id: 'settings',
+        label: { en: 'Settings', zh: '系统设置' },
+        tooltip: { en: 'System settings and preferences', zh: '系统设置和偏好' },
+        icon: Settings,
+        category: 'user',
+        order: 2,
+        visible: true
+      }
+    ]
   }
 ];
 

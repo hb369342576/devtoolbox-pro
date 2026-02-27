@@ -195,3 +195,36 @@ export const convertDorisToMysql = (
 ${fieldLines.join(',\n')}${pkStr}
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4${commentSql};`;
 };
+
+/**
+ * 从列元数据生成原生 DDL（不做类型转换）
+ * 确保 varchar(50) 就是 varchar(50), decimal(10,2) 就是 decimal(10,2)
+ */
+export const generateNativeDdl = (
+    tableName: string,
+    columns: ColumnInfo[],
+    tableDetail?: { engine?: string; comment?: string; collation?: string }
+): string => {
+    const primaryKeys = columns.filter(c => c.isPrimaryKey).map(c => c.name);
+
+    const fieldLines = columns.map(col => {
+        const type = formatColumnType(col);
+        const nullStr = col.nullable ? 'NULL' : 'NOT NULL';
+        const defaultStr = col.defaultValue !== undefined && col.defaultValue !== null
+            ? ` DEFAULT ${col.defaultValue === '' ? "''" : col.defaultValue}`
+            : '';
+        const comment = col.comment ? ` COMMENT '${col.comment}'` : '';
+        return `    \`${col.name}\` ${type} ${nullStr}${defaultStr}${comment}`;
+    });
+
+    if (primaryKeys.length > 0) {
+        fieldLines.push(`    PRIMARY KEY (${primaryKeys.map(k => `\`${k}\``).join(', ')})`);
+    }
+
+    const engine = tableDetail?.engine ? ` ENGINE=${tableDetail.engine}` : '';
+    const charset = tableDetail?.collation ? ` DEFAULT CHARSET=utf8mb4` : '';
+    const commentSql = tableDetail?.comment ? ` COMMENT='${tableDetail.comment}'` : '';
+
+    return `CREATE TABLE \`${tableName}\` (\n${fieldLines.join(',\n')}\n)${engine}${charset}${commentSql};`;
+};
+
