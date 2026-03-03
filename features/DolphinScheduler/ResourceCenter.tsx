@@ -134,10 +134,13 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
         setCreating(true);
         try {
             const url = `${connection.baseUrl}/resources/directory`;
+            // v3.4 需要 currentDir；v3.2/v3.3 需要 pid（id 形式）
+            // 同时发送两个参数以兼容不同版本
+            const body = `type=FILE&name=${encodeURIComponent(newName)}&currentDir=${encodeURIComponent(currentPath || '/')}&pid=-1`;
             const response = await httpFetch(url, {
                 method: 'POST',
                 headers: { 'token': connection.token, 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `type=FILE&name=${encodeURIComponent(newName)}&pid=${currentPath ? encodeURIComponent(currentPath) : -1}`
+                body
             });
             const result = await response.json();
             if (result.code === 0) {

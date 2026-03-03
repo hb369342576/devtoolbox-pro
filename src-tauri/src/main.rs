@@ -7,7 +7,7 @@ use base64::Engine as _;
 use std::time::Duration;
 use sysinfo::System;
 use std::sync::Mutex;
-use tauri::State;
+use tauri::{State, Manager};
 use mysql::prelude::*;
 
 // --- 结构体定义 ---
@@ -666,6 +666,14 @@ fn main() {
     };
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            // 当第二个实例尝试启动时，聚焦已有窗口
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.unminimize();
+                let _ = window.show();
+                let _ = window.set_focus();
+            }
+        }))
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_updater::Builder::new().build())

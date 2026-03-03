@@ -85,6 +85,8 @@ interface TaskNode {
     failRetryInterval?: number;
     // 超时
     timeout?: number;
+    // 环境
+    environmentCode?: number;
     // 描述
     description?: string;
     // 保存原始任务数据（用于保存时保留所有字段）
@@ -166,16 +168,16 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
     const [showK8sNodeDialog, setShowK8sNodeDialog] = useState(false);
     const [pendingK8sNode, setPendingK8sNode] = useState<{ code: number; x: number; y: number } | null>(null);
     const [editingK8sNodeId, setEditingK8sNodeId] = useState<string | null>(null);
-    const [k8sNodeConfigPath, setK8sNodeConfigPath] = useState('smart_cloud_pro/');
+    const [k8sNodeConfigPath, setK8sNodeConfigPath] = useState(projectConfig.projectName ? `${projectConfig.projectName}/` : 'smart_cloud_pro/');
     const [k8sNodeDatasource, setK8sNodeDatasource] = useState(1);
     const [k8sNodeImage, setK8sNodeImage] = useState('registry-vpc.cn-shenzhen.aliyuncs.com/zdiai-library/apache_seatunnel-k8s:2.3.12-20260204');
     const [k8sNodeNamespace, setK8sNodeNamespace] = useState('{"name":"default","cluster":"k8s-Security-Cluster-admin"}');
     const [k8sNodeEnvCode, setK8sNodeEnvCode] = useState(164447603311488);
     const [k8sNodeTimeoutFlag, setK8sNodeTimeoutFlag] = useState(true);
-    const [k8sNodeTimeout, setK8sNodeTimeout] = useState(10);
+    const [k8sNodeTimeout, setK8sNodeTimeout] = useState(15);
     const [k8sNodeTimeoutWarn, setK8sNodeTimeoutWarn] = useState(false);
     const [k8sNodeTimeoutFail, setK8sNodeTimeoutFail] = useState(true);
-    const [k8sNodeRetryTimes, setK8sNodeRetryTimes] = useState(3);
+    const [k8sNodeRetryTimes, setK8sNodeRetryTimes] = useState(0);
     const [k8sNodeRetryInterval, setK8sNodeRetryInterval] = useState(1);
 
     // K8S 节点资源浏览
@@ -184,6 +186,12 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
     const [k8sResourceLoading, setK8sResourceLoading] = useState(false);
     const [k8sResourceHistory, setK8sResourceHistory] = useState<{name: string; path: string}[]>([{name: '根目录', path: ''}]);
     const [k8sResourceSearch, setK8sResourceSearch] = useState('');
+
+    // 连线拖拽状态
+    const [isConnecting, setIsConnecting] = useState(false);
+    const [connectingFrom, setConnectingFrom] = useState<TaskNode | null>(null);
+    const [connectingMousePos, setConnectingMousePos] = useState({ x: 0, y: 0 });
+    const [hoveredRelation, setHoveredRelation] = useState<number | null>(null);
 
     // 只读模式：上线状态不允许编辑
     const isReadOnly = process.releaseState === 'ONLINE';
@@ -508,25 +516,30 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                 }
                 
                 // 新创建的节点（没有原始数据）
+                const hasTimeout = node.timeout && node.timeout > 0;
+                // environmentCode 优先用节点自身的，再用项目默认，避免 -1
+                const envCode = (node as any).environmentCode > 0
+                    ? (node as any).environmentCode
+                    : k8sNodeEnvCode;
                 return {
                     code: node.code,
                     version: 1,
                     name: node.name,
                     taskType: node.taskType,
                     taskParams: taskParams,
-                    failRetryTimes: node.failRetryTimes || 0,
-                    failRetryInterval: node.failRetryInterval || 1,
-                    timeout: node.timeout || 0,
+                    failRetryTimes: node.failRetryTimes ?? 0,
+                    failRetryInterval: node.failRetryInterval ?? 1,
+                    timeout: node.timeout ?? 0,
                     description: node.description || '',
                     flag: 'YES',
                     taskPriority: 'MEDIUM',
                     workerGroup: taskParams?.workerGroup || 'default',
-                    environmentCode: taskParams?.environmentCode || -1,
+                    environmentCode: envCode,
                     delayTime: 0,
                     taskExecuteType: 'BATCH',
                     isCache: 'NO',
-                    timeoutFlag: (node.timeout && node.timeout > 0) ? 'OPEN' : 'CLOSE',
-                    timeoutNotifyStrategy: (node.timeout && node.timeout > 0) ? 'FAILED' : ''
+                    timeoutFlag: hasTimeout ? 'OPEN' : 'CLOSE',
+                    timeoutNotifyStrategy: hasTimeout ? 'FAILED' : null
                 };
             });
             
@@ -679,13 +692,72 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
             setTaskNodes(nodes => nodes.map(n => 
                 n.id === draggingNode ? { ...n, x: Math.max(0, newX), y: Math.max(0, newY) } : n
             ));
+        } else if (isConnecting) {
+            // 将屏幕坐标转换为画布坐标
+            const rect = canvasRef.current?.getBoundingClientRect();
+            if (rect) {
+                const cx = (e.clientX - rect.left - offset.x) / scale;
+                const cy = (e.clientY - rect.top - offset.y) / scale;
+                setConnectingMousePos({ x: cx, y: cy });
+            }
         }
-    }, [isPanning, draggingNode, dragStart, scale]);
+    }, [isPanning, draggingNode, isConnecting, dragStart, scale, offset]);
 
     // 鼠标释放
     const handleMouseUp = () => {
         setIsPanning(false);
         setDraggingNode(null);
+        // 若在连线拖拽中释放到空白区域，取消连线
+        if (isConnecting) {
+            setIsConnecting(false);
+            setConnectingFrom(null);
+        }
+    };
+
+    // 开始从输出端口拖拽连线
+    const handleOutputPortMouseDown = (e: React.MouseEvent, node: TaskNode) => {
+        if (isReadOnly) return;
+        e.stopPropagation();
+        e.preventDefault();
+        const rect = canvasRef.current?.getBoundingClientRect();
+        if (rect) {
+            const cx = (e.clientX - rect.left - offset.x) / scale;
+            const cy = (e.clientY - rect.top - offset.y) / scale;
+            setConnectingMousePos({ x: cx, y: cy });
+        }
+        setIsConnecting(true);
+        setConnectingFrom(node);
+    };
+
+    // 鼠标释放到输入端口 => 创建连线
+    const handleInputPortMouseUp = (e: React.MouseEvent, targetNode: TaskNode) => {
+        if (!isConnecting || !connectingFrom) return;
+        e.stopPropagation();
+        // 防止自连
+        if (connectingFrom.id === targetNode.id) {
+            setIsConnecting(false);
+            setConnectingFrom(null);
+            return;
+        }
+        // 防止重复连线
+        const exists = taskRelations.some(
+            r => r.preTaskCode === connectingFrom.code && r.postTaskCode === targetNode.code
+        );
+        if (!exists) {
+            setTaskRelations(rels => [...rels, {
+                preTaskCode: connectingFrom.code,
+                postTaskCode: targetNode.code
+            }]);
+        }
+        setIsConnecting(false);
+        setConnectingFrom(null);
+    };
+
+    // 删除连线
+    const handleDeleteRelation = (index: number) => {
+        if (isReadOnly) return;
+        setTaskRelations(rels => rels.filter((_, i) => i !== index));
+        setHoveredRelation(null);
     };
 
     // 节点双击编辑/查看
@@ -767,21 +839,31 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                 y: Math.max(0, y - NODE_HEIGHT / 2)
             });
             // 重置表单到默认值
-            setK8sNodeConfigPath('smart_cloud_pro/');
+            const defaultDir = projectConfig.projectName ? `${projectConfig.projectName}/` : 'smart_cloud_pro/';
+            setK8sNodeConfigPath(defaultDir);
             setK8sNodeDatasource(1);
             setK8sNodeImage('registry-vpc.cn-shenzhen.aliyuncs.com/zdiai-library/apache_seatunnel-k8s:2.3.12-20260204');
             setK8sNodeNamespace('{"name":"default","cluster":"k8s-Security-Cluster-admin"}');
             setK8sNodeEnvCode(164447603311488);
             setK8sNodeTimeoutFlag(true);
-            setK8sNodeTimeout(10);
+            setK8sNodeTimeout(15);
             setK8sNodeTimeoutWarn(false);
             setK8sNodeTimeoutFail(true);
-            setK8sNodeRetryTimes(3);
+            setK8sNodeRetryTimes(0);
             setK8sNodeRetryInterval(1);
             setShowK8sNodeDialog(true);
             return;
         }
         
+        // 根据节点类型初始化完整的 taskParams
+        const initTaskParams = (): any => {
+            const base = { workerGroup: 'default', localParams: [], resourceList: [] };
+            const t = nodeType.id.toUpperCase();
+            if (t === 'SQL') return { ...base, type: 'MYSQL', datasource: '', sql: '', sqlType: '1', displayRows: 10, preStatements: [], postStatements: [] };
+            if (t === 'SHELL') return { ...base, rawScript: '', conditionResult: { successNode: [], failedNode: [] }, waitStartTimeout: {} };
+            if (t === 'DEPENDENT') return { ...base, dependence: { checkInterval: 10, failurePolicy: 'DEPENDENT_FAILURE_FAILURE', relation: 'AND', dependTaskList: [] } };
+            return base;
+        };
         const newNode: TaskNode = {
             id: `new_${taskCode}`,
             code: taskCode,
@@ -789,12 +871,11 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
             taskType: nodeType.id.toUpperCase(),
             x: Math.max(0, x - NODE_WIDTH / 2),
             y: Math.max(0, y - NODE_HEIGHT / 2),
-            taskParams: {
-                workerGroup: 'default'
-            },
+            taskParams: initTaskParams(),
             failRetryTimes: 0,
             failRetryInterval: 1,
             timeout: 0,
+            environmentCode: k8sNodeEnvCode as any,
             description: ''
         };
         
@@ -1281,6 +1362,12 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                     <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
                                         <polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8" />
                                     </marker>
+                                    <marker id="arrowhead-red" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                                        <polygon points="0 0, 10 3.5, 0 7" fill="#ef4444" />
+                                    </marker>
+                                    <marker id="arrowhead-blue" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                                        <polygon points="0 0, 10 3.5, 0 7" fill="#3b82f6" />
+                                    </marker>
                                 </defs>
                                 
                                 {/* 连线 */}
@@ -1288,19 +1375,61 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                     const fromNode = taskNodes.find(n => n.code === relation.preTaskCode);
                                     const toNode = taskNodes.find(n => n.code === relation.postTaskCode);
                                     if (!fromNode || !toNode) return null;
+                                    const isHovered = hoveredRelation === index;
                                     
                                     return (
                                         <g key={`relation-${index}`}>
+                                            {/* 可见连线 */}
                                             <path
                                                 d={getConnectionPath(fromNode, toNode)}
                                                 fill="none"
-                                                stroke="#94a3b8"
-                                                strokeWidth="2"
-                                                markerEnd="url(#arrowhead)"
+                                                stroke={isHovered ? '#ef4444' : '#94a3b8'}
+                                                strokeWidth={isHovered ? 3 : 2}
+                                                markerEnd={isHovered ? 'url(#arrowhead-red)' : 'url(#arrowhead)'}
+                                                style={{ transition: 'stroke 0.15s, stroke-width 0.15s' }}
                                             />
+                                            {/* 透明宽路径，扩大鼠标可点击区域 */}
+                                            <path
+                                                d={getConnectionPath(fromNode, toNode)}
+                                                fill="none"
+                                                stroke="transparent"
+                                                strokeWidth="16"
+                                                style={{ cursor: isReadOnly ? 'default' : 'pointer' }}
+                                                onMouseEnter={() => !isReadOnly && setHoveredRelation(index)}
+                                                onMouseLeave={() => setHoveredRelation(null)}
+                                                onClick={() => handleDeleteRelation(index)}
+                                            />
+                                            {/* 悬停时显示删除提示 */}
+                                            {isHovered && !isReadOnly && (() => {
+                                                const startX = fromNode.x + NODE_WIDTH;
+                                                const startY = fromNode.y + NODE_HEIGHT / 2;
+                                                const endX = toNode.x;
+                                                const endY = toNode.y + NODE_HEIGHT / 2;
+                                                const midX = (startX + endX) / 2;
+                                                const midY = (startY + endY) / 2;
+                                                return (
+                                                    <g transform={`translate(${midX}, ${midY})`}>
+                                                        <circle r="10" fill="#ef4444" opacity="0.9" />
+                                                        <text y="4.5" textAnchor="middle" fill="white" fontSize="14" fontWeight="bold" style={{ pointerEvents: 'none' }}>×</text>
+                                                    </g>
+                                                );
+                                            })()}
                                         </g>
                                     );
                                 })}
+
+                                {/* 拖拽中的临时连线 */}
+                                {isConnecting && connectingFrom && (
+                                    <path
+                                        d={`M ${connectingFrom.x + NODE_WIDTH} ${connectingFrom.y + NODE_HEIGHT / 2} L ${connectingMousePos.x} ${connectingMousePos.y}`}
+                                        fill="none"
+                                        stroke="#3b82f6"
+                                        strokeWidth="2"
+                                        strokeDasharray="6,4"
+                                        markerEnd="url(#arrowhead-blue)"
+                                        style={{ pointerEvents: 'none' }}
+                                    />
+                                )}
                                 
                                 {/* 节点 */}
                                 {taskNodes.map(node => {
@@ -1313,6 +1442,12 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                             key={node.id} 
                                             transform={`translate(${node.x}, ${node.y})`}
                                             onMouseDown={(e) => handleNodeMouseDown(e as any, node)}
+                                            onMouseUp={(e) => {
+                                                // 连线模式下落到任意节点区域均完成连线
+                                                if (isConnecting && connectingFrom && connectingFrom.id !== node.id) {
+                                                    handleInputPortMouseUp(e as any, node);
+                                                }
+                                            }}
                                             onDoubleClick={() => handleNodeDoubleClick(node)}
                                             onContextMenu={(e) => handleNodeContextMenu(e as any, node)}
                                             className="cursor-pointer"
@@ -1405,6 +1540,30 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                                     </button>
                                                 </foreignObject>
                                             )}
+
+                                            {/* 右侧输出端口（拖拽起点） - 非只读模式 */}
+                                            {!isReadOnly && (
+                                                <g
+                                                    transform={`translate(${NODE_WIDTH}, ${NODE_HEIGHT / 2})`}
+                                                    onMouseDown={(e) => handleOutputPortMouseDown(e as any, node)}
+                                                    style={{ cursor: 'crosshair' }}
+                                                >
+                                                    <circle r="8" fill="transparent" />
+                                                    <circle
+                                                        r={isConnecting && connectingFrom?.id === node.id ? 6 : 5}
+                                                        fill={isConnecting && connectingFrom?.id === node.id ? '#3b82f6' : 'white'}
+                                                        stroke="#3b82f6"
+                                                        strokeWidth="2"
+                                                    />
+                                                </g>
+                                            )}
+
+                                            {/* 左侧输入端口（连线中显示，视觉提示） - 仅做提示，不再需要精确点击 */}
+                                            {isConnecting && connectingFrom?.id !== node.id && (
+                                                <g transform={`translate(0, ${NODE_HEIGHT / 2})`} style={{ pointerEvents: 'none' }}>
+                                                    <circle r="5" fill="white" stroke="#22c55e" strokeWidth="2.5" />
+                                                </g>
+                                            )}
                                         </g>
                                     );
                                 })}
@@ -1427,7 +1586,10 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                     <h3 className="font-bold text-lg text-slate-800 dark:text-white">
                                         {lang === 'zh' ? (isReadOnly ? '查看节点' : '编辑节点') : (isReadOnly ? 'View Node' : 'Edit Node')}
                                     </h3>
-                                    <span className="text-xs text-slate-500">{editingNode.taskType}{isReadOnly && (lang === 'zh' ? ' (只读)' : ' (Read Only)')}</span>
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        <span className="text-xs text-slate-500">{editingNode.taskType}{isReadOnly && (lang === 'zh' ? ' (只读)' : ' (Read Only)')}</span>
+                                        <span className="text-xs text-blue-500 font-medium bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded-full">{process.name}</span>
+                                    </div>
                                 </div>
                             </div>
                             <button onClick={() => setEditingNode(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
@@ -2196,6 +2358,9 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                 <Container size={20} className="mr-2 text-purple-500" />
                                 {lang === 'zh' ? (editingK8sNodeId ? '编辑 K8S 节点' : '新建 K8S 节点') : (editingK8sNodeId ? 'Edit K8S Node' : 'New K8S Node')}
                             </h3>
+                            <span className="mt-1 inline-flex items-center text-xs text-purple-600 dark:text-purple-300 font-medium bg-purple-50 dark:bg-purple-900/30 px-2 py-0.5 rounded-full">
+                                {process.name}
+                            </span>
                         </div>
                         <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
                             {/* 配置文件路径 */}
@@ -2271,7 +2436,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                             <button onClick={() => setShowK8sResourceBrowser(false)} className="text-slate-400 hover:text-slate-600 ml-2">✕</button>
                                         </div>
                                         {/* 全局搜索框 */}
-                                        <div className="px-3 py-1.5 border-b border-slate-100 dark:border-slate-800">
+                                        <div className="px-3 py-1.5 border-b border-slate-100 dark:border-slate-800 flex gap-1">
                                             <input
                                                 type="text"
                                                 value={k8sResourceSearch}
@@ -2289,44 +2454,73 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                                         finally { setK8sResourceLoading(false); }
                                                     }
                                                 }}
-                                                placeholder={lang === 'zh' ? '🔍 全局搜索，回车搜索...' : '🔍 Global search, press Enter...'}
-                                                className="w-full px-2 py-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs focus:ring-1 focus:ring-purple-500 outline-none"
+                                                placeholder={lang === 'zh' ? '🔍 输入文件名，点击搜索...' : '🔍 Type filename, click to search...'}
+                                                className="flex-1 px-2 py-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs focus:ring-1 focus:ring-purple-500 outline-none"
                                             />
+                                            <button
+                                                onClick={async () => {
+                                                    setK8sResourceLoading(true);
+                                                    try {
+                                                        const searchVal = k8sResourceSearch ? encodeURIComponent(k8sResourceSearch) : '';
+                                                        const url = `${projectConfig.baseUrl}/resources?fullName=&tenantCode=&type=FILE&searchVal=${searchVal}&pageNo=1&pageSize=200`;
+                                                        const resp = await httpFetch(url, { method: 'GET', headers: { 'token': projectConfig.token } });
+                                                        const result = await resp.json();
+                                                        if (result.code === 0) setK8sResourceFiles(result.data?.totalList || result.data || []);
+                                                    } catch (e) { console.error(e); }
+                                                    finally { setK8sResourceLoading(false); }
+                                                }}
+                                                className="px-2 py-1 bg-purple-500 hover:bg-purple-600 text-white text-xs rounded"
+                                            >
+                                                {lang === 'zh' ? '搜' : 'Go'}
+                                            </button>
                                         </div>
                                         <div className="max-h-48 overflow-y-auto">
                                             {k8sResourceLoading ? (
                                                 <div className="flex items-center justify-center py-4"><Loader2 size={16} className="animate-spin text-slate-400" /></div>
-                                            ) : k8sResourceFiles.length === 0 ? (
-                                                <div className="text-center py-4 text-xs text-slate-400">{lang === 'zh' ? '无匹配文件' : 'No matching files'}</div>
-                                            ) : (
-                                                k8sResourceFiles.map((f: any, i: number) => (
-                                                    <button
-                                                        key={i}
-                                                        onClick={async () => {
-                                                            if (f.directory) {
-                                                                setK8sResourceHistory([...k8sResourceHistory, { name: (f.alias || f.fileName || '').replace(/\/$/, ''), path: f.fullName }]);
-                                                                setK8sResourceSearch('');
-                                                                setK8sResourceLoading(true);
-                                                                try {
-                                                                    const url = `${projectConfig.baseUrl}/resources?fullName=${encodeURIComponent(f.fullName)}&tenantCode=&type=FILE&searchVal=&pageNo=1&pageSize=200`;
-                                                                    const resp = await httpFetch(url, { method: 'GET', headers: { 'token': projectConfig.token } });
-                                                                    const result = await resp.json();
-                                                                    if (result.code === 0) setK8sResourceFiles(result.data?.totalList || result.data || []);
-                                                                } catch (e) { console.error(e); }
-                                                                finally { setK8sResourceLoading(false); }
-                                                            } else {
-                                                                const path = (f.fullName || '').replace(/^.*\/resources\//, '');
-                                                                setK8sNodeConfigPath(path);
-                                                                setShowK8sResourceBrowser(false);
-                                                            }
-                                                        }}
-                                                        className="w-full flex items-center px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-800 text-left text-sm border-b border-slate-100 dark:border-slate-800 last:border-0"
-                                                    >
-                                                        <span className="mr-2">{f.directory ? '📁' : '📄'}</span>
-                                                        <span className="truncate text-slate-700 dark:text-slate-300">{(f.alias || f.fileName || '').replace(/\/$/, '')}</span>
-                                                    </button>
-                                                ))
-                                            )}
+                                            ) : (() => {
+                                                // 本地关键词过滤
+                                                const filtered = k8sResourceSearch
+                                                    ? k8sResourceFiles.filter((f: any) => 
+                                                        (f.alias || f.fileName || '').toLowerCase().includes(k8sResourceSearch.toLowerCase())
+                                                      )
+                                                    : k8sResourceFiles;
+                                                return filtered.length === 0 ? (
+                                                    <div className="text-center py-4 text-xs text-slate-400">
+                                                        {k8sResourceSearch 
+                                                            ? (lang === 'zh' ? '当前目录无匹配，点击"搜"进行全局搜索' : 'No match, click "Go" for global search')
+                                                            : (lang === 'zh' ? '空目录' : 'Empty directory')
+                                                        }
+                                                    </div>
+                                                ) : (
+                                                    filtered.map((f: any, i: number) => (
+                                                        <button
+                                                            key={i}
+                                                            onClick={async () => {
+                                                                if (f.directory) {
+                                                                    setK8sResourceHistory([...k8sResourceHistory, { name: (f.alias || f.fileName || '').replace(/\/$/, ''), path: f.fullName }]);
+                                                                    setK8sResourceSearch('');
+                                                                    setK8sResourceLoading(true);
+                                                                    try {
+                                                                        const url = `${projectConfig.baseUrl}/resources?fullName=${encodeURIComponent(f.fullName)}&tenantCode=&type=FILE&searchVal=&pageNo=1&pageSize=200`;
+                                                                        const resp = await httpFetch(url, { method: 'GET', headers: { 'token': projectConfig.token } });
+                                                                        const result = await resp.json();
+                                                                        if (result.code === 0) setK8sResourceFiles(result.data?.totalList || result.data || []);
+                                                                    } catch (e) { console.error(e); }
+                                                                    finally { setK8sResourceLoading(false); }
+                                                                } else {
+                                                                    const path = (f.fullName || '').replace(/^.*\/resources\//, '');
+                                                                    setK8sNodeConfigPath(path);
+                                                                    setShowK8sResourceBrowser(false);
+                                                                }
+                                                            }}
+                                                            className="w-full flex items-center px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-800 text-left text-sm border-b border-slate-100 dark:border-slate-800 last:border-0"
+                                                        >
+                                                            <span className="mr-2">{f.directory ? '📁' : '📄'}</span>
+                                                            <span className="truncate text-slate-700 dark:text-slate-300">{(f.alias || f.fileName || '').replace(/\/$/, '')}</span>
+                                                        </button>
+                                                    ))
+                                                );
+                                            })()}
                                         </div>
                                     </div>
                                     );
