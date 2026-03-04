@@ -179,12 +179,12 @@ export const FieldMappingTool: React.FC<{
             {/* Profile Grid */}
             <div className="flex-1 overflow-y-auto pb-4 custom-scrollbar">
                {viewMode === 'grid' ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-2">
+                  <div className="flex flex-wrap gap-6 pt-2">
                      {profiles.map((profile) => (
                         <Tooltip key={profile.id} content={profile.name} position="top">
                            <div
                               onClick={() => setActiveProfile(profile)}
-                              className="group relative p-6 bg-white dark:bg-slate-800 rounded-2xl border-2 border-slate-200 dark:border-slate-700 hover:border-purple-400 dark:hover:border-purple-500 hover:shadow-2xl hover:shadow-purple-500/20 hover:-translate-y-2 transition-all duration-300 cursor-pointer overflow-hidden min-h-[200px]"
+                              className="w-[288px] h-[200px] flex-shrink-0 flex flex-col group relative p-6 bg-white dark:bg-slate-800 rounded-2xl border-2 border-slate-200 dark:border-slate-700 hover:border-purple-400 dark:hover:border-purple-500 hover:shadow-2xl hover:shadow-purple-500/20 hover:-translate-y-2 transition-all duration-300 cursor-pointer overflow-hidden"
                            >
                               {/* Gradient */}
                               <div className="absolute inset-0 bg-gradient-to-br from-purple-50 via-pink-50/30 to-transparent dark:from-purple-900/20 dark:via-pink-900/10 dark:to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -216,7 +216,7 @@ export const FieldMappingTool: React.FC<{
                      {/* New Card */}
                      <div
                         onClick={handleNewProfile}
-                        className="group p-6 bg-gradient-to-br from-indigo-50/50 to-purple-50/50 dark:from-indigo-900/10 dark:to-purple-900/10 border-2 border-dashed border-indigo-300 dark:border-indigo-600 rounded-2xl hover:shadow-lg hover:border-indigo-500 dark:hover:border-indigo-500 hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col items-center justify-center min-h-[200px]"
+                        className="w-[288px] h-[200px] flex-shrink-0 group p-6 bg-gradient-to-br from-indigo-50/50 to-purple-50/50 dark:from-indigo-900/10 dark:to-purple-900/10 border-2 border-dashed border-indigo-300 dark:border-indigo-600 rounded-2xl hover:shadow-lg hover:border-indigo-500 dark:hover:border-indigo-500 hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col items-center justify-center"
                      >
                         <div className="p-4 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-full mb-4 group-hover:scale-110 transition-transform duration-300">
                            <Plus size={32} />

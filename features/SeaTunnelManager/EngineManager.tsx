@@ -190,7 +190,7 @@ export const EngineManager: React.FC<EngineManagerProps> = ({
                         {configs.map(config => (
                             <Tooltip key={config.id} content={config.name} position="top">
                                 <div
-                                    className="group relative bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border-2 border-slate-200 dark:border-slate-700 hover:border-cyan-400 dark:hover:border-cyan-500 hover:shadow-2xl hover:shadow-cyan-500/20 hover:-translate-y-2 transition-all duration-300 cursor-pointer overflow-hidden min-h-[200px] w-72"
+                                    className="group relative bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border-2 border-slate-200 dark:border-slate-700 hover:border-cyan-400 dark:hover:border-cyan-500 hover:shadow-2xl hover:shadow-cyan-500/20 hover:-translate-y-2 transition-all duration-300 cursor-pointer overflow-hidden w-[288px] h-[200px] flex-shrink-0 flex flex-col"
                                     onClick={() => handleCardClick(config)}
                                 >
                                     <div className="flex items-start justify-between mb-4">
@@ -227,7 +227,7 @@ export const EngineManager: React.FC<EngineManagerProps> = ({
                         ))}
                         <button
                             onClick={handleAddNew}
-                            className="group flex flex-col items-center justify-center p-6 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-600 bg-gradient-to-br from-cyan-50/50 to-blue-50/50 dark:from-cyan-900/10 dark:to-blue-900/10 hover:border-cyan-400 dark:hover:border-cyan-500 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 cursor-pointer min-h-[200px] w-72"
+                            className="group flex flex-col items-center justify-center p-6 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-600 bg-gradient-to-br from-cyan-50/50 to-blue-50/50 dark:from-cyan-900/10 dark:to-blue-900/10 hover:border-cyan-400 dark:hover:border-cyan-500 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 cursor-pointer w-[288px] h-[200px] flex-shrink-0"
                         >
                             <div className="p-4 rounded-full bg-cyan-100 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400 group-hover:scale-110 transition-transform duration-300 mb-4">
                                 <Plus size={32} />

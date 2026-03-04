@@ -406,12 +406,12 @@ export const ExcelImport: React.FC<ExcelImportProps> = ({ lang, connections }) =
 
                 {/* Content */}
                 {viewMode === 'grid' ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-2">
+                    <div className="flex flex-wrap gap-6 pt-2">
                         {profiles.map(p => (
                             <Tooltip key={p.id} content={p.title} position="top">
                                 <div
                                     onClick={() => handleLoadProfile(p)}
-                                    className="group relative p-6 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border-2 border-slate-200 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-2xl hover:shadow-blue-500/20 hover:-translate-y-2 transition-all duration-300 cursor-pointer overflow-hidden min-h-[200px] flex flex-col"
+                                    className="w-[288px] h-[200px] flex-shrink-0 flex flex-col group relative p-6 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border-2 border-slate-200 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-2xl hover:shadow-blue-500/20 hover:-translate-y-2 transition-all duration-300 cursor-pointer overflow-hidden"
                                 >
                                     {/* Gradient Overlay */}
                                     <div className="absolute inset-0 bg-gradient-to-br from-green-50 via-emerald-50/30 to-transparent dark:from-green-900/20 dark:via-emerald-900/10 dark:to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -449,7 +449,7 @@ export const ExcelImport: React.FC<ExcelImportProps> = ({ lang, connections }) =
                         {/* New Import Card - 放在最后 */}
                         <div
                             onClick={handleNewImport}
-                            className="group p-6 bg-gradient-to-br from-green-50/50 to-emerald-50/50 dark:from-green-900/10 dark:to-emerald-900/10 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-600 hover:border-green-400 dark:hover:border-green-500 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 cursor-pointer min-h-[200px] flex flex-col items-center justify-center"
+                            className="w-[288px] h-[200px] flex-shrink-0 flex flex-col items-center justify-center group p-6 bg-gradient-to-br from-green-50/50 to-emerald-50/50 dark:from-green-900/10 dark:to-emerald-900/10 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-600 hover:border-green-400 dark:hover:border-green-500 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 cursor-pointer"
                         >
                             <div className="p-4 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 group-hover:scale-110 transition-transform duration-300 mb-4">
                                 <Plus size={32} />

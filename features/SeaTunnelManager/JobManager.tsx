@@ -184,7 +184,7 @@ export const JobManager: React.FC<JobManagerProps> = ({
                             <div
                                 key={config.id}
                                 onClick={() => onSelectEngine(config)}
-                                className="group relative bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border-2 border-slate-200 dark:border-slate-700 hover:border-cyan-400 dark:hover:border-cyan-500 hover:shadow-2xl hover:shadow-cyan-500/20 hover:-translate-y-2 transition-all duration-300 cursor-pointer overflow-hidden min-h-[180px] w-72"
+                                className="group relative bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border-2 border-slate-200 dark:border-slate-700 hover:border-cyan-400 dark:hover:border-cyan-500 hover:shadow-2xl hover:shadow-cyan-500/20 hover:-translate-y-2 transition-all duration-300 cursor-pointer overflow-hidden w-[288px] h-[200px] flex-shrink-0 flex flex-col"
                             >
                                 <div className="flex items-start justify-between mb-4">
                                     <div className="p-3 rounded-lg bg-cyan-100 dark:bg-cyan-900/30 text-2xl">

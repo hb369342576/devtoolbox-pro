@@ -10,6 +10,7 @@ import { httpFetch } from '../../../utils/http';
 import { getWorkflowApiPath } from '../utils';
 import { useToast } from '../../../components/ui/Toast';
 import { ConfirmModal } from '../../../components/ui/ConfirmModal';
+import { DEFAULT_CONFIG_KEY, defaultSettingsTemplate } from './GlobalSettingsModal';
 
 // 节点类型定义
 const NODE_TYPES = [
@@ -167,18 +168,40 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
     // K8S 节点配置弹窗
     const [showK8sNodeDialog, setShowK8sNodeDialog] = useState(false);
     const [pendingK8sNode, setPendingK8sNode] = useState<{ code: number; x: number; y: number } | null>(null);
+    // 全局默认配置 - 从 localStorage 加载
+    const [globalSettings] = useState(() => {
+        try {
+            const saved = localStorage.getItem(DEFAULT_CONFIG_KEY);
+            const parsed = saved ? JSON.parse(saved) : {};
+            return {
+                ...defaultSettingsTemplate,
+                ...parsed,
+                common: {
+                    ...defaultSettingsTemplate.common,
+                    ...(parsed.common || {})
+                },
+                nodes: {
+                    k8s: { ...defaultSettingsTemplate.nodes?.k8s, ...(parsed.nodes?.k8s || {}) },
+                    sql: { ...defaultSettingsTemplate.nodes?.sql, ...(parsed.nodes?.sql || {}) }
+                }
+            };
+        } catch {
+            return defaultSettingsTemplate;
+        }
+    });
+
     const [editingK8sNodeId, setEditingK8sNodeId] = useState<string | null>(null);
     const [k8sNodeConfigPath, setK8sNodeConfigPath] = useState(projectConfig.projectName ? `${projectConfig.projectName}/` : 'smart_cloud_pro/');
     const [k8sNodeDatasource, setK8sNodeDatasource] = useState(1);
-    const [k8sNodeImage, setK8sNodeImage] = useState('registry-vpc.cn-shenzhen.aliyuncs.com/zdiai-library/apache_seatunnel-k8s:2.3.12-20260204');
-    const [k8sNodeNamespace, setK8sNodeNamespace] = useState('{"name":"default","cluster":"k8s-Security-Cluster-admin"}');
+    const [k8sNodeImage, setK8sNodeImage] = useState(globalSettings.nodes.k8s.image);
+    const [k8sNodeNamespace, setK8sNodeNamespace] = useState(globalSettings.nodes.k8s.namespace);
     const [k8sNodeEnvCode, setK8sNodeEnvCode] = useState(164447603311488);
     const [k8sNodeTimeoutFlag, setK8sNodeTimeoutFlag] = useState(true);
-    const [k8sNodeTimeout, setK8sNodeTimeout] = useState(15);
+    const [k8sNodeTimeout, setK8sNodeTimeout] = useState(globalSettings.common.timeout);
     const [k8sNodeTimeoutWarn, setK8sNodeTimeoutWarn] = useState(false);
     const [k8sNodeTimeoutFail, setK8sNodeTimeoutFail] = useState(true);
-    const [k8sNodeRetryTimes, setK8sNodeRetryTimes] = useState(0);
-    const [k8sNodeRetryInterval, setK8sNodeRetryInterval] = useState(1);
+    const [k8sNodeRetryTimes, setK8sNodeRetryTimes] = useState(globalSettings.common.retryTimes);
+    const [k8sNodeRetryInterval, setK8sNodeRetryInterval] = useState(globalSettings.common.retryInterval);
 
     // K8S 节点资源浏览
     const [showK8sResourceBrowser, setShowK8sResourceBrowser] = useState(false);
@@ -846,15 +869,15 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
             const defaultDir = projectConfig.projectName ? `${projectConfig.projectName}/` : 'smart_cloud_pro/';
             setK8sNodeConfigPath(defaultDir);
             setK8sNodeDatasource(1);
-            setK8sNodeImage('registry-vpc.cn-shenzhen.aliyuncs.com/zdiai-library/apache_seatunnel-k8s:2.3.12-20260204');
-            setK8sNodeNamespace('{"name":"default","cluster":"k8s-Security-Cluster-admin"}');
+            setK8sNodeImage(globalSettings.nodes.k8s.image);
+            setK8sNodeNamespace(globalSettings.nodes.k8s.namespace);
             setK8sNodeEnvCode(164447603311488);
             setK8sNodeTimeoutFlag(true);
-            setK8sNodeTimeout(15);
+            setK8sNodeTimeout(globalSettings.common.timeout);
             setK8sNodeTimeoutWarn(false);
             setK8sNodeTimeoutFail(true);
-            setK8sNodeRetryTimes(0);
-            setK8sNodeRetryInterval(1);
+            setK8sNodeRetryTimes(globalSettings.common.retryTimes);
+            setK8sNodeRetryInterval(globalSettings.common.retryInterval);
             setShowK8sNodeDialog(true);
             return;
         }

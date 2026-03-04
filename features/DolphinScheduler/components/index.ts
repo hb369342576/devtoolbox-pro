@@ -7,3 +7,4 @@ export * from './ExportModal';
 export * from './ImportModal';
 export * from './LogModal';
 export * from './TaskEditor';
+export * from './GlobalSettingsModal';

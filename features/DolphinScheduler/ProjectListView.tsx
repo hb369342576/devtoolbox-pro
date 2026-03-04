@@ -157,7 +157,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                         {filteredProjects.map(project => (
                             <div
                                 key={project.code}
-                                className="group relative bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border-2 border-slate-200 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-2xl hover:shadow-blue-500/20 hover:-translate-y-2 transition-all duration-300 cursor-pointer overflow-hidden min-h-[180px] w-72"
+                                className="w-[288px] h-[200px] flex-shrink-0 flex flex-col group relative bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border-2 border-slate-200 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-2xl hover:shadow-blue-500/20 hover:-translate-y-2 transition-all duration-300 cursor-pointer overflow-hidden"
                                 onClick={() => onSelectProject(project)}
                             >
                                 <div className="flex items-start justify-between mb-4">

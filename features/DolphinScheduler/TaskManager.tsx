@@ -16,7 +16,8 @@ import { exportWorkflowsToLocal, readWorkflowFromDir, getWorkflowApiPath, import
 import { ProcessDefinition } from './types';
 import {
     DetailModal, RunModal, ScheduleModal, BatchRunModal, 
-    BatchPublishModal, ExportModal, ImportModal, LogModal, TaskEditor 
+    BatchPublishModal, ExportModal, ImportModal, LogModal, TaskEditor,
+    GlobalSettingsModal, DEFAULT_CONFIG_KEY, defaultSettingsTemplate
 } from './components';
 
 interface TaskManagerProps {
@@ -126,6 +127,48 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
     const [total, setTotal] = useState(0);
     const [pageSize, setPageSize] = useState(20);
     
+    // 全局默认配置 - 从 localStorage 加载并支持灵活扩展
+
+    const [globalSettings, setGlobalSettings] = useState(() => {
+        try {
+            const saved = localStorage.getItem(DEFAULT_CONFIG_KEY);
+            const parsed = saved ? JSON.parse(saved) : {};
+            return {
+                ...defaultSettingsTemplate,
+                ...parsed,
+                common: {
+                    ...defaultSettingsTemplate.common,
+                    ...(parsed.common || {})
+                },
+                nodes: {
+                    k8s: { ...defaultSettingsTemplate.nodes?.k8s, ...(parsed.nodes?.k8s || {}) },
+                    sql: { ...defaultSettingsTemplate.nodes?.sql, ...(parsed.nodes?.sql || {}) }
+                }
+            };
+        } catch {
+            return defaultSettingsTemplate;
+        }
+    });
+    
+    const [showConfigModal, setShowConfigModal] = useState(false);
+
+    const handleCreateK8sClick = () => {
+        // 使用保存的配置或默认配置
+        const commonConfig = globalSettings.common;
+        
+        // 提取项目名称作为默认路径（追加反斜杠）
+        const projectName = currentProject?.projectName || currentProject?.name || '';
+        const defaultPath = projectName ? `${projectName}/` : 'smart_cloud_pro/';
+        
+        // 设置默认值
+        setCreateK8sConfigPath(defaultPath);
+        setCreateK8sTimeout(commonConfig.timeout);
+        setCreateK8sRetryTimes(commonConfig.retryTimes);
+        setCreateK8sRetryInterval(commonConfig.retryInterval);
+        
+        setShowCreateK8s(true);
+    };
+
     // 列宽配置 - 从 localStorage 加载
     const COLUMN_WIDTHS_KEY = 'dolphin_task_manager_column_widths';
     const defaultColumnWidths = {
@@ -900,7 +943,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                                         <div className="fixed inset-0 z-40" onClick={() => setShowCreateMenu(false)} />
                                         <div className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 py-1 w-52 overflow-hidden">
                                             <button
-                                                onClick={() => { setShowCreateMenu(false); setShowCreateK8s(true); }}
+                                                onClick={() => { setShowCreateMenu(false); handleCreateK8sClick(); }}
                                                 className="w-full flex items-center px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-700 text-left transition-colors"
                                             >
                                                 <div className="p-1.5 rounded-md bg-purple-500 text-white mr-3"><Container size={14} /></div>
@@ -998,8 +1041,14 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                             <RefreshCw size={18} className={(loading || instanceLoading || scheduleLoading || taskInstanceLoading) ? 'animate-spin' : ''} />
                         </button>
                     </Tooltip>
+                    
+                    <Tooltip content={lang === 'zh' ? '参数设置' : 'Settings'} position="bottom">
+                        <button onClick={() => setShowConfigModal(true)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-300">
+                            <Settings size={18} />
+                        </button>
+                    </Tooltip>
 
-                    {activeTab === 'workflow-definition' && (
+                        {activeTab === 'workflow-definition' && (
                         <>
                             <Tooltip content={lang === 'zh' ? '批量运行' : 'Batch Run'} position="bottom">
                                 <button onClick={() => setShowBatchRun(true)} className="p-2 hover:bg-orange-100 dark:hover:bg-orange-900/30 rounded-lg text-orange-600">
@@ -1317,7 +1366,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                         ) : schedules.length === 0 ? (
                             <div className="flex-1 flex items-center justify-center text-slate-400">暂无定时</div>
                         ) : (
-                            <div className="flex-1 overflow-x-auto overflow-y-auto min-h-0">
+                            <div className="flex-1 overflow-x-auto overflow-y-auto min-h-0 scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-600 scrollbar-track-transparent [&::-webkit-scrollbar-corner]:bg-transparent">
                                 <table className="w-full text-sm min-w-[1400px]">
                                     <thead className="bg-slate-50 dark:bg-slate-900/50 sticky top-0 z-10">
                                         <tr className="text-slate-500 text-xs whitespace-nowrap">
@@ -1394,7 +1443,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                         ) : taskInstances.length === 0 ? (
                             <div className="flex-1 flex items-center justify-center text-slate-400">暂无任务</div>
                         ) : (
-                            <div className="flex-1 overflow-x-auto overflow-y-auto min-h-0">
+                            <div className="flex-1 overflow-x-auto overflow-y-auto min-h-0 scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-600 scrollbar-track-transparent [&::-webkit-scrollbar-corner]:bg-transparent">
                                 <table className="w-full text-sm min-w-[1500px]">
                                     <thead className="bg-slate-50 dark:bg-slate-900/50 sticky top-0 z-10">
                                         <tr className="text-slate-500 text-xs whitespace-nowrap">
@@ -1984,6 +2033,14 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                     onClose={() => setEditProcess(null)}
                 />
             )}
+
+            {/* 参数设置弹窗 */}
+            <GlobalSettingsModal 
+                show={showConfigModal}
+                lang={lang}
+                onClose={() => setShowConfigModal(false)}
+                onSave={(newSettings) => setGlobalSettings(newSettings)}
+            />
         </div>
     );
 };

@@ -71,12 +71,12 @@ export const ConfigList: React.FC<ConfigListProps> = ({
 
             {/* Config Cards Grid/List */}
             {viewMode === 'grid' ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="flex flex-wrap gap-6">
                     {/* Existing Configs */}
                     {configs.map(config => (
                         <Tooltip key={config.id} content={config.name} position="top">
                             <div
-                                className="group relative bg-white dark:bg-slate-800 p-6 rounded-2xl border-2 border-slate-200 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-500 hover:shadow-2xl hover:shadow-indigo-500/20 hover:-translate-y-2 transition-all duration-300 cursor-pointer overflow-hidden min-h-[200px]"
+                                className="w-[288px] h-[200px] flex-shrink-0 flex flex-col group relative bg-white dark:bg-slate-800 p-6 rounded-2xl border-2 border-slate-200 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-500 hover:shadow-2xl hover:shadow-indigo-500/20 hover:-translate-y-2 transition-all duration-300 cursor-pointer overflow-hidden"
                                 onDoubleClick={() => onEdit(config)}
                             >
                                 {/* Gradient */}
@@ -124,7 +124,7 @@ export const ConfigList: React.FC<ConfigListProps> = ({
                     {/* Add New Card */}
                     <button
                         onClick={onNew}
-                        className="group bg-gradient-to-br from-blue-50/50 to-indigo-50/50 dark:from-blue-900/10 dark:to-indigo-900/10 p-6 rounded-2xl border-2 border-dashed border-blue-300 dark:border-blue-600 hover:border-blue-500 dark:hover:border-blue-500 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 min-h-[200px] flex flex-col items-center justify-center"
+                        className="w-[288px] h-[200px] flex-shrink-0 group bg-gradient-to-br from-blue-50/50 to-indigo-50/50 dark:from-blue-900/10 dark:to-indigo-900/10 p-6 rounded-2xl border-2 border-dashed border-blue-300 dark:border-blue-600 hover:border-blue-500 dark:hover:border-blue-500 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col items-center justify-center"
                     >
                         <div className="p-4 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 mb-4 group-hover:scale-110 transition-transform duration-300">
                             <Plus size={32} />
