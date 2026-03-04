@@ -91,7 +91,7 @@ export const NAV_ITEMS: NavItem[] = [
 
   {
     id: 'task-dev',
-    label: { en: 'Task Development', zh: '任务开发' },
+    label: { en: 'Task Development', zh: '海豚调度' },
     tooltip: { en: 'DolphinScheduler workflow management', zh: 'DolphinScheduler 工作流管理' },
     icon: CalendarClock,
     category: 'db',

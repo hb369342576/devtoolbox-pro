@@ -49,6 +49,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                 method: 'GET',
                 headers: { 'token': connection.token }
             });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const result = await response.json();
             
             if (result.code === 0) {

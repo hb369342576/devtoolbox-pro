@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import {
     ListTodo, ArrowLeft, Search, Folder, Calendar, AlertCircle,
     PlayCircle, Settings, RefreshCw, CalendarClock, Plus, CheckCircle2, XCircle, Timer, User, Loader2,
-    Eye, Download, Upload, Power, Clock, ChevronLeft, ChevronRight, MoreHorizontal, Tag, Copy, Edit, Container
+    Eye, Download, Upload, Power, Clock, ChevronLeft, ChevronRight, MoreHorizontal, Tag, Copy, Edit, Container,
+    Trash2, StopCircle, AlignJustify
 } from 'lucide-react';
 import { Language, DolphinSchedulerConfig, DolphinSchedulerApiVersion } from '../../types';
 import { getTexts } from '../../locales';
@@ -89,9 +90,12 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
     const [processInstances, setProcessInstances] = useState<any[]>([]);
     const [instanceLoading, setInstanceLoading] = useState(false);
     const [instancePageNo, setInstancePageNo] = useState(1);
+    const [instancePageSize, setInstancePageSize] = useState(20);
     const [instanceTotal, setInstanceTotal] = useState(0);
     const [instanceStateFilter, setInstanceStateFilter] = useState('');
+    const [instanceDeleting, setInstanceDeleting] = useState(false);
     const [instanceSearchTerm, setInstanceSearchTerm] = useState('');
+    const [selectedInstances, setSelectedInstances] = useState<Set<number>>(new Set());
     const [instanceLogId, setInstanceLogId] = useState<number | null>(null);
     const [instanceLogContent, setInstanceLogContent] = useState('');
     const [instanceLogLoading, setInstanceLogLoading] = useState(false);
@@ -100,6 +104,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
     const [schedules, setSchedules] = useState<any[]>([]);
     const [scheduleLoading, setScheduleLoading] = useState(false);
     const [schedulePageNo, setSchedulePageNo] = useState(1);
+    const [schedulePageSize, setSchedulePageSize] = useState(20);
     const [scheduleTotal, setScheduleTotal] = useState(0);
     const [scheduleSearchTerm, setScheduleSearchTerm] = useState('');
 
@@ -107,6 +112,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
     const [taskInstances, setTaskInstances] = useState<any[]>([]);
     const [taskInstanceLoading, setTaskInstanceLoading] = useState(false);
     const [taskInstancePageNo, setTaskInstancePageNo] = useState(1);
+    const [taskInstancePageSize, setTaskInstancePageSize] = useState(20);
     const [taskInstanceTotal, setTaskInstanceTotal] = useState(0);
     const [taskInstanceSearchTerm, setTaskInstanceSearchTerm] = useState('');
     const [taskInstanceStateFilter, setTaskInstanceStateFilter] = useState('');
@@ -118,7 +124,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
     // 分页
     const [pageNo, setPageNo] = useState(1);
     const [total, setTotal] = useState(0);
-    const pageSize = 20;
+    const [pageSize, setPageSize] = useState(20);
     
     // 列宽配置 - 从 localStorage 加载
     const COLUMN_WIDTHS_KEY = 'dolphin_task_manager_column_widths';
@@ -142,6 +148,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
         }
         return defaultColumnWidths;
     });
+
     
     // 保存列宽到 localStorage
     const saveColumnWidths = useCallback((widths: Record<string, number>) => {
@@ -261,33 +268,139 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
         }
     }, [currentProject, fetchProcessDefinitions]);
 
-    // 当项目切换时，重置状态
-    const currentProjectId = currentProject?.id;
-    useEffect(() => {
-        // 切换项目时，先清空列表和重置 projectCode
-        setProcesses([]);
-        setResolvedProjectCode('');
-        setPageNo(1);
-        setSearchTerm('');
-    }, [currentProjectId]);
+    // --- 数据获取函数开始 (移至此处以解决引用顺序问题) ---
+
+    // 获取工作流实例列表
+    const fetchProcessInstances = useCallback(async (code?: string) => {
+        const pc = code || projectCode;
+        if (!baseUrl || !token || !pc) return;
+        setInstanceLoading(true);
+        try {
+            const instancePath = currentProject?.apiVersion === 'v3.4' ? 'workflow-instances' : 'process-instances';
+            let url = `${baseUrl}/projects/${pc}/${instancePath}?pageNo=${instancePageNo}&pageSize=${instancePageSize}`;
+            if (instanceSearchTerm) url += `&searchVal=${encodeURIComponent(instanceSearchTerm)}`;
+            if (instanceStateFilter) url += `&stateType=${instanceStateFilter}`;
+            console.log('[TaskManager] Fetching process instances:', url);
+            const response = await httpFetch(url, { method: 'GET', headers: { 'token': token } });
+            if (!response.ok) {
+                const text = await response.text();
+                console.error('[TaskManager] Process instances response not ok:', response.status, text.substring(0, 200));
+                throw new Error(`HTTP ${response.status}`);
+            }
+            const result = await response.json();
+            if (result.code === 0) {
+                setProcessInstances(result.data?.totalList || []);
+                setInstanceTotal(result.data?.total || 0);
+            } else {
+                toast({ title: lang === 'zh' ? '加载失败' : 'Load Failed', description: result.msg, variant: 'destructive' });
+            }
+        } catch (err: any) {
+            console.error('[TaskManager] Fetch process instances error:', err);
+            toast({ title: lang === 'zh' ? '加载失败' : 'Load Failed', description: err.message, variant: 'destructive' });
+        } finally {
+            setInstanceLoading(false);
+        }
+    }, [baseUrl, token, projectCode, currentProject, instancePageNo, instancePageSize, instanceSearchTerm, instanceStateFilter, lang, toast]);
+
+    // 获取工作流定时列表
+    const fetchSchedules = useCallback(async (code?: string) => {
+        const pc = code || projectCode;
+        if (!baseUrl || !token || !pc) return;
+        setScheduleLoading(true);
+        try {
+            let url = `${baseUrl}/projects/${pc}/schedules?pageNo=${schedulePageNo}&pageSize=${schedulePageSize}`;
+            if (scheduleSearchTerm) url += `&searchVal=${encodeURIComponent(scheduleSearchTerm)}`;
+            console.log('[TaskManager] Fetching schedules:', url);
+            const response = await httpFetch(url, { method: 'GET', headers: { 'token': token } });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const result = await response.json();
+            if (result.code === 0) {
+                setSchedules(result.data?.totalList || []);
+                setScheduleTotal(result.data?.total || 0);
+            } else {
+                toast({ title: lang === 'zh' ? '加载失败' : 'Load Failed', description: result.msg, variant: 'destructive' });
+            }
+        } catch (err: any) {
+            console.error('[TaskManager] Fetch schedules error:', err);
+            toast({ title: lang === 'zh' ? '加载失败' : 'Load Failed', description: err.message, variant: 'destructive' });
+        } finally {
+            setScheduleLoading(false);
+        }
+    }, [baseUrl, token, projectCode, schedulePageNo, schedulePageSize, scheduleSearchTerm, lang, toast]);
+
+    // 获取任务实例列表
+    const fetchTaskInstances = useCallback(async (code?: string) => {
+        const pc = code || projectCode;
+        if (!baseUrl || !token || !pc) return;
+        setTaskInstanceLoading(true);
+        try {
+            let url = `${baseUrl}/projects/${pc}/task-instances?pageNo=${taskInstancePageNo}&pageSize=${taskInstancePageSize}`;
+            if (taskInstanceSearchTerm) url += `&searchVal=${encodeURIComponent(taskInstanceSearchTerm)}`;
+            if (taskInstanceStateFilter) url += `&stateType=${taskInstanceStateFilter}`;
+            console.log('[TaskManager] Fetching task instances:', url);
+            const response = await httpFetch(url, { method: 'GET', headers: { 'token': token } });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const result = await response.json();
+            if (result.code === 0) {
+                setTaskInstances(result.data?.totalList || []);
+                setTaskInstanceTotal(result.data?.total || 0);
+            } else {
+                toast({ title: lang === 'zh' ? '加载失败' : 'Load Failed', description: result.msg, variant: 'destructive' });
+            }
+        } catch (err: any) {
+            console.error('[TaskManager] Fetch task instances error:', err);
+            toast({ title: lang === 'zh' ? '加载失败' : 'Load Failed', description: err.message, variant: 'destructive' });
+        } finally {
+            setTaskInstanceLoading(false);
+        }
+    }, [baseUrl, token, projectCode, taskInstancePageNo, taskInstancePageSize, taskInstanceSearchTerm, taskInstanceStateFilter, lang, toast]);
+
+    // --- 数据获取函数结束 ---
+
+    // 当项目切换或搜索/分页/Tab变化时，根据 activeTab 获取数据
+    const handleRefresh = useCallback(() => {
+        if (!projectCode) return;
+        if (activeTab === 'workflow-definition') {
+            fetchProcessDefinitions(projectCode);
+        } else if (activeTab === 'workflow-instance') {
+            fetchProcessInstances(projectCode);
+        } else if (activeTab === 'workflow-schedule') {
+            fetchSchedules(projectCode);
+        } else if (activeTab === 'task-instance') {
+            fetchTaskInstances(projectCode);
+        }
+    }, [activeTab, projectCode, fetchProcessDefinitions, fetchProcessInstances, fetchSchedules, fetchTaskInstances]);
 
     useEffect(() => {
         if (currentProject) {
-            resolveProjectCodeAndFetch();
+            if (!projectCode) {
+                resolveProjectCodeAndFetch();
+            } else {
+                handleRefresh();
+            }
         } else {
             setResolvedProjectCode('');
             setProcesses([]);
         }
-    }, [currentProject, pageNo, searchTerm, resolveProjectCodeAndFetch]);
+    }, [currentProject, projectCode, handleRefresh, resolveProjectCodeAndFetch]);
 
-    // 刷新
-    const handleRefresh = () => {
-        if (projectCode) {
-            fetchProcessDefinitions(projectCode);
-        } else {
-            resolveProjectCodeAndFetch();
-        }
-    };
+    // 当项目切换时，重置状态
+    const currentProjectId = currentProject?.id;
+    useEffect(() => {
+        setProcesses([]);
+        setProcessInstances([]);
+        setSchedules([]);
+        setTaskInstances([]);
+        setPageNo(1);
+        setInstancePageNo(1);
+        setSchedulePageNo(1);
+        setTaskInstancePageNo(1);
+        setSearchTerm('');
+        setInstanceSearchTerm('');
+        setScheduleSearchTerm('');
+        setTaskInstanceSearchTerm('');
+        setActiveTab('workflow-definition');
+    }, [currentProjectId]);
 
     // 新建 K8S 工作流
     const handleCreateK8s = async () => {
@@ -523,73 +636,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
         return <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${info.color}`}>{info.label}</span>;
     };
 
-    // 获取工作流实例列表
-    const fetchProcessInstances = async (code?: string) => {
-        const pc = code || projectCode;
-        if (!baseUrl || !token || !pc) return;
-        setInstanceLoading(true);
-        try {
-            const stateParam = instanceStateFilter ? `&stateType=${instanceStateFilter}` : '';
-            const url = `${baseUrl}/projects/${pc}/process-instances?pageNo=${instancePageNo}&pageSize=${pageSize}&searchVal=${encodeURIComponent(instanceSearchTerm)}${stateParam}`;
-            const response = await httpFetch(url, { method: 'GET', headers: { 'token': token } });
-            const result = await response.json();
-            if (result.code === 0) {
-                setProcessInstances(result.data?.totalList || []);
-                setInstanceTotal(result.data?.total || 0);
-            } else {
-                toast({ title: lang === 'zh' ? '加载失败' : 'Load Failed', description: result.msg, variant: 'destructive' });
-            }
-        } catch (err: any) {
-            toast({ title: lang === 'zh' ? '加载失败' : 'Load Failed', description: err.message, variant: 'destructive' });
-        } finally {
-            setInstanceLoading(false);
-        }
-    };
 
-    // 获取工作流定时列表
-    const fetchSchedules = async (code?: string) => {
-        const pc = code || projectCode;
-        if (!baseUrl || !token || !pc) return;
-        setScheduleLoading(true);
-        try {
-            const url = `${baseUrl}/projects/${pc}/schedules?pageNo=${schedulePageNo}&pageSize=${pageSize}&searchVal=${encodeURIComponent(scheduleSearchTerm)}`;
-            const response = await httpFetch(url, { method: 'GET', headers: { 'token': token } });
-            const result = await response.json();
-            if (result.code === 0) {
-                setSchedules(result.data?.totalList || []);
-                setScheduleTotal(result.data?.total || 0);
-            } else {
-                toast({ title: lang === 'zh' ? '加载失败' : 'Load Failed', description: result.msg, variant: 'destructive' });
-            }
-        } catch (err: any) {
-            toast({ title: lang === 'zh' ? '加载失败' : 'Load Failed', description: err.message, variant: 'destructive' });
-        } finally {
-            setScheduleLoading(false);
-        }
-    };
-
-    // 获取任务实例列表
-    const fetchTaskInstances = async (code?: string) => {
-        const pc = code || projectCode;
-        if (!baseUrl || !token || !pc) return;
-        setTaskInstanceLoading(true);
-        try {
-            const stateParam = taskInstanceStateFilter ? `&stateType=${taskInstanceStateFilter}` : '';
-            const url = `${baseUrl}/projects/${pc}/task-instances?pageNo=${taskInstancePageNo}&pageSize=${pageSize}&searchVal=${encodeURIComponent(taskInstanceSearchTerm)}${stateParam}`;
-            const response = await httpFetch(url, { method: 'GET', headers: { 'token': token } });
-            const result = await response.json();
-            if (result.code === 0) {
-                setTaskInstances(result.data?.totalList || []);
-                setTaskInstanceTotal(result.data?.total || 0);
-            } else {
-                toast({ title: lang === 'zh' ? '加载失败' : 'Load Failed', description: result.msg, variant: 'destructive' });
-            }
-        } catch (err: any) {
-            toast({ title: lang === 'zh' ? '加载失败' : 'Load Failed', description: err.message, variant: 'destructive' });
-        } finally {
-            setTaskInstanceLoading(false);
-        }
-    };
 
     // 查看任务日志
     const fetchTaskLog = async (taskInstanceId: number, taskName: string) => {
@@ -602,7 +649,18 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
             const response = await httpFetch(url, { method: 'GET', headers: { 'token': token } });
             const result = await response.json();
             if (result.code === 0) {
-                setTaskLogContent(typeof result.data === 'string' ? result.data : JSON.stringify(result.data, null, 2));
+                const data = result.data;
+                let logText = '';
+                if (typeof data === 'string') {
+                    logText = data;
+                } else if (data && typeof data.message === 'string') {
+                    logText = data.message;
+                } else {
+                    logText = JSON.stringify(data, null, 2);
+                }
+                // 将 \r\n 转换为真实换行
+                logText = logText.replace(/\\r\\n/g, '\n').replace(/\\n/g, '\n');
+                setTaskLogContent(logText);
             } else {
                 setTaskLogContent(`[Error] ${result.msg}`);
             }
@@ -638,12 +696,89 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
         }
     };
 
+    // 停止工作流实例
+    const handleStopInstance = async (instanceId: number) => {
+        try {
+            const instancePath = currentProject?.apiVersion === 'v3.4' ? 'workflow-instances' : 'process-instances';
+            const url = `${baseUrl}/projects/${projectCode}/${instancePath}/${instanceId}`;
+            const response = await httpFetch(url, {
+                method: 'POST',
+                headers: { 'token': token, 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'executeType=STOP'
+            });
+            const result = await response.json();
+            if (result.code === 0) {
+                toast({ title: lang === 'zh' ? '已停止' : 'Stopped', variant: 'success' });
+                fetchProcessInstances();
+            } else {
+                toast({ title: lang === 'zh' ? '停止失败' : 'Stop Failed', description: result.msg, variant: 'destructive' });
+            }
+        } catch (err: any) {
+            toast({ title: lang === 'zh' ? '停止失败' : 'Stop Failed', description: err.message, variant: 'destructive' });
+        }
+    };
+
+    // 删除工作流实例
+    const handleDeleteInstance = async (instanceId: number) => {
+        setInstanceDeleting(true);
+        try {
+            const instancePath = currentProject?.apiVersion === 'v3.4' ? 'workflow-instances' : 'process-instances';
+            const url = `${baseUrl}/projects/${projectCode}/${instancePath}/${instanceId}`;
+            const response = await httpFetch(url, {
+                method: 'DELETE',
+                headers: { 'token': token }
+            });
+            const result = await response.json();
+            if (result.code === 0) {
+                toast({ title: lang === 'zh' ? '已删除' : 'Deleted', variant: 'success' });
+                setSelectedInstances(prev => { const n = new Set(prev); n.delete(instanceId); return n; });
+                fetchProcessInstances();
+            } else {
+                toast({ title: lang === 'zh' ? '删除失败' : 'Delete Failed', description: result.msg, variant: 'destructive' });
+            }
+        } catch (err: any) {
+            toast({ title: lang === 'zh' ? '删除失败' : 'Delete Failed', description: err.message, variant: 'destructive' });
+        } finally {
+            setInstanceDeleting(false);
+        }
+    };
+
+    // 批量删除工作流实例
+    const handleBatchDeleteInstances = async () => {
+        if (selectedInstances.size === 0) return;
+        setInstanceDeleting(true);
+        try {
+            const instancePath = currentProject?.apiVersion === 'v3.4' ? 'workflow-instances' : 'process-instances';
+            const paramName = currentProject?.apiVersion === 'v3.4' ? 'workflowInstanceIds' : 'processInstanceIds';
+            const ids = Array.from(selectedInstances);
+            const url = `${baseUrl}/projects/${projectCode}/${instancePath}/batch-delete`;
+            const response = await httpFetch(url, {
+                method: 'POST',
+                headers: { 'token': token, 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `${paramName}=${ids.join(',')}`
+            });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const result = await response.json();
+            if (result.code === 0) {
+                toast({ title: lang === 'zh' ? `已删除 ${ids.length} 个实例` : `Deleted ${ids.length} instances`, variant: 'success' });
+                setSelectedInstances(new Set());
+                fetchProcessInstances();
+            } else {
+                toast({ title: lang === 'zh' ? '批量删除失败' : 'Batch Delete Failed', description: result.msg, variant: 'destructive' });
+            }
+        } catch (err: any) {
+            toast({ title: lang === 'zh' ? '批量删除失败' : 'Batch Delete Failed', description: err.message, variant: 'destructive' });
+        } finally {
+            setInstanceDeleting(false);
+        }
+    };
+
     // 分页信息
     const totalPages = Math.ceil(total / pageSize);
     const filteredProcesses = processes;
-    const instanceTotalPages = Math.ceil(instanceTotal / pageSize);
-    const scheduleTotalPages = Math.ceil(scheduleTotal / pageSize);
-    const taskInstanceTotalPages = Math.ceil(taskInstanceTotal / pageSize);
+    const instanceTotalPages = Math.ceil(instanceTotal / instancePageSize) || 1;
+    const scheduleTotalPages = Math.ceil(scheduleTotal / schedulePageSize) || 1;
+    const taskInstanceTotalPages = Math.ceil(taskInstanceTotal / taskInstancePageSize) || 1;
 
 
     if (!currentProject) {
@@ -702,108 +837,201 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
 
     return (
         <div className="h-full flex flex-col">
-            {/* 头部 */}
-            <div className="flex justify-between items-center mb-6 pt-1.5">
+            {/* 头部 - 第一行: 标题/返回 + Tab 导航 */}
+            <div className="flex flex-col mb-4 pt-1.5 border-b border-slate-100 dark:border-slate-800">
+                <div className="flex justify-between items-center mb-4">
+                    <div className="flex items-center space-x-3">
+                        <button
+                            onClick={() => onBack ? onBack() : onSelectProject(null as any)}
+                            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors text-slate-500"
+                            title={lang === 'zh' ? '返回项目列表' : 'Back to Projects'}
+                        >
+                            <ArrowLeft size={20} />
+                        </button>
+                        <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center whitespace-nowrap">
+                            <ListTodo className="mr-3 text-blue-600" />
+                            {lang === 'zh' ? '项目管理' : 'Project Manager'}
+                            <span className="mx-2 text-slate-300 dark:text-slate-600">/</span>
+                            <span className="text-base font-normal text-slate-600 dark:text-slate-300">
+                                {currentProject.name}
+                            </span>
+                        </h2>
+                    </div>
+                </div>
+
+                {/* Tab 导航区域 */}
+                <div className="flex items-center space-x-1 px-1 -mb-px">
+                    {[
+                        { id: 'workflow-definition', name: lang === 'zh' ? '工作流定义' : 'Workflow Definitions', icon: <Folder size={16} /> },
+                        { id: 'workflow-instance', name: lang === 'zh' ? '工作流实例' : 'Workflow Instances', icon: <ListTodo size={16} /> },
+                        { id: 'workflow-schedule', name: lang === 'zh' ? '工作流定时' : 'Workflow Schedules', icon: <Calendar size={16} /> },
+                        { id: 'task-instance', name: lang === 'zh' ? '任务实例' : 'Task Instances', icon: <CheckCircle2 size={16} /> }
+                    ].map(tab => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id as any)}
+                            className={`flex items-center px-4 py-2 text-sm font-medium transition-all relative ${
+                                activeTab === tab.id
+                                    ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
+                                    : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'
+                            }`}
+                        >
+                            <span className="mr-2">{tab.icon}</span>
+                            {tab.name}
+                        </button>
+                    ))}
+                </div>
+            </div>
+            
+            {/* 头部 - 第二行: 操作按钮栏 (随 Tab 变化) */}
+            <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center space-x-3">
-                    <button
-                        onClick={() => onBack ? onBack() : onSelectProject(null as any)}
-                        className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors text-slate-500"
-                        title={lang === 'zh' ? '返回项目列表' : 'Back to Projects'}
-                    >
-                        <ArrowLeft size={20} />
-                    </button>
-                    <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center whitespace-nowrap">
-                        <ListTodo className="mr-3 text-blue-600" />
-                        {lang === 'zh' ? '任务管理' : 'Task Manager'}
-                        <span className="mx-2 text-slate-300 dark:text-slate-600">/</span>
-                        <span className="text-base font-normal text-slate-600 dark:text-slate-300">
-                            {currentProject.name}
-                        </span>
-                    </h2>
+                    {/* 根据不同的 Tab 显示不同的操作/统计 */}
+                    {activeTab === 'workflow-definition' && (
+                        <>
+                            <div className="relative">
+                                <Tooltip content={lang === 'zh' ? '快速创建' : 'Quick Create'} position="bottom">
+                                    <button onClick={() => setShowCreateMenu(!showCreateMenu)} className="p-2 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 rounded-lg text-emerald-600">
+                                        <Plus size={18} />
+                                    </button>
+                                </Tooltip>
+                                {showCreateMenu && (
+                                    <>
+                                        <div className="fixed inset-0 z-40" onClick={() => setShowCreateMenu(false)} />
+                                        <div className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 py-1 w-52 overflow-hidden">
+                                            <button
+                                                onClick={() => { setShowCreateMenu(false); setShowCreateK8s(true); }}
+                                                className="w-full flex items-center px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-700 text-left transition-colors"
+                                            >
+                                                <div className="p-1.5 rounded-md bg-purple-500 text-white mr-3"><Container size={14} /></div>
+                                                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">K8S</span>
+                                            </button>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                                <input
+                                    type="text"
+                                    placeholder={lang === 'zh' ? '搜索工作流...' : 'Search...'}
+                                    value={searchTerm}
+                                    onChange={e => setSearchTerm(e.target.value)}
+                                    className="w-48 pl-9 pr-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                                />
+                            </div>
+                            <span className="text-sm text-slate-500 whitespace-nowrap">
+                                {lang === 'zh' ? `${total} 个` : `${total} total`}
+                            </span>
+                        </>
+                    )}
+                    
+                    {activeTab === 'workflow-instance' && (
+                        <>
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                                <input
+                                    type="text"
+                                    placeholder={lang === 'zh' ? '搜索实例...' : 'Search Instances...'}
+                                    value={instanceSearchTerm}
+                                    onChange={e => setInstanceSearchTerm(e.target.value)}
+                                    className="w-48 pl-9 pr-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                                />
+                            </div>
+                            <select 
+                                value={instanceStateFilter} 
+                                onChange={e => setInstanceStateFilter(e.target.value)}
+                                className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm outline-none"
+                            >
+                                <option value="">{lang === 'zh' ? '全部状态' : 'All States'}</option>
+                                <option value="SUCCESS">成功</option>
+                                <option value="RUNNING_EXECUTION">运行中</option>
+                                <option value="FAILURE">失败</option>
+                                <option value="PAUSE">暂停</option>
+                                <option value="STOP">停止</option>
+                            </select>
+                        </>
+                    )}
+
+                    {activeTab === 'workflow-schedule' && (
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                            <input
+                                type="text"
+                                placeholder={lang === 'zh' ? '搜索定时...' : 'Search Schedules...'}
+                                value={scheduleSearchTerm}
+                                onChange={e => setScheduleSearchTerm(e.target.value)}
+                                className="w-48 pl-9 pr-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                            />
+                        </div>
+                    )}
+
+                    {activeTab === 'task-instance' && (
+                        <>
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                                <input
+                                    type="text"
+                                    placeholder={lang === 'zh' ? '搜索任务实例...' : 'Search Task Instances...'}
+                                    value={taskInstanceSearchTerm}
+                                    onChange={e => setTaskInstanceSearchTerm(e.target.value)}
+                                    className="w-48 pl-9 pr-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                                />
+                            </div>
+                            <select 
+                                value={taskInstanceStateFilter} 
+                                onChange={e => setTaskInstanceStateFilter(e.target.value)}
+                                className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm outline-none"
+                            >
+                                <option value="">{lang === 'zh' ? '全部状态' : 'All States'}</option>
+                                <option value="SUCCESS">成功</option>
+                                <option value="RUNNING_EXECUTION">运行中</option>
+                                <option value="FAILURE">失败</option>
+                            </select>
+                        </>
+                    )}
                 </div>
                 
-                {/* 操作按钮和搜索框 */}
-                <div className="flex items-center space-x-3">
-                    <div className="relative">
-                        <Tooltip content={lang === 'zh' ? '快速创建' : 'Quick Create'} position="bottom">
-                            <button onClick={() => setShowCreateMenu(!showCreateMenu)} className="p-2 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 rounded-lg text-emerald-600">
-                                <Plus size={18} />
+                <div className="flex items-center space-x-2">
+                    <Tooltip content={lang === 'zh' ? '刷新' : 'Refresh'} position="bottom">
+                        <button onClick={handleRefresh} disabled={loading || instanceLoading || scheduleLoading || taskInstanceLoading} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-300 disabled:opacity-50">
+                            <RefreshCw size={18} className={(loading || instanceLoading || scheduleLoading || taskInstanceLoading) ? 'animate-spin' : ''} />
+                        </button>
+                    </Tooltip>
+
+                    {activeTab === 'workflow-definition' && (
+                        <>
+                            <Tooltip content={lang === 'zh' ? '批量运行' : 'Batch Run'} position="bottom">
+                                <button onClick={() => setShowBatchRun(true)} className="p-2 hover:bg-orange-100 dark:hover:bg-orange-900/30 rounded-lg text-orange-600">
+                                    <PlayCircle size={18} />
+                                </button>
+                            </Tooltip>
+                            <Tooltip content={lang === 'zh' ? '批量上下线' : 'Batch Publish'} position="bottom">
+                                <button onClick={() => setShowBatchPublish(true)} className="p-2 hover:bg-green-100 dark:hover:bg-green-900/30 rounded-lg text-green-600">
+                                    <Power size={18} />
+                                </button>
+                            </Tooltip>
+                            <Tooltip content={lang === 'zh' ? '导出' : 'Export'} position="bottom">
+                                <button onClick={() => setShowExport(true)} className="p-2 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded-lg text-purple-600">
+                                    <Download size={18} />
+                                </button>
+                            </Tooltip>
+                            <Tooltip content={lang === 'zh' ? '导入' : 'Import'} position="bottom">
+                                <button onClick={() => setShowImport(true)} className="p-2 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded-lg text-purple-600">
+                                    <Upload size={18} />
+                                </button>
+                            </Tooltip>
+                        </>
+                    )}
+
+                    {activeTab === 'workflow-instance' && selectedInstances.size > 0 && (
+                        <Tooltip content={lang === 'zh' ? `批量删除 (${selectedInstances.size})` : `Batch Delete (${selectedInstances.size})`} position="bottom">
+                            <button onClick={handleBatchDeleteInstances} className="p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg text-red-600">
+                                <Trash2 size={18} />
                             </button>
                         </Tooltip>
-                        {showCreateMenu && (
-                            <>
-                                <div className="fixed inset-0 z-40" onClick={() => setShowCreateMenu(false)} />
-                                <div className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 py-1 w-52 overflow-hidden">
-                                    <button
-                                        onClick={() => { setShowCreateMenu(false); setShowCreateK8s(true); }}
-                                        className="w-full flex items-center px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-700 text-left transition-colors"
-                                    >
-                                        <div className="p-1.5 rounded-md bg-purple-500 text-white mr-3"><Container size={14} /></div>
-                                        <span className="text-sm font-medium text-slate-700 dark:text-slate-200">K8S</span>
-                                    </button>
-                                    {[
-                                        { name: 'SeaTunnel', color: 'bg-blue-500' },
-                                        { name: 'SQL', color: 'bg-green-500' },
-                                        { name: 'Shell', color: 'bg-slate-500' },
-                                        { name: 'Java', color: 'bg-red-500' },
-                                        { name: 'Python', color: 'bg-yellow-500' },
-                                    ].map(t => (
-                                        <button
-                                            key={t.name}
-                                            disabled
-                                            className="w-full flex items-center px-4 py-2.5 text-left opacity-40 cursor-not-allowed"
-                                        >
-                                            <div className={`p-1.5 rounded-md ${t.color} text-white mr-3`}><Container size={14} /></div>
-                                            <span className="text-sm font-medium text-slate-400 dark:text-slate-500">{t.name}</span>
-                                            <span className="ml-auto text-[10px] text-slate-400">{lang === 'zh' ? '即将支持' : 'Soon'}</span>
-                                        </button>
-                                    ))}
-                                </div>
-                            </>
-                        )}
-                    </div>
-                    <div className="w-px h-6 bg-slate-200 dark:bg-slate-700" />
-                    {/* 搜索框 */}
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                        <input
-                            type="text"
-                            placeholder={lang === 'zh' ? '搜索工作流...' : 'Search...'}
-                            value={searchTerm}
-                            onChange={e => setSearchTerm(e.target.value)}
-                            className="w-48 pl-9 pr-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-                        />
-                    </div>
-                    <span className="text-sm text-slate-500 whitespace-nowrap">
-                        {lang === 'zh' ? `${total} 个` : `${total} total`}
-                    </span>
-                    <div className="w-px h-6 bg-slate-200 dark:bg-slate-700" />
-                    <Tooltip content={lang === 'zh' ? '刷新' : 'Refresh'} position="bottom">
-                        <button onClick={handleRefresh} disabled={loading} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-300 disabled:opacity-50">
-                            <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
-                        </button>
-                    </Tooltip>
-                    <Tooltip content={lang === 'zh' ? '批量运行' : 'Batch Run'} position="bottom">
-                        <button onClick={() => setShowBatchRun(true)} className="p-2 hover:bg-orange-100 dark:hover:bg-orange-900/30 rounded-lg text-orange-600">
-                            <PlayCircle size={18} />
-                        </button>
-                    </Tooltip>
-                    <Tooltip content={lang === 'zh' ? '批量上下线' : 'Batch Publish'} position="bottom">
-                        <button onClick={() => setShowBatchPublish(true)} className="p-2 hover:bg-green-100 dark:hover:bg-green-900/30 rounded-lg text-green-600">
-                            <Power size={18} />
-                        </button>
-                    </Tooltip>
-                    <Tooltip content={lang === 'zh' ? '导出' : 'Export'} position="bottom">
-                        <button onClick={() => setShowExport(true)} className="p-2 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded-lg text-purple-600">
-                            <Download size={18} />
-                        </button>
-                    </Tooltip>
-                    <Tooltip content={lang === 'zh' ? '导入' : 'Import'} position="bottom">
-                        <button onClick={() => setShowImport(true)} className="p-2 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded-lg text-purple-600">
-                            <Upload size={18} />
-                        </button>
-                    </Tooltip>
-                    <div className="w-px h-6 bg-slate-200 dark:bg-slate-700" />
+                    )}                    
+                    <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-1" />
                     <Tooltip content={lang === 'zh' ? '运行日志' : 'Run Logs'} position="bottom">
                         <button onClick={() => setShowLog(true)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-300">
                             <Eye size={18} />
@@ -812,185 +1040,430 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                 </div>
             </div>
             
-            {/* 表格 */}
+            {/* 主内容区域 - 根据 activeTab 分发渲染 */}
             <div className="flex-1 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col">
-                {loading && processes.length === 0 ? (
-                    <div className="flex-1 flex items-center justify-center">
-                        <Loader2 size={32} className="animate-spin text-blue-500" />
-                    </div>
-                ) : error ? (
-                    <div className="flex-1 flex items-center justify-center text-red-500">
-                        <AlertCircle size={24} className="mr-2" />
-                        {error}
-                    </div>
-                ) : filteredProcesses.length === 0 ? (
-                    <div className="flex-1 flex items-center justify-center text-slate-400">
-                        <ListTodo size={48} className="mr-4 opacity-20" />
-                        {lang === 'zh' ? '暂无工作流' : 'No workflows found'}
-                    </div>
-                ) : (
-                    <>
-                        <div className="overflow-auto flex-1">
-                            <table className="w-full text-sm" style={{ tableLayout: 'fixed' }}>
-                                <colgroup>
-                                    <col style={{ width: '50px' }} />
-                                    <col style={{ width: columnWidths.name }} />
-                                    <col style={{ width: columnWidths.version }} />
-                                    <col style={{ width: columnWidths.state }} />
-                                    <col style={{ width: columnWidths.schedule }} />
-                                    <col style={{ width: columnWidths.actions }} />
-                                    <col /> {/* 更新时间列自动填充剩余空间 */}
-                                </colgroup>
-                                <thead className="bg-slate-50 dark:bg-slate-900/50 sticky top-0">
-                                    <tr className="text-center text-slate-500 dark:text-slate-400">
-                                        <th className="px-2 py-3 font-medium w-12 text-center">#</th>
-                                        <th className="px-4 py-3 font-medium relative text-left">
-                                            {lang === 'zh' ? '名称' : 'Name'}
-                                            <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-purple-400 active:bg-purple-500" onMouseDown={e => handleResizeStart(e, 'name')} />
-                                        </th>
-                                        <th className="px-4 py-3 font-medium relative">
-                                            {lang === 'zh' ? '版本' : 'Ver'}
-                                            <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-purple-400 active:bg-purple-500" onMouseDown={e => handleResizeStart(e, 'version')} />
-                                        </th>
-                                        <th className="px-4 py-3 font-medium relative">
-                                            {lang === 'zh' ? '状态' : 'State'}
-                                            <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-purple-400 active:bg-purple-500" onMouseDown={e => handleResizeStart(e, 'state')} />
-                                        </th>
-                                        <th className="px-4 py-3 font-medium relative">
-                                            {lang === 'zh' ? '调度' : 'Schedule'}
-                                            <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-purple-400 active:bg-purple-500" onMouseDown={e => handleResizeStart(e, 'schedule')} />
-                                        </th>
-                                        <th className="px-4 py-3 font-medium relative">
-                                            {lang === 'zh' ? '操作' : 'Actions'}
-                                            <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-purple-400 active:bg-purple-500" onMouseDown={e => handleResizeStart(e, 'actions')} />
-                                        </th>
-                                        <th className="px-4 py-3 font-medium">{lang === 'zh' ? '更新时间' : 'Updated'}</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                                    {filteredProcesses.map((process, index) => (
-                                        <tr key={process.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
-                                            <td className="px-2 py-3 text-center text-slate-400 text-xs">{(pageNo - 1) * pageSize + index + 1}</td>
-                                            <td className="px-4 py-3">
-                                                <button 
-                                                    onClick={() => setDetailProcess(process)}
-                                                    className="font-medium text-slate-800 dark:text-white hover:text-blue-600 text-left"
-                                                >
-                                                    {process.name}
-                                                </button>
-                                                {process.description && (
-                                                    <p className="text-xs text-slate-400 truncate max-w-xs">{process.description}</p>
-                                                )}
-                                            </td>
-                                            <td className="px-4 py-3 text-slate-600 dark:text-slate-300">v{process.version}</td>
-                                            <td className="px-4 py-3">{renderStateTag(process.releaseState)}</td>
-                                            <td className="px-4 py-3">
-                                                <span className={`text-xs px-2 py-0.5 rounded ${
-                                                    process.scheduleReleaseState === 'ONLINE'
-                                                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                                                        : 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400'
-                                                }`}>
-                                                    {process.scheduleReleaseState || 'NONE'}
-                                                </span>
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <div className="flex items-center justify-center space-x-1">
-                                                    <Tooltip content={lang === 'zh' ? '编辑' : 'Edit'} position="top">
-                                                        <button
-                                                            onClick={() => setEditProcess(process)}
-                                                            className="p-1.5 hover:bg-cyan-100 dark:hover:bg-cyan-900/30 rounded text-cyan-600"
-                                                        >
-                                                            <Edit size={16} />
-                                                        </button>
-                                                    </Tooltip>
-                                                    <Tooltip content={lang === 'zh' ? '运行' : 'Run'} position="top">
-                                                        <button
-                                                            onClick={() => setRunProcess(process)}
-                                                            disabled={process.releaseState !== 'ONLINE'}
-                                                            className="p-1.5 hover:bg-orange-100 dark:hover:bg-orange-900/30 rounded text-orange-600 disabled:opacity-30 disabled:cursor-not-allowed"
-                                                        >
-                                                            <PlayCircle size={16} />
-                                                        </button>
-                                                    </Tooltip>
-                                                    <Tooltip content={lang === 'zh' ? '调度' : 'Schedule'} position="top">
-                                                        <button
-                                                            onClick={() => setScheduleProcess(process)}
-                                                            className="p-1.5 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded text-blue-600"
-                                                        >
-                                                            <Timer size={16} />
-                                                        </button>
-                                                    </Tooltip>
-                                                    <Tooltip content={process.releaseState === 'ONLINE' ? (lang === 'zh' ? '下线' : 'Unpublish') : (lang === 'zh' ? '上线' : 'Publish')} position="top">
-                                                        <button
-                                                            onClick={() => handleToggleOnline(process)}
-                                                            className={`p-1.5 rounded ${process.releaseState === 'ONLINE' ? 'hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600' : 'hover:bg-green-100 dark:hover:bg-green-900/30 text-green-600'}`}
-                                                        >
-                                                            <Power size={16} />
-                                                        </button>
-                                                    </Tooltip>
-                                                    <Tooltip content={lang === 'zh' ? '复制' : 'Copy'} position="top">
-                                                        <button
-                                                            onClick={() => handleCopyWorkflow(process)}
-                                                            className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-600"
-                                                        >
-                                                            <Copy size={16} />
-                                                        </button>
-                                                    </Tooltip>
-                                                    <Tooltip content={lang === 'zh' ? '导出' : 'Export'} position="top">
-                                                        <button
-                                                            onClick={() => handleExportSingle(process)}
-                                                            className="p-1.5 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded text-purple-600"
-                                                        >
-                                                            <Download size={16} />
-                                                        </button>
-                                                    </Tooltip>
-                                                    <Tooltip content={lang === 'zh' ? '导入' : 'Import'} position="top">
-                                                        <button
-                                                            onClick={() => handleImportSingle(process)}
-                                                            className="p-1.5 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded text-purple-600"
-                                                        >
-                                                            <Upload size={16} />
-                                                        </button>
-                                                    </Tooltip>
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-xs text-center">
-                                                {new Date(process.updateTime).toLocaleString()}
-                                            </td>
+                {/* 1. 工作流定义 Tab */}
+                {activeTab === 'workflow-definition' && (
+                    <div className="flex-1 flex flex-col min-h-0">
+                        {loading && processes.length === 0 ? (
+                            <div className="flex-1 flex items-center justify-center">
+                                <Loader2 size={32} className="animate-spin text-blue-500" />
+                            </div>
+                        ) : error ? (
+                            <div className="flex-1 flex items-center justify-center text-red-500">
+                                <AlertCircle size={24} className="mr-2" />
+                                {error}
+                            </div>
+                        ) : filteredProcesses.length === 0 ? (
+                            <div className="flex-1 flex items-center justify-center text-slate-400">
+                                <ListTodo size={48} className="mr-4 opacity-20" />
+                                {lang === 'zh' ? '暂无工作流' : 'No workflows found'}
+                            </div>
+                        ) : (
+                            <div className="overflow-auto flex-1 min-h-0">
+                                <table className="w-full text-sm" style={{ tableLayout: 'fixed' }}>
+                                    <colgroup>
+                                        <col style={{ width: '50px' }} />
+                                        <col style={{ width: columnWidths.name }} />
+                                        <col style={{ width: columnWidths.version }} />
+                                        <col style={{ width: columnWidths.state }} />
+                                        <col style={{ width: columnWidths.schedule }} />
+                                        <col style={{ width: columnWidths.actions }} />
+                                        <col />
+                                    </colgroup>
+                                    <thead className="bg-slate-50 dark:bg-slate-900/50 sticky top-0">
+                                        <tr className="text-center text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                                            <th className="px-2 py-3 font-medium w-12 text-center">#</th>
+                                            <th className="px-4 py-3 font-medium relative text-left">
+                                                {lang === 'zh' ? '名称' : 'Name'}
+                                                <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-purple-400 active:bg-purple-500" onMouseDown={e => handleResizeStart(e, 'name')} />
+                                            </th>
+                                            <th className="px-4 py-3 font-medium relative">
+                                                {lang === 'zh' ? '版本' : 'Ver'}
+                                                <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-purple-400 active:bg-purple-500" onMouseDown={e => handleResizeStart(e, 'version')} />
+                                            </th>
+                                            <th className="px-4 py-3 font-medium relative">
+                                                {lang === 'zh' ? '状态' : 'State'}
+                                                <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-purple-400 active:bg-purple-500" onMouseDown={e => handleResizeStart(e, 'state')} />
+                                            </th>
+                                            <th className="px-4 py-3 font-medium relative">
+                                                {lang === 'zh' ? '调度' : 'Schedule'}
+                                                <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-purple-400 active:bg-purple-500" onMouseDown={e => handleResizeStart(e, 'schedule')} />
+                                            </th>
+                                            <th className="px-4 py-3 font-medium relative">
+                                                {lang === 'zh' ? '操作' : 'Actions'}
+                                                <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-purple-400 active:bg-purple-500" onMouseDown={e => handleResizeStart(e, 'actions')} />
+                                            </th>
+                                            <th className="px-4 py-3 font-medium">{lang === 'zh' ? '更新时间' : 'Updated'}</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                        
-                        {/* 分页 */}
-                        {totalPages > 1 && (
-                            <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between bg-slate-50 dark:bg-slate-900/50">
-                                <span className="text-sm text-slate-500">
-                                    {lang === 'zh' ? `第 ${pageNo} 页 / 共 ${totalPages} 页` : `Page ${pageNo} of ${totalPages}`}
-                                </span>
-                                <div className="flex items-center space-x-2">
-                                    <button
-                                        onClick={() => setPageNo(p => Math.max(1, p - 1))}
-                                        disabled={pageNo === 1}
-                                        className="px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg text-sm disabled:opacity-50 hover:bg-slate-100 dark:hover:bg-slate-700"
-                                    >
-                                        <ChevronLeft size={16} />
-                                    </button>
-                                    <button
-                                        onClick={() => setPageNo(p => Math.min(totalPages, p + 1))}
-                                        disabled={pageNo === totalPages}
-                                        className="px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg text-sm disabled:opacity-50 hover:bg-slate-100 dark:hover:bg-slate-700"
-                                    >
-                                        <ChevronRight size={16} />
-                                    </button>
-                                </div>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                                        {filteredProcesses.map((process, index) => (
+                                            <tr key={process.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                                                <td className="px-2 py-3 text-center text-slate-400 text-xs">{(pageNo - 1) * pageSize + index + 1}</td>
+                                                <td className="px-4 py-3">
+                                                    <button 
+                                                        onClick={() => setDetailProcess(process)}
+                                                        className="font-medium text-slate-800 dark:text-white hover:text-blue-600 text-left"
+                                                    >
+                                                        {process.name}
+                                                    </button>
+                                                    {process.description && (
+                                                        <p className="text-xs text-slate-400 truncate max-w-xs">{process.description}</p>
+                                                    )}
+                                                </td>
+                                                <td className="px-4 py-3 text-slate-600 dark:text-slate-300">v{process.version}</td>
+                                                <td className="px-4 py-3">{renderStateTag(process.releaseState)}</td>
+                                                <td className="px-4 py-3">
+                                                    <span className={`text-xs px-2 py-0.5 rounded ${
+                                                        process.scheduleReleaseState === 'ONLINE'
+                                                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                                                            : 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400'
+                                                    }`}>
+                                                        {process.scheduleReleaseState || 'NONE'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-3 text-center">
+                                                    <div className="flex items-center justify-center space-x-1">
+                                                        <Tooltip content={lang === 'zh' ? '编辑' : 'Edit'} position="top">
+                                                            <button onClick={() => setEditProcess(process)} className="p-1.5 hover:bg-cyan-100 dark:hover:bg-cyan-900/30 rounded text-cyan-600">
+                                                                <Edit size={16} />
+                                                            </button>
+                                                        </Tooltip>
+                                                        <Tooltip content={lang === 'zh' ? '运行' : 'Run'} position="top">
+                                                            <button onClick={() => setRunProcess(process)} disabled={process.releaseState !== 'ONLINE'} className="p-1.5 hover:bg-orange-100 dark:hover:bg-orange-900/30 rounded text-orange-600 disabled:opacity-30">
+                                                                <PlayCircle size={16} />
+                                                            </button>
+                                                        </Tooltip>
+                                                        <Tooltip content={lang === 'zh' ? '定时' : 'Schedule'} position="top">
+                                                            <button onClick={() => setScheduleProcess(process)} className="p-1.5 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded text-blue-600">
+                                                                <Timer size={16} />
+                                                            </button>
+                                                        </Tooltip>
+                                                        <Tooltip content={process.releaseState === 'ONLINE' ? '下线' : '上线'} position="top">
+                                                            <button onClick={() => handleToggleOnline(process)} className={`p-1.5 rounded ${process.releaseState === 'ONLINE' ? 'text-red-600 hover:bg-red-50' : 'text-green-600 hover:bg-green-50'}`}>
+                                                                <Power size={16} />
+                                                            </button>
+                                                        </Tooltip>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-xs text-center">
+                                                    {new Date(process.updateTime).toLocaleString()}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
                         )}
-                    </>
+                        {/* 底部分页 - 始终显示 */}
+                        <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex justify-between items-center text-sm shrink-0">
+                            <div className="flex items-center space-x-2 text-slate-500">
+                                <span>共 {total} 条 · 每页</span>
+                                {[20, 50, 100].map(size => (
+                                    <button key={size} onClick={() => { setPageSize(size); setPageNo(1); }}
+                                        className={`px-2 py-0.5 rounded text-xs border ${pageSize === size ? 'bg-blue-500 text-white border-blue-500' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-blue-400'}`}
+                                    >{size}</button>
+                                ))}
+                                <span>条</span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <button onClick={() => setPageNo(p => Math.max(1, p - 1))} disabled={pageNo === 1} className="p-1 border rounded disabled:opacity-30"><ChevronLeft size={16} /></button>
+                                <span>{pageNo} / {totalPages || 1}</span>
+                                <button onClick={() => setPageNo(p => Math.min(totalPages || 1, p + 1))} disabled={pageNo === (totalPages || 1)} className="p-1 border rounded disabled:opacity-30"><ChevronRight size={16} /></button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* 2. 工作流实例 Tab */}
+                {activeTab === 'workflow-instance' && (
+                    <div className="flex-1 flex flex-col min-h-0 relative">
+                        {/* 删除中遮罩 */}
+                        {instanceDeleting && (
+                            <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex flex-col items-center justify-center rounded-lg transition-opacity duration-300">
+                                <Loader2 size={36} className="animate-spin text-white mb-3" />
+                                <span className="text-white text-sm font-medium">删除中...</span>
+                            </div>
+                        )}
+                        {/* 内容区：加载/空/表格 */}
+                        {instanceLoading ? (
+                            <div className="flex-1 flex items-center justify-center"><Loader2 className="animate-spin text-blue-500" /></div>
+                        ) : processInstances.length === 0 ? (
+                            <div className="flex-1 flex items-center justify-center text-slate-400">暂无实例</div>
+                        ) : (
+                            <div className="flex-1 overflow-x-auto overflow-y-auto min-h-0">
+                                <table className="w-full text-sm min-w-[1200px]">
+                                    <thead className="bg-slate-50 dark:bg-slate-900/50 sticky top-0 z-10">
+                                        <tr className="text-slate-500 text-xs whitespace-nowrap">
+                                            <th className="px-2 py-3 text-center w-10">
+                                                <input type="checkbox"
+                                                    checked={selectedInstances.size === processInstances.length && processInstances.length > 0}
+                                                    onChange={e => {
+                                                        if (e.target.checked) {
+                                                            setSelectedInstances(new Set(processInstances.map(i => i.id)));
+                                                        } else {
+                                                            setSelectedInstances(new Set());
+                                                        }
+                                                    }}
+                                                    className="rounded border-slate-300"
+                                                />
+                                            </th>
+                                            <th className="px-2 py-3 text-center w-12">#</th>
+                                            <th className="px-3 py-3 text-left min-w-[200px]">工作流实例名称</th>
+                                            <th className="px-3 py-3 text-center w-24">状态</th>
+                                            <th className="px-3 py-3 text-center w-24">运行类型</th>
+                                            <th className="px-3 py-3 text-center w-40">调度时间</th>
+                                            <th className="px-3 py-3 text-center w-40">开始时间</th>
+                                            <th className="px-3 py-3 text-center w-40">结束时间</th>
+                                            <th className="px-3 py-3 text-center w-20">运行时长</th>
+                                            <th className="px-3 py-3 text-center w-16">运行次数</th>
+                                            <th className="px-3 py-3 text-center w-16">容错标识</th>
+                                            <th className="px-3 py-3 text-center w-16">空跑标识</th>
+                                            <th className="px-3 py-3 text-center w-20">执行用户</th>
+                                            <th className="px-3 py-3 text-center w-24">操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                                        {processInstances.map((inst, idx) => (
+                                            <tr key={inst.id} className={`hover:bg-slate-50 dark:hover:bg-slate-700/50 ${selectedInstances.has(inst.id) ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}>
+                                                <td className="px-2 py-2.5 text-center">
+                                                    <input type="checkbox"
+                                                        checked={selectedInstances.has(inst.id)}
+                                                        onChange={e => {
+                                                            const next = new Set(selectedInstances);
+                                                            if (e.target.checked) next.add(inst.id); else next.delete(inst.id);
+                                                            setSelectedInstances(next);
+                                                        }}
+                                                        className="rounded border-slate-300"
+                                                    />
+                                                </td>
+                                                <td className="px-2 py-2.5 text-center text-slate-400 text-xs">{inst.id}</td>
+                                                <td className="px-3 py-2.5 font-medium text-slate-800 dark:text-slate-200 truncate max-w-[300px]" title={inst.name}>{inst.name}</td>
+                                                <td className="px-3 py-2.5 text-center">{renderInstanceStateTag(inst.state)}</td>
+                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500">{inst.commandType === 'SCHEDULER' ? '调度执行' : inst.commandType === 'START_PROCESS' ? '手动执行' : inst.commandType || '-'}</td>
+                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500 font-mono">{inst.scheduleTime || '-'}</td>
+                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500 font-mono">{inst.startTime || '-'}</td>
+                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500 font-mono">{inst.endTime || '-'}</td>
+                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500">{inst.duration || '-'}</td>
+                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500">{inst.runTimes ?? '-'}</td>
+                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500">{inst.recovery === 'NO' ? 'NO' : inst.recovery || '-'}</td>
+                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500">{inst.dryRun === 0 ? 'NO' : 'YES'}</td>
+                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500">{inst.executorName || '-'}</td>
+                                                <td className="px-3 py-2.5 text-center">
+                                                    <div className="flex items-center justify-center space-x-1">
+                                                        {(inst.state === 'RUNNING_EXECUTION' || inst.state === 'READY_PAUSE' || inst.state === 'READY_STOP') && (
+                                                            <Tooltip content="停止" position="top">
+                                                                <button onClick={() => handleStopInstance(inst.id)} className="p-1 hover:bg-orange-100 dark:hover:bg-orange-900/30 rounded text-orange-600">
+                                                                    <StopCircle size={15} />
+                                                                </button>
+                                                            </Tooltip>
+                                                        )}
+                                                        <Tooltip content="删除" position="top">
+                                                            <button onClick={() => handleDeleteInstance(inst.id)} className="p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded text-red-500">
+                                                                <Trash2 size={15} />
+                                                            </button>
+                                                        </Tooltip>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                        {/* 底部分页 - 始终显示 */}
+                        <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex justify-between items-center text-sm shrink-0">
+                            <div className="flex items-center space-x-2 text-slate-500">
+                                <span>共 {instanceTotal} 条 · 每页</span>
+                                {[20, 50, 100].map(size => (
+                                    <button key={size} onClick={() => { setInstancePageSize(size); setInstancePageNo(1); }}
+                                        className={`px-2 py-0.5 rounded text-xs border ${instancePageSize === size ? 'bg-blue-500 text-white border-blue-500' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-blue-400'}`}
+                                    >{size}</button>
+                                ))}
+                                <input
+                                    type="number"
+                                    min={1}
+                                    placeholder="自定义"
+                                    defaultValue={![20, 50, 100].includes(instancePageSize) ? instancePageSize : ''}
+                                    onKeyDown={e => {
+                                        if (e.key === 'Enter') {
+                                            const v = parseInt((e.target as HTMLInputElement).value);
+                                            if (v > 0) { setInstancePageSize(v); setInstancePageNo(1); }
+                                        }
+                                    }}
+                                    onBlur={e => {
+                                        const v = parseInt(e.target.value);
+                                        if (v > 0) { setInstancePageSize(v); setInstancePageNo(1); }
+                                    }}
+                                    className="w-16 px-1.5 py-0.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs outline-none text-center"
+                                />
+                                <span>条</span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <button onClick={() => setInstancePageNo(p => Math.max(1, p - 1))} disabled={instancePageNo === 1} className="p-1 border rounded disabled:opacity-30"><ChevronLeft size={16} /></button>
+                                <span>{instancePageNo} / {instanceTotalPages}</span>
+                                <button onClick={() => setInstancePageNo(p => Math.min(instanceTotalPages, p + 1))} disabled={instancePageNo === instanceTotalPages} className="p-1 border rounded disabled:opacity-30"><ChevronRight size={16} /></button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* 3. 工作流定时 Tab */}
+                {activeTab === 'workflow-schedule' && (
+                    <div className="flex-1 flex flex-col min-h-0">
+                        {scheduleLoading ? (
+                            <div className="flex-1 flex items-center justify-center"><Loader2 className="animate-spin text-blue-500" /></div>
+                        ) : schedules.length === 0 ? (
+                            <div className="flex-1 flex items-center justify-center text-slate-400">暂无定时</div>
+                        ) : (
+                            <div className="flex-1 overflow-x-auto overflow-y-auto min-h-0">
+                                <table className="w-full text-sm min-w-[1400px]">
+                                    <thead className="bg-slate-50 dark:bg-slate-900/50 sticky top-0 z-10">
+                                        <tr className="text-slate-500 text-xs whitespace-nowrap">
+                                            <th className="px-3 py-3 text-center w-12">#</th>
+                                            <th className="px-3 py-3 text-left min-w-[180px]">工作流名称</th>
+                                            <th className="px-3 py-3 text-center">开始时间</th>
+                                            <th className="px-3 py-3 text-center">结束时间</th>
+                                            <th className="px-3 py-3 text-center">Crontab</th>
+                                            <th className="px-3 py-3 text-center">失败策略</th>
+                                            <th className="px-3 py-3 text-center">状态</th>
+                                            <th className="px-3 py-3 text-center">Worker分组</th>
+                                            <th className="px-3 py-3 text-center">租户</th>
+                                            <th className="px-3 py-3 text-center">环境名称</th>
+                                            <th className="px-3 py-3 text-center">创建时间</th>
+                                            <th className="px-3 py-3 text-center">更新时间</th>
+                                            <th className="px-3 py-3 text-center w-24">操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                                        {schedules.map((sch, idx) => (
+                                            <tr key={sch.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                                                <td className="px-3 py-2.5 text-center text-slate-400 text-xs">{idx + 1}</td>
+                                                <td className="px-3 py-2.5 font-medium text-slate-800 dark:text-slate-200 truncate max-w-[250px]" title={sch.workflowDefinitionName || sch.processDefinitionName}>{sch.workflowDefinitionName || sch.processDefinitionName}</td>
+                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500 font-mono whitespace-nowrap">{sch.startTime || '-'}</td>
+                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500 font-mono whitespace-nowrap">{sch.endTime || '-'}</td>
+                                                <td className="px-3 py-2.5 text-center text-xs font-mono text-slate-500">{sch.crontab || '-'}</td>
+                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500">{sch.failureStrategy === 'CONTINUE' ? '继续' : sch.failureStrategy === 'END' ? '结束' : sch.failureStrategy || '-'}</td>
+                                                <td className="px-3 py-2.5 text-center">{renderStateTag(sch.releaseState)}</td>
+                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500">{sch.workerGroup || 'default'}</td>
+                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500">{sch.tenantCode || '-'}</td>
+                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500">{sch.environmentName || '-'}</td>
+                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500 font-mono whitespace-nowrap">{sch.createTime || '-'}</td>
+                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500 font-mono whitespace-nowrap">{sch.updateTime || '-'}</td>
+                                                <td className="px-3 py-2.5 text-center">
+                                                    <div className="flex items-center justify-center space-x-1">
+                                                        <Tooltip content={sch.releaseState === 'ONLINE' ? '下线' : '上线'} position="top">
+                                                            <button onClick={() => handleToggleSchedule(sch)} className={`p-1 rounded ${sch.releaseState === 'ONLINE' ? 'hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500' : 'hover:bg-green-100 dark:hover:bg-green-900/30 text-green-500'}`}>
+                                                                <Power size={15} />
+                                                            </button>
+                                                        </Tooltip>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                        {/* 底部分页 - 始终显示 */}
+                        <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex justify-between items-center text-sm shrink-0">
+                            <div className="flex items-center space-x-2 text-slate-500">
+                                <span>共 {scheduleTotal} 条 · 每页</span>
+                                {[20, 50, 100].map(size => (
+                                    <button key={size} onClick={() => { setSchedulePageSize(size); setSchedulePageNo(1); }}
+                                        className={`px-2 py-0.5 rounded text-xs border ${schedulePageSize === size ? 'bg-blue-500 text-white border-blue-500' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-blue-400'}`}
+                                    >{size}</button>
+                                ))}
+                                <span>条</span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <button onClick={() => setSchedulePageNo(p => Math.max(1, p - 1))} disabled={schedulePageNo === 1} className="p-1 border rounded disabled:opacity-30"><ChevronLeft size={16} /></button>
+                                <span>{schedulePageNo} / {scheduleTotalPages}</span>
+                                <button onClick={() => setSchedulePageNo(p => Math.min(scheduleTotalPages, p + 1))} disabled={schedulePageNo === scheduleTotalPages} className="p-1 border rounded disabled:opacity-30"><ChevronRight size={16} /></button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* 4. 任务实例 Tab */}
+                {activeTab === 'task-instance' && (
+                    <div className="flex-1 flex flex-col min-h-0">
+                        {taskInstanceLoading ? (
+                            <div className="flex-1 flex items-center justify-center"><Loader2 className="animate-spin text-blue-500" /></div>
+                        ) : taskInstances.length === 0 ? (
+                            <div className="flex-1 flex items-center justify-center text-slate-400">暂无任务</div>
+                        ) : (
+                            <div className="flex-1 overflow-x-auto overflow-y-auto min-h-0">
+                                <table className="w-full text-sm min-w-[1500px]">
+                                    <thead className="bg-slate-50 dark:bg-slate-900/50 sticky top-0 z-10">
+                                        <tr className="text-slate-500 text-xs whitespace-nowrap">
+                                            <th className="px-3 py-3 text-center w-12">#</th>
+                                            <th className="px-3 py-3 text-left min-w-[180px]">任务名称</th>
+                                            <th className="px-3 py-3 text-left min-w-[200px]">工作流实例</th>
+                                            <th className="px-3 py-3 text-center">执行用户</th>
+                                            <th className="px-3 py-3 text-center">节点类型</th>
+                                            <th className="px-3 py-3 text-center">状态</th>
+                                            <th className="px-3 py-3 text-center">提交时间</th>
+                                            <th className="px-3 py-3 text-center">开始时间</th>
+                                            <th className="px-3 py-3 text-center">结束时间</th>
+                                            <th className="px-3 py-3 text-center">运行时长</th>
+                                            <th className="px-3 py-3 text-center">重试次数</th>
+                                            <th className="px-3 py-3 text-center">空跑标识</th>
+                                            <th className="px-3 py-3 text-left">主机</th>
+                                            <th className="px-3 py-3 text-center w-20">操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                                        {taskInstances.map((ti, idx) => (
+                                            <tr key={ti.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                                                <td className="px-3 py-2.5 text-center text-slate-400 text-xs">{(taskInstancePageNo - 1) * taskInstancePageSize + idx + 1}</td>
+                                                <td className="px-3 py-2.5 font-medium text-slate-800 dark:text-slate-200 truncate max-w-[250px]" title={ti.name}>{ti.name}</td>
+                                                <td className="px-3 py-2.5 text-slate-500 text-xs truncate max-w-[280px]" title={ti.workflowInstanceName || ti.processInstanceName}>{ti.workflowInstanceName || ti.processInstanceName || '-'}</td>
+                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500">{ti.executorName || '-'}</td>
+                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500">{ti.taskType || '-'}</td>
+                                                <td className="px-3 py-2.5 text-center">{renderInstanceStateTag(ti.state)}</td>
+                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500 font-mono whitespace-nowrap">{ti.submitTime || '-'}</td>
+                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500 font-mono whitespace-nowrap">{ti.startTime || '-'}</td>
+                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500 font-mono whitespace-nowrap">{ti.endTime || '-'}</td>
+                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500">{ti.duration || '-'}</td>
+                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500">{ti.retryTimes ?? 0}</td>
+                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500">{ti.dryRun === 1 ? 'YES' : 'NO'}</td>
+                                                <td className="px-3 py-2.5 text-xs text-slate-500 truncate max-w-[180px]" title={ti.host}>{ti.host || '-'}</td>
+                                                <td className="px-3 py-2.5 text-center">
+                                                    <Tooltip content="查看日志" position="top">
+                                                        <button onClick={() => fetchTaskLog(ti.id, ti.name)} className="p-1 rounded hover:bg-blue-100 dark:hover:bg-blue-900/30 text-blue-500">
+                                                            <Eye size={15} />
+                                                        </button>
+                                                    </Tooltip>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                        {/* 底部分页 - 始终显示 */}
+                        <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex justify-between items-center text-sm shrink-0">
+                            <div className="flex items-center space-x-2 text-slate-500">
+                                <span>共 {taskInstanceTotal} 条 · 每页</span>
+                                {[20, 50, 100].map(size => (
+                                    <button key={size} onClick={() => { setTaskInstancePageSize(size); setTaskInstancePageNo(1); }}
+                                        className={`px-2 py-0.5 rounded text-xs border ${taskInstancePageSize === size ? 'bg-blue-500 text-white border-blue-500' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-blue-400'}`}
+                                    >{size}</button>
+                                ))}
+                                <span>条</span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <button onClick={() => setTaskInstancePageNo(p => Math.max(1, p - 1))} disabled={taskInstancePageNo === 1} className="p-1 border rounded disabled:opacity-30"><ChevronLeft size={16} /></button>
+                                <span>{taskInstancePageNo} / {taskInstanceTotalPages}</span>
+                                <button onClick={() => setTaskInstancePageNo(p => Math.min(taskInstanceTotalPages, p + 1))} disabled={taskInstancePageNo === taskInstanceTotalPages} className="p-1 border rounded disabled:opacity-30"><ChevronRight size={16} /></button>
+                            </div>
+                        </div>
+                    </div>
                 )}
             </div>
-            
+
             {/* Modal 组件 */}
             {detailProcess && (
                 <DetailModal
@@ -1081,7 +1554,39 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                 onClose={() => setShowLog(false)}
             />
             
-            {/* 单个导出版本选择对话框 */}
+            {/* 单条任务日志查看弹窗 */}
+            {taskLogName && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                    <div className="bg-slate-900 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col border border-slate-700" onClick={e => e.stopPropagation()}>
+                        <div className="px-5 py-3 border-b border-slate-700 flex items-center justify-between shrink-0">
+                            <h3 className="text-white font-medium text-sm flex items-center min-w-0">
+                                <AlignJustify size={16} className="mr-2 text-blue-400 shrink-0" />
+                                <span className="truncate">{taskLogName}</span>
+                            </h3>
+                            <div className="flex items-center space-x-2 shrink-0 ml-4">
+                                <Tooltip content="重新加载" position="bottom">
+                                    <button onClick={() => { if (taskLogId) fetchTaskLog(taskLogId, taskLogName); }} className={`p-1.5 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-white transition-colors ${taskLogLoading ? 'animate-spin' : ''}`}>
+                                        <RefreshCw size={16} />
+                                    </button>
+                                </Tooltip>
+                                <button onClick={() => { setTaskLogName(''); setTaskLogContent(''); }} className="p-1.5 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition-colors">
+                                    <XCircle size={18} />
+                                </button>
+                            </div>
+                        </div>
+                        <div className="flex-1 overflow-auto p-4 min-h-0">
+                            {taskLogLoading ? (
+                                <div className="flex items-center justify-center py-12">
+                                    <Loader2 className="animate-spin text-blue-500 mr-2" />
+                                    <span className="text-slate-400">加载日志中...</span>
+                                </div>
+                            ) : (
+                                <pre className="text-xs text-green-400 font-mono whitespace-pre-wrap break-all leading-relaxed">{taskLogContent || '暂无日志内容'}</pre>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
             {exportSingleProcess && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in" onClick={() => setExportSingleProcess(null)}>
                     <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden border border-slate-200 dark:border-slate-700" onClick={e => e.stopPropagation()}>
