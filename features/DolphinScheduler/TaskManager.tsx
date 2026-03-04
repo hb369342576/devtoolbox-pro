@@ -81,6 +81,40 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
     const [exportSingleVersion, setExportSingleVersion] = useState<DolphinSchedulerApiVersion>('v3.2');
     const [exportingSingle, setExportingSingle] = useState(false);
     
+    // Tab 导航
+    type TabType = 'workflow-definition' | 'workflow-instance' | 'workflow-schedule' | 'task-instance';
+    const [activeTab, setActiveTab] = useState<TabType>('workflow-definition');
+
+    // 工作流实例
+    const [processInstances, setProcessInstances] = useState<any[]>([]);
+    const [instanceLoading, setInstanceLoading] = useState(false);
+    const [instancePageNo, setInstancePageNo] = useState(1);
+    const [instanceTotal, setInstanceTotal] = useState(0);
+    const [instanceStateFilter, setInstanceStateFilter] = useState('');
+    const [instanceSearchTerm, setInstanceSearchTerm] = useState('');
+    const [instanceLogId, setInstanceLogId] = useState<number | null>(null);
+    const [instanceLogContent, setInstanceLogContent] = useState('');
+    const [instanceLogLoading, setInstanceLogLoading] = useState(false);
+
+    // 工作流定时
+    const [schedules, setSchedules] = useState<any[]>([]);
+    const [scheduleLoading, setScheduleLoading] = useState(false);
+    const [schedulePageNo, setSchedulePageNo] = useState(1);
+    const [scheduleTotal, setScheduleTotal] = useState(0);
+    const [scheduleSearchTerm, setScheduleSearchTerm] = useState('');
+
+    // 任务实例
+    const [taskInstances, setTaskInstances] = useState<any[]>([]);
+    const [taskInstanceLoading, setTaskInstanceLoading] = useState(false);
+    const [taskInstancePageNo, setTaskInstancePageNo] = useState(1);
+    const [taskInstanceTotal, setTaskInstanceTotal] = useState(0);
+    const [taskInstanceSearchTerm, setTaskInstanceSearchTerm] = useState('');
+    const [taskInstanceStateFilter, setTaskInstanceStateFilter] = useState('');
+    const [taskLogId, setTaskLogId] = useState<number | null>(null);
+    const [taskLogContent, setTaskLogContent] = useState('');
+    const [taskLogLoading, setTaskLogLoading] = useState(false);
+    const [taskLogName, setTaskLogName] = useState('');
+
     // 分页
     const [pageNo, setPageNo] = useState(1);
     const [total, setTotal] = useState(0);
@@ -473,9 +507,144 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
         </span>
     );
 
+    // 实例运行状态渲染
+    const renderInstanceStateTag = (state: string) => {
+        const stateMap: Record<string, { color: string; label: string }> = {
+            'SUCCESS': { color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400', label: '成功' },
+            'RUNNING_EXECUTION': { color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400', label: '运行中' },
+            'FAILURE': { color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400', label: '失败' },
+            'STOP': { color: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400', label: '停止' },
+            'PAUSE': { color: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400', label: '暂停' },
+            'KILL': { color: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400', label: '终止' },
+            'SUBMITTED_SUCCESS': { color: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400', label: '已提交' },
+            'DISPATCH': { color: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400', label: '调度中' },
+        };
+        const info = stateMap[state] || { color: 'bg-slate-100 text-slate-500', label: state };
+        return <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${info.color}`}>{info.label}</span>;
+    };
+
+    // 获取工作流实例列表
+    const fetchProcessInstances = async (code?: string) => {
+        const pc = code || projectCode;
+        if (!baseUrl || !token || !pc) return;
+        setInstanceLoading(true);
+        try {
+            const stateParam = instanceStateFilter ? `&stateType=${instanceStateFilter}` : '';
+            const url = `${baseUrl}/projects/${pc}/process-instances?pageNo=${instancePageNo}&pageSize=${pageSize}&searchVal=${encodeURIComponent(instanceSearchTerm)}${stateParam}`;
+            const response = await httpFetch(url, { method: 'GET', headers: { 'token': token } });
+            const result = await response.json();
+            if (result.code === 0) {
+                setProcessInstances(result.data?.totalList || []);
+                setInstanceTotal(result.data?.total || 0);
+            } else {
+                toast({ title: lang === 'zh' ? '加载失败' : 'Load Failed', description: result.msg, variant: 'destructive' });
+            }
+        } catch (err: any) {
+            toast({ title: lang === 'zh' ? '加载失败' : 'Load Failed', description: err.message, variant: 'destructive' });
+        } finally {
+            setInstanceLoading(false);
+        }
+    };
+
+    // 获取工作流定时列表
+    const fetchSchedules = async (code?: string) => {
+        const pc = code || projectCode;
+        if (!baseUrl || !token || !pc) return;
+        setScheduleLoading(true);
+        try {
+            const url = `${baseUrl}/projects/${pc}/schedules?pageNo=${schedulePageNo}&pageSize=${pageSize}&searchVal=${encodeURIComponent(scheduleSearchTerm)}`;
+            const response = await httpFetch(url, { method: 'GET', headers: { 'token': token } });
+            const result = await response.json();
+            if (result.code === 0) {
+                setSchedules(result.data?.totalList || []);
+                setScheduleTotal(result.data?.total || 0);
+            } else {
+                toast({ title: lang === 'zh' ? '加载失败' : 'Load Failed', description: result.msg, variant: 'destructive' });
+            }
+        } catch (err: any) {
+            toast({ title: lang === 'zh' ? '加载失败' : 'Load Failed', description: err.message, variant: 'destructive' });
+        } finally {
+            setScheduleLoading(false);
+        }
+    };
+
+    // 获取任务实例列表
+    const fetchTaskInstances = async (code?: string) => {
+        const pc = code || projectCode;
+        if (!baseUrl || !token || !pc) return;
+        setTaskInstanceLoading(true);
+        try {
+            const stateParam = taskInstanceStateFilter ? `&stateType=${taskInstanceStateFilter}` : '';
+            const url = `${baseUrl}/projects/${pc}/task-instances?pageNo=${taskInstancePageNo}&pageSize=${pageSize}&searchVal=${encodeURIComponent(taskInstanceSearchTerm)}${stateParam}`;
+            const response = await httpFetch(url, { method: 'GET', headers: { 'token': token } });
+            const result = await response.json();
+            if (result.code === 0) {
+                setTaskInstances(result.data?.totalList || []);
+                setTaskInstanceTotal(result.data?.total || 0);
+            } else {
+                toast({ title: lang === 'zh' ? '加载失败' : 'Load Failed', description: result.msg, variant: 'destructive' });
+            }
+        } catch (err: any) {
+            toast({ title: lang === 'zh' ? '加载失败' : 'Load Failed', description: err.message, variant: 'destructive' });
+        } finally {
+            setTaskInstanceLoading(false);
+        }
+    };
+
+    // 查看任务日志
+    const fetchTaskLog = async (taskInstanceId: number, taskName: string) => {
+        setTaskLogId(taskInstanceId);
+        setTaskLogName(taskName);
+        setTaskLogContent('');
+        setTaskLogLoading(true);
+        try {
+            const url = `${baseUrl}/log/detail?taskInstanceId=${taskInstanceId}&skipLineNum=0&limit=9999`;
+            const response = await httpFetch(url, { method: 'GET', headers: { 'token': token } });
+            const result = await response.json();
+            if (result.code === 0) {
+                setTaskLogContent(typeof result.data === 'string' ? result.data : JSON.stringify(result.data, null, 2));
+            } else {
+                setTaskLogContent(`[Error] ${result.msg}`);
+            }
+        } catch (err: any) {
+            setTaskLogContent(`[Error] ${err.message}`);
+        } finally {
+            setTaskLogLoading(false);
+        }
+    };
+
+    // 定时上/下线
+    const handleToggleSchedule = async (schedule: any) => {
+        const newState = schedule.releaseState === 'ONLINE' ? 'OFFLINE' : 'ONLINE';
+        try {
+            const url = `${baseUrl}/projects/${projectCode}/schedules/${schedule.id}/online`;
+            const body = newState === 'ONLINE' ? undefined : undefined;
+            const onlineUrl = newState === 'ONLINE'
+                ? `${baseUrl}/projects/${projectCode}/schedules/${schedule.id}/online`
+                : `${baseUrl}/projects/${projectCode}/schedules/${schedule.id}/offline`;
+            const response = await httpFetch(onlineUrl, {
+                method: 'POST',
+                headers: { 'token': token, 'Content-Type': 'application/x-www-form-urlencoded' }
+            });
+            const result = await response.json();
+            if (result.code === 0) {
+                toast({ title: lang === 'zh' ? '操作成功' : 'Success', variant: 'success' });
+                fetchSchedules();
+            } else {
+                toast({ title: lang === 'zh' ? '操作失败' : 'Failed', description: result.msg, variant: 'destructive' });
+            }
+        } catch (err: any) {
+            toast({ title: lang === 'zh' ? '操作失败' : 'Failed', description: err.message, variant: 'destructive' });
+        }
+    };
+
     // 分页信息
     const totalPages = Math.ceil(total / pageSize);
     const filteredProcesses = processes;
+    const instanceTotalPages = Math.ceil(instanceTotal / pageSize);
+    const scheduleTotalPages = Math.ceil(scheduleTotal / pageSize);
+    const taskInstanceTotalPages = Math.ceil(taskInstanceTotal / pageSize);
+
 
     if (!currentProject) {
         return (
@@ -484,7 +653,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                 <div className="flex justify-between items-center mb-6 pt-1.5">
                     <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center">
                         <ListTodo className="mr-3 text-blue-600" size={24} />
-                        {lang === 'zh' ? '任务管理' : 'Task Manager'}
+                        {lang === 'zh' ? '项目管理' : 'Project Manager'}
                     </h2>
                 </div>
                 

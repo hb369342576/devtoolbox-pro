@@ -106,14 +106,18 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
     };
 
     const handleSelectAll = () => {
-        if (selectedIds.length === resources.length) {
+        const selectableResources = resources.filter(r => !r.directory);
+        const selectableIds = selectableResources.map(r => r.fullName);
+        const allSelected = selectableIds.length > 0 && selectableIds.every(id => selectedIds.includes(id));
+        if (allSelected) {
             setSelectedIds([]);
         } else {
-            setSelectedIds(resources.map(r => r.fullName));
+            setSelectedIds(selectableIds);
         }
     };
 
-    const handleSelect = (key: string) => {
+    const handleSelect = (key: string, isDirectory?: boolean) => {
+        if (isDirectory) return; // 文件夹不可选择
         setSelectedIds(prev => prev.includes(key) ? prev.filter(i => i !== key) : [...prev, key]);
     };
 
@@ -158,7 +162,7 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
         }
     };
 
-    // 创建文件
+    // 创建文件（使用 DS online-create API）
     const handleCreateFile = async () => {
         if (!newName.trim()) {
             toast({ title: lang === 'zh' ? '请输入文件名称' : 'Please enter file name', variant: 'destructive' });
@@ -166,25 +170,27 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
         }
         setCreating(true);
         try {
-            const encoder = new TextEncoder();
-            const fileData = Array.from(encoder.encode(fileContent));
-            const url = `${connection.baseUrl}/resources`;
-            const result: any = await invoke('http_upload', {
-                url,
-                headers: { 'token': connection.token },
-                fileName: newName,
-                fileData,
-                formFields: { type: 'FILE', name: newName, currentDir: currentPath || '' }
+            // 提取文件后缀
+            const dotIdx = newName.lastIndexOf('.');
+            const fileSuffix = dotIdx > 0 ? newName.substring(dotIdx + 1) : 'txt';
+            const fileName = newName;
+
+            const url = `${connection.baseUrl}/resources/online-create`;
+            const body = `type=FILE&fileName=${encodeURIComponent(fileName)}&suffix=${encodeURIComponent(fileSuffix)}&content=${encodeURIComponent(fileContent)}&currentDir=${encodeURIComponent(currentPath || '/')}`;
+            const response = await httpFetch(url, {
+                method: 'POST',
+                headers: { 'token': connection.token, 'Content-Type': 'application/x-www-form-urlencoded' },
+                body
             });
-            const parsed = JSON.parse(result.body);
-            if (parsed.code === 0) {
+            const result = await response.json();
+            if (result.code === 0) {
                 toast({ title: lang === 'zh' ? '创建成功' : 'Created successfully', variant: 'success' });
                 setCreateModal({ isOpen: false, type: 'file' });
                 setNewName('');
                 setFileContent('');
                 fetchResources();
             } else {
-                toast({ title: lang === 'zh' ? '创建失败' : 'Create failed', description: parsed.msg, variant: 'destructive' });
+                toast({ title: lang === 'zh' ? '创建失败' : 'Create failed', description: result.msg, variant: 'destructive' });
             }
         } catch (err: any) {
             toast({ title: lang === 'zh' ? '创建失败' : 'Create failed', description: err.message, variant: 'destructive' });
@@ -445,9 +451,38 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
     };
 
     // 删除单个
-    const handleDeleteSingle = (resource: DSResource, e: React.MouseEvent) => {
+    const handleDeleteSingle = async (resource: DSResource, e: React.MouseEvent) => {
         e.stopPropagation();
-        setConfirmDelete({ isOpen: true, ids: [resource.fullName], names: [resource.alias] });
+        if (resource.directory) {
+            // 文件夹：先检查是否为空
+            try {
+                const dirPath = resource.fullName;
+                const url = `${connection.baseUrl}/resources?fullName=${encodeURIComponent(dirPath)}&tenantCode=&type=FILE&searchVal=&pageNo=1&pageSize=1`;
+                const response = await httpFetch(url, {
+                    method: 'GET',
+                    headers: { 'token': connection.token }
+                });
+                const responseText = await response.text();
+                const result = JSON.parse(responseText);
+                const childCount = result.data?.total || (result.data?.totalList?.length) || 0;
+                if (childCount > 0) {
+                    // 文件夹非空，不允许删除
+                    toast({
+                        title: lang === 'zh' ? '无法删除' : 'Cannot Delete',
+                        description: lang === 'zh' ? `文件夹 "${resource.alias}" 不为空，请先清空其中的文件后再删除` : `Folder "${resource.alias}" is not empty. Please remove all files first.`,
+                        variant: 'destructive'
+                    });
+                    return;
+                }
+            } catch (err) {
+                console.error('[ResourceCenter] Check folder empty error:', err);
+            }
+            // 文件夹为空，弹窗确认删除
+            setConfirmDelete({ isOpen: true, ids: [resource.fullName], names: [resource.alias] });
+        } else {
+            // 文件：直接弹窗确认
+            setConfirmDelete({ isOpen: true, ids: [resource.fullName], names: [resource.alias] });
+        }
     };
 
     // 重命名
@@ -455,6 +490,27 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
         if (!renameModal.resource || !renameName.trim()) return;
         try {
             const res = renameModal.resource;
+
+            // 文件夹重命名前检查是否为空
+            if (res.directory) {
+                try {
+                    const checkUrl = `${connection.baseUrl}/resources?fullName=${encodeURIComponent(res.fullName)}&tenantCode=&type=FILE&searchVal=&pageNo=1&pageSize=1`;
+                    const checkResp = await httpFetch(checkUrl, { method: 'GET', headers: { 'token': connection.token } });
+                    const checkResult = await checkResp.json();
+                    const childCount = checkResult.data?.total || (checkResult.data?.totalList?.length) || 0;
+                    if (childCount > 0) {
+                        toast({
+                            title: lang === 'zh' ? '无法重命名' : 'Cannot Rename',
+                            description: lang === 'zh' ? `文件夹 "${res.alias}" 不为空，无法重命名` : `Folder "${res.alias}" is not empty and cannot be renamed`,
+                            variant: 'destructive'
+                        });
+                        return;
+                    }
+                } catch (err) {
+                    console.error('[ResourceCenter] Check folder empty for rename error:', err);
+                }
+            }
+
             // 3.2/3.3 用 /resources/{id}; 3.4.0 用 /resources 且 fullName 放 body 里
             const url = res.id != null
                 ? `${connection.baseUrl}/resources/${res.id}`
@@ -815,7 +871,14 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
                                 {lang === 'zh' ? '批量下载' : 'Download'}
                             </button>
                             <button
-                                onClick={() => setConfirmDelete({ isOpen: true, ids: selectedIds, names: resources.filter(r => selectedIds.includes(r.fullName)).map(r => r.alias) })}
+                                onClick={() => {
+                                    const fileOnly = resources.filter(r => selectedIds.includes(r.fullName) && !r.directory);
+                                    if (fileOnly.length === 0) {
+                                        toast({ title: lang === 'zh' ? '文件夹不支持批量删除' : 'Folders cannot be batch deleted', variant: 'destructive' });
+                                        return;
+                                    }
+                                    setConfirmDelete({ isOpen: true, ids: fileOnly.map(r => r.fullName), names: fileOnly.map(r => r.alias) });
+                                }}
                                 className="px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium flex items-center text-sm transition-colors"
                             >
                                 <Trash2 size={16} className="mr-1" />
@@ -860,7 +923,7 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
                                 <tr className="bg-gradient-to-r from-slate-50 to-slate-100/80 dark:from-slate-800/80 dark:to-slate-800/60">
                                     <th className="w-11 px-3 py-2.5 text-left">
                                         <button onClick={handleSelectAll} className="text-slate-400 hover:text-amber-500 transition-colors">
-                                            {selectedIds.length === resources.length && resources.length > 0 ? <CheckSquare size={15} className="text-amber-500" /> : <Square size={15} />}
+                                            {(() => { const sel = resources.filter(r => !r.directory); return sel.length > 0 && sel.every(r => selectedIds.includes(r.fullName)); })() ? <CheckSquare size={15} className="text-amber-500" /> : <Square size={15} />}
                                         </button>
                                     </th>
                                     <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{lang === 'zh' ? '名称' : 'Name'}</th>
@@ -880,9 +943,13 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
                                         onClick={() => handleNavigate(resource)}
                                     >
                                         <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
-                                            <button onClick={(e) => { e.stopPropagation(); handleSelect(resource.fullName); }} className="text-slate-400 hover:text-amber-500 transition-colors">
-                                                {selectedIds.includes(resource.fullName) ? <CheckSquare size={16} className="text-amber-500" /> : <Square size={16} />}
-                                            </button>
+                                            {resource.directory ? (
+                                                <span className="text-slate-300 dark:text-slate-600"><Square size={16} /></span>
+                                            ) : (
+                                                <button onClick={(e) => { e.stopPropagation(); handleSelect(resource.fullName, resource.directory); }} className="text-slate-400 hover:text-amber-500 transition-colors">
+                                                    {selectedIds.includes(resource.fullName) ? <CheckSquare size={16} className="text-amber-500" /> : <Square size={16} />}
+                                                </button>
+                                            )}
                                         </td>
                                         <td className="px-3 py-2">
                                             <div className="flex items-center space-x-2.5 min-w-0">

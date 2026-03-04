@@ -187,6 +187,10 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
     const [k8sResourceHistory, setK8sResourceHistory] = useState<{name: string; path: string}[]>([{name: '根目录', path: ''}]);
     const [k8sResourceSearch, setK8sResourceSearch] = useState('');
 
+    // 全局参数弹窗
+    const [showGlobalParamsModal, setShowGlobalParamsModal] = useState(false);
+    const [editingGlobalParams, setEditingGlobalParams] = useState<{prop: string; value: string; direct: string; type: string}[]>([]);
+
     // 连线拖拽状态
     const [isConnecting, setIsConnecting] = useState(false);
     const [connectingFrom, setConnectingFrom] = useState<TaskNode | null>(null);
@@ -581,7 +585,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
             formData.append('tenantCode', 'default');
             formData.append('executionType', 'PARALLEL');
             formData.append('description', process.description || '');
-            formData.append('globalParams', '[]');
+            formData.append('globalParams', process.globalParams || '[]');
             formData.append('timeout', '0');
             
             console.log('=== Save Workflow Request ===');
@@ -1212,6 +1216,32 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                     </div>
                 </div>
                 <div className="flex items-center space-x-2">
+                    {/* 全局参数按钮 - 任何模式都可查看/编辑 */}
+                    <button
+                        onClick={() => {
+                            // 解析 process.globalParams 初始化编辑列表
+                            try {
+                                const raw = process.globalParams || '[]';
+                                const parsed = JSON.parse(raw);
+                                const list = Array.isArray(parsed) && parsed.length > 0
+                                    ? parsed.map((p: any) => ({
+                                        prop: p.prop || p.name || '',
+                                        value: p.value || '',
+                                        direct: p.direct || 'IN',
+                                        type: p.type || 'VARCHAR'
+                                    }))
+                                    : [{ prop: 'biz_date', value: '${yyyy-MM-dd-1}', direct: 'IN', type: 'VARCHAR' }];
+                                setEditingGlobalParams(list);
+                            } catch {
+                                setEditingGlobalParams([{ prop: 'biz_date', value: '${yyyy-MM-dd-1}', direct: 'IN', type: 'VARCHAR' }]);
+                            }
+                            setShowGlobalParamsModal(true);
+                        }}
+                        className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm flex items-center space-x-1 transition-colors"
+                    >
+                        <Settings size={16} />
+                        <span>{lang === 'zh' ? '参数' : 'Params'}</span>
+                    </button>
                     {!isReadOnly && (
                         <button 
                             onClick={handleSaveWorkflow}
@@ -2682,6 +2712,141 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                 className="px-6 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg font-medium disabled:opacity-50 flex items-center"
                             >
                                 {lang === 'zh' ? (editingK8sNodeId ? '保存' : '添加节点') : (editingK8sNodeId ? 'Save' : 'Add Node')}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* 全局参数管理弹窗 */}
+            {showGlobalParamsModal && (
+                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200 dark:border-slate-700">
+                        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 flex items-center justify-between">
+                            <div>
+                                <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center">
+                                    <Settings size={18} className="mr-2 text-blue-500" />
+                                    {lang === 'zh' ? '全局参数' : 'Global Parameters'}
+                                </h3>
+                                <span className="text-xs text-slate-500">{process.name}</span>
+                            </div>
+                            <button onClick={() => setShowGlobalParamsModal(false)} className="text-slate-400 hover:text-slate-600">
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <div className="p-5 space-y-3 max-h-[60vh] overflow-y-auto">
+                            {editingGlobalParams.length === 0 && (
+                                <div className="text-center py-6 text-slate-400 text-sm">
+                                    {lang === 'zh' ? '暂无全局参数，点击下方添加' : 'No global params. Click below to add.'}
+                                </div>
+                            )}
+                            {editingGlobalParams.map((param, idx) => (
+                                <div key={idx} className="flex gap-2 items-center">
+                                    <input
+                                        type="text"
+                                        value={param.prop}
+                                        onChange={e => {
+                                            const arr = [...editingGlobalParams];
+                                            arr[idx] = { ...arr[idx], prop: e.target.value };
+                                            setEditingGlobalParams(arr);
+                                        }}
+                                        placeholder={lang === 'zh' ? '参数名' : 'Param name'}
+                                        className="flex-1 min-w-0 px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
+                                    />
+                                    <select
+                                        value={param.direct}
+                                        onChange={e => {
+                                            const arr = [...editingGlobalParams];
+                                            arr[idx] = { ...arr[idx], direct: e.target.value };
+                                            setEditingGlobalParams(arr);
+                                        }}
+                                        className="px-2 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
+                                    >
+                                        <option value="IN">IN</option>
+                                        <option value="OUT">OUT</option>
+                                    </select>
+                                    <select
+                                        value={(param as any).type || 'VARCHAR'}
+                                        onChange={e => {
+                                            const arr = [...editingGlobalParams];
+                                            arr[idx] = { ...arr[idx], type: e.target.value };
+                                            setEditingGlobalParams(arr);
+                                        }}
+                                        className="px-2 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
+                                    >
+                                        <option value="VARCHAR">VARCHAR</option>
+                                        <option value="INTEGER">INTEGER</option>
+                                        <option value="LONG">LONG</option>
+                                        <option value="FLOAT">FLOAT</option>
+                                        <option value="DOUBLE">DOUBLE</option>
+                                        <option value="DATE">DATE</option>
+                                        <option value="TIME">TIME</option>
+                                        <option value="TIMESTAMP">TIMESTAMP</option>
+                                        <option value="BOOLEAN">BOOLEAN</option>
+                                    </select>
+                                    <input
+                                        type="text"
+                                        value={param.value}
+                                        onChange={e => {
+                                            const arr = [...editingGlobalParams];
+                                            arr[idx] = { ...arr[idx], value: e.target.value };
+                                            setEditingGlobalParams(arr);
+                                        }}
+                                        placeholder={lang === 'zh' ? '默认值' : 'Default value'}
+                                        className="flex-1 min-w-0 px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
+                                    />
+                                    <button
+                                        onClick={() => setEditingGlobalParams(editingGlobalParams.filter((_, i) => i !== idx))}
+                                        className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded"
+                                    >
+                                        <Trash2 size={14} />
+                                    </button>
+                                </div>
+                            ))}
+                            <button
+                                onClick={() => setEditingGlobalParams([...editingGlobalParams, { prop: '', value: '', direct: 'IN', type: 'VARCHAR' }])}
+                                className="w-full py-2 border border-dashed border-blue-400 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg text-sm transition-colors"
+                            >
+                                + {lang === 'zh' ? '添加参数' : 'Add Parameter'}
+                            </button>
+                        </div>
+                        <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-3">
+                            <button onClick={() => setShowGlobalParamsModal(false)} className="px-4 py-2 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">
+                                {lang === 'zh' ? '取消' : 'Cancel'}
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    // 构建 globalParamList JSON 并提交保存
+                                    const paramJson = JSON.stringify(editingGlobalParams.map(p => ({
+                                        prop: p.prop,
+                                        value: p.value,
+                                        direct: p.direct,
+                                        type: (p as any).type || 'VARCHAR'
+                                    })));
+                                    // 更新 process 的 globalParams（通过 API 保存）
+                                    try {
+                                        const apiPath = getWorkflowApiPath(projectConfig.apiVersion);
+                                        const url = `${projectConfig.baseUrl}/projects/${projectConfig.projectCode}/${apiPath}/${process.code}`;
+                                        const formData = new URLSearchParams();
+                                        formData.append('name', process.name);
+                                        formData.append('globalParams', paramJson);
+                                        formData.append('description', process.description || '');
+                                        formData.append('timeout', '0');
+                                        formData.append('tenantCode', 'default');
+                                        formData.append('executionType', 'PARALLEL');
+                                        // 保持任务定义和关系不变（用空字符串表示不修改，DS会保留原值）
+                                        // 实际上DS的PUT接口需要完整数据，这里复用 handleSaveWorkflow 前先更新 process
+                                        // 直接把 paramJson 写入 process.globalParams（组件内更新）
+                                        process.globalParams = paramJson;
+                                        setShowGlobalParamsModal(false);
+                                        // 再触发完整保存
+                                        await handleSaveWorkflow();
+                                    } catch (e) {
+                                        console.error('Save global params error:', e);
+                                    }
+                                }}
+                                className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium"
+                            >
+                                {lang === 'zh' ? '保存参数' : 'Save Params'}
                             </button>
                         </div>
                     </div>
