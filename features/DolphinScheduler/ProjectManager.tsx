@@ -5,10 +5,11 @@ import {
 } from 'lucide-react';
 import { Language, DolphinSchedulerConfig } from '../../types';
 import { getTexts } from '../../locales';
-import { ConfirmModal } from '../../components/ui/ConfirmModal';
+import { useToast } from '../common/Toast';
+import { ConfirmModal } from '../common/ConfirmModal';
 import { httpFetch } from '../../utils/http';
-import { Tooltip } from '../../components/ui/Tooltip';
-import { ViewModeToggle } from '../../components/shared/ViewModeToggle';
+import { Tooltip } from '../common/Tooltip';
+import { ViewModeToggle } from '../common/ViewModeToggle';
 import { useViewMode } from '../../store/globalStore';
 
 interface ProjectManagerProps {

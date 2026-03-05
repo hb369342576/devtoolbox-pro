@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Upload, XCircle, Search, Loader2, Folder } from 'lucide-react';
-import { useToast } from '../../../components/ui/Toast';
+import { useToast } from '../../common/Toast';
 import { open } from '@tauri-apps/plugin-dialog';
 import { readDir } from '@tauri-apps/plugin-fs';
 import { readWorkflowFromDir, importWorkflowToDS } from '../utils';
+import { getTexts } from '../../../locales';
 import { Language, ProcessDefinition } from '../types';
 import { DolphinSchedulerApiVersion } from '../../../types';
 
@@ -20,6 +21,8 @@ interface ImportModalProps {
 }
 
 export const ImportModal: React.FC<ImportModalProps> = ({ show, lang, projectCode, baseUrl, token, processes, apiVersion, onClose, onSuccess }) => {
+    const texts = getTexts(lang);
+    const dsTexts = texts.dolphinScheduler;
     const { toast } = useToast();
     const [importing, setImporting] = useState(false);
     const [workflows, setWorkflows] = useState<any[]>([]);
@@ -44,7 +47,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({ show, lang, projectCod
             const dirPath = await open({
                 directory: true,
                 multiple: false,
-                title: lang === 'zh' ? '选择导入目录' : 'Select Import Directory'
+                title: dsTexts.selectImportDir
             });
             
             if (!dirPath) return;
@@ -80,16 +83,16 @@ export const ImportModal: React.FC<ImportModalProps> = ({ show, lang, projectCod
             }
             
             if (loadedWorkflows.length === 0) {
-                toast({ title: lang === 'zh' ? '未找到 workflow.json 文件' : 'No workflow.json found', variant: 'destructive' });
+                toast({ title: dsTexts.noWorkflowJsonFound, variant: 'destructive' });
                 return;
             }
             
             setWorkflows(loadedWorkflows);
             setSelectedIndices(loadedWorkflows.map((_, i) => i));
-            toast({ title: lang === 'zh' ? `找到 ${loadedWorkflows.length} 个工作流` : `Found ${loadedWorkflows.length} workflows`, variant: 'success' });
+            toast({ title: dsTexts.foundWorkflows.replace('{total}', String(loadedWorkflows.length)), variant: 'success' });
         } catch (err: any) {
             console.error('[Import] Select dir error:', err);
-            toast({ title: lang === 'zh' ? '读取目录失败' : 'Read directory failed', description: err.message, variant: 'destructive' });
+            toast({ title: dsTexts.readDirFailed, description: err.message, variant: 'destructive' });
         }
     };
     
@@ -107,7 +110,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({ show, lang, projectCod
     
     const handleImport = async () => {
         if (workflows.length === 0 || selectedIndices.length === 0) {
-            toast({ title: lang === 'zh' ? '请选择要导入的工作流' : 'Please select workflows', variant: 'destructive' });
+            toast({ title: dsTexts.pleaseSelectWorkflows, variant: 'destructive' });
             return;
         }
         
@@ -131,7 +134,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({ show, lang, projectCod
                 }
                 
                 toast({ 
-                    title: lang === 'zh' ? `正在导入: ${workflow.name}` : `Importing: ${workflow.name}`, 
+                    title: dsTexts.importingWorkflow.replace('{name}', workflow.name), 
                     variant: 'default' 
                 });
                 
@@ -151,7 +154,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({ show, lang, projectCod
                         failCount++;
                         console.error(`[Import] Failed: ${workflow.name}:`, result.msg);
                         toast({
-                            title: lang === 'zh' ? `导入失败: ${workflow.name}` : `Import failed: ${workflow.name}`,
+                            title: dsTexts.importFailedWithName.replace('{name}', workflow.name),
                             description: result.msg,
                             variant: 'destructive'
                         });
@@ -160,16 +163,17 @@ export const ImportModal: React.FC<ImportModalProps> = ({ show, lang, projectCod
                     failCount++;
                     console.error(`[Import] Error for ${workflow.name}:`, err);
                     toast({
-                        title: lang === 'zh' ? `导入出错: ${workflow.name}` : `Import error: ${workflow.name}`,
+                        title: dsTexts.importErrorWithName.replace('{name}', workflow.name),
                         description: err.message,
                         variant: 'destructive'
                     });
                 }
             }
             
-            const summary = lang === 'zh' 
-                ? `导入完成：成功 ${successCount}，跳过 ${skipCount}${failCount > 0 ? `，失败 ${failCount}` : ''}`
-                : `Import done: ${successCount} success, ${skipCount} skipped${failCount > 0 ? `, ${failCount} failed` : ''}`;
+            const summary = dsTexts.importDone
+                .replace('{success}', String(successCount))
+                .replace('{skip}', String(skipCount))
+                .replace('{fail}', String(failCount));
             
             toast({ 
                 title: summary, 
@@ -182,7 +186,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({ show, lang, projectCod
             onClose();
         } catch (err: any) {
             console.error('[Import] Error:', err);
-            toast({ title: lang === 'zh' ? '导入失败' : 'Import Failed', description: err.message, variant: 'destructive' });
+            toast({ title: texts.common.failed, description: err.message, variant: 'destructive' });
         } finally {
             setImporting(false);
         }
@@ -194,7 +198,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({ show, lang, projectCod
                 <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800/80">
                     <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center">
                         <Upload size={20} className="mr-2 text-purple-500" />
-                        {lang === 'zh' ? '导入工作流' : 'Import Workflows'}
+                        {dsTexts.importWorkflow}
                     </h3>
                     <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1"><XCircle size={20} /></button>
                 </div>
@@ -203,10 +207,10 @@ export const ImportModal: React.FC<ImportModalProps> = ({ show, lang, projectCod
                     <div className="p-6">
                         <div className="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl p-8 text-center hover:border-purple-400 transition-colors">
                             <Folder size={40} className="mx-auto text-slate-400 mb-4" />
-                            <p className="text-slate-600 dark:text-slate-300 mb-2">{lang === 'zh' ? '选择包含 workflow.json 的目录' : 'Select a folder with workflow.json'}</p>
-                            <p className="text-xs text-slate-400 mb-4">{lang === 'zh' ? '支持单个工作流目录或包含多个工作流的批量目录' : 'Supports single workflow or batch folder'}</p>
+                            <p className="text-slate-600 dark:text-slate-300 mb-2">{dsTexts.selectImportFolder}</p>
+                            <p className="text-xs text-slate-400 mb-4">{dsTexts.supportSingleOrBatch}</p>
                             <button onClick={handleSelectDir} className="px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg">
-                                {lang === 'zh' ? '选择目录' : 'Select Folder'}
+                                {dsTexts.selectFolder}
                             </button>
                         </div>
                     </div>
@@ -215,22 +219,22 @@ export const ImportModal: React.FC<ImportModalProps> = ({ show, lang, projectCod
                         <div className="p-4 border-b border-slate-200 dark:border-slate-700 space-y-3">
                             <div className="flex items-center justify-between text-sm">
                                 <span className="text-slate-600 dark:text-slate-300 truncate" title={importDir}>{importDir.split('/').pop() || importDir}</span>
-                                <button onClick={() => { setWorkflows([]); setImportDir(''); }} className="text-xs text-red-500 hover:text-red-600">{lang === 'zh' ? '重新选择' : 'Re-select'}</button>
+                                <button onClick={() => { setWorkflows([]); setImportDir(''); }} className="text-xs text-red-500 hover:text-red-600">{dsTexts.reSelect}</button>
                             </div>
                             <div className="relative">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                                 <input 
                                     type="text" 
-                                    placeholder={lang === 'zh' ? '搜索工作流...' : 'Search workflows...'} 
+                                    placeholder={dsTexts.searchWorkflows} 
                                     value={searchTerm} 
                                     onChange={e => setSearchTerm(e.target.value)} 
                                     className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 outline-none" 
                                 />
                             </div>
                             <div className="flex items-center justify-between">
-                                <span className="text-xs text-slate-500">{lang === 'zh' ? `共 ${workflows.length} 个工作流` : `${workflows.length} workflows`}</span>
+                                <span className="text-xs text-slate-500">{dsTexts.foundWorkflows.replace('{total}', String(workflows.length))}</span>
                                 <button onClick={handleSelectAll} className="text-xs text-purple-500 hover:text-purple-600">
-                                    {selectedIndices.length === filteredWorkflows.length && filteredWorkflows.length > 0 ? (lang === 'zh' ? '取消全选' : 'Deselect All') : (lang === 'zh' ? '全选' : 'Select All')}
+                                    {selectedIndices.length === filteredWorkflows.length && filteredWorkflows.length > 0 ? dsTexts.deselectAll : dsTexts.selectAll}
                                 </button>
                             </div>
                         </div>
@@ -242,19 +246,19 @@ export const ImportModal: React.FC<ImportModalProps> = ({ show, lang, projectCod
                                         <span className="text-slate-700 dark:text-slate-300 text-sm">{w.name || `Workflow ${w._index + 1}`}</span>
                                     </label>
                                 ))}
-                                {filteredWorkflows.length === 0 && <p className="text-slate-400 text-center py-4 text-sm">{lang === 'zh' ? '未找到匹配的工作流' : 'No matching workflows'}</p>}
+                                {filteredWorkflows.length === 0 && <p className="text-slate-400 text-center py-4 text-sm">{dsTexts.noMatchingWorkflows}</p>}
                             </div>
                         </div>
                     </>
                 )}
                 
                 <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 flex justify-between items-center">
-                    <span className="text-sm text-slate-500">{workflows.length > 0 ? (lang === 'zh' ? `已选 ${selectedIndices.length} 个` : `${selectedIndices.length} selected`) : ''}</span>
+                    <span className="text-sm text-slate-500">{workflows.length > 0 ? dsTexts.selectedCount.replace('{count}', String(selectedIndices.length)) : ''}</span>
                     <div className="flex space-x-3">
-                        <button onClick={onClose} className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg">{lang === 'zh' ? '取消' : 'Cancel'}</button>
+                        <button onClick={onClose} className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg">{texts.common.cancel}</button>
                         <button onClick={handleImport} disabled={importing || workflows.length === 0 || selectedIndices.length === 0} className="px-6 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg font-medium disabled:opacity-50 flex items-center">
                             {importing && <Loader2 size={16} className="animate-spin mr-2" />}
-                            {lang === 'zh' ? '导入' : 'Import'}
+                            {texts.common.import}
                         </button>
                     </div>
                 </div>

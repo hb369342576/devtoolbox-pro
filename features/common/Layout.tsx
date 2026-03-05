@@ -60,8 +60,6 @@ export const Layout: React.FC<LayoutProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-
-
   // Helper to get tab info recursively
   const getTabInfo = (id: string) => {
     const findItem = (items: typeof NAV_ITEMS): typeof NAV_ITEMS[0] | undefined => {
@@ -98,8 +96,6 @@ export const Layout: React.FC<LayoutProps> = ({
       id: 'unknown'
     };
   };
-
-
 
   const renderNavItem = (item: typeof NAV_ITEMS[0], level = 0) => {
     const isParent = !!item.children;
@@ -193,7 +189,7 @@ export const Layout: React.FC<LayoutProps> = ({
           </div>
         </div>
 
-        <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-1">
+        <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-1 flex flex-col">
           {NAV_ITEMS
             .filter(item => item.visible)
             .sort((a, b) => a.order - b.order)

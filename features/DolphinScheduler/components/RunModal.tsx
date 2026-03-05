@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { PlayCircle, XCircle, Loader2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { httpFetch } from '../../../utils/http';
-import { useToast } from '../../../components/ui/Toast';
+import { useToast } from '../../common/Toast';
 import { Language, ProcessDefinition } from '../types';
 
 interface RunModalProps {
@@ -15,6 +16,7 @@ interface RunModalProps {
 }
 
 export const RunModal: React.FC<RunModalProps> = ({ process, lang, projectCode, baseUrl, token, onClose, onSuccess }) => {
+    const { t } = useTranslation();
     const { toast } = useToast();
     const [running, setRunning] = useState(false);
     const [failureStrategy, setFailureStrategy] = useState<'CONTINUE' | 'END'>('CONTINUE');
@@ -68,12 +70,12 @@ export const RunModal: React.FC<RunModalProps> = ({ process, lang, projectCode, 
             const result = JSON.parse(responseText);
             if (result.code !== 0) throw new Error(result.msg);
             
-            toast({ title: lang === 'zh' ? '运行成功' : 'Run Success', variant: 'success' });
+            toast({ title: t('common.success'), variant: 'success' });
             onSuccess();
             onClose();
         } catch (err: any) {
             console.error('[DolphinScheduler] Run error:', err);
-            toast({ title: lang === 'zh' ? '运行失败' : 'Run Failed', description: err.message, variant: 'destructive' });
+            toast({ title: t('common.failed'), description: err.message, variant: 'destructive' });
         } finally {
             setRunning(false);
         }
@@ -85,37 +87,37 @@ export const RunModal: React.FC<RunModalProps> = ({ process, lang, projectCode, 
                 <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800/80">
                     <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center">
                         <PlayCircle size={20} className="mr-2 text-orange-500" />
-                        {lang === 'zh' ? '运行工作流' : 'Run Workflow'}
+                        {t('dolphinScheduler.runWorkflow')}
                     </h3>
                     <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1"><XCircle size={20} /></button>
                 </div>
                 <div className="p-6 space-y-4">
                     <div>
-                        <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{lang === 'zh' ? '工作流名称' : 'Workflow'}</label>
+                        <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{t('dolphinScheduler.workflowName')}</label>
                         <p className="text-slate-800 dark:text-white font-bold">{process.name}</p>
                     </div>
                     <div>
-                        <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-2">{lang === 'zh' ? '失败策略' : 'Failure Strategy'}</label>
+                        <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-2">{t('dolphinScheduler.failureStrategy')}</label>
                         <div className="flex space-x-4">
-                            <label className="flex items-center"><input type="radio" checked={failureStrategy === 'CONTINUE'} onChange={() => setFailureStrategy('CONTINUE')} className="mr-2" />{lang === 'zh' ? '继续' : 'Continue'}</label>
-                            <label className="flex items-center"><input type="radio" checked={failureStrategy === 'END'} onChange={() => setFailureStrategy('END')} className="mr-2" />{lang === 'zh' ? '结束' : 'End'}</label>
+                            <label className="flex items-center"><input type="radio" checked={failureStrategy === 'CONTINUE'} onChange={() => setFailureStrategy('CONTINUE')} className="mr-2" />{t('dolphinScheduler.continue')}</label>
+                            <label className="flex items-center"><input type="radio" checked={failureStrategy === 'END'} onChange={() => setFailureStrategy('END')} className="mr-2" />{t('dolphinScheduler.end')}</label>
                         </div>
                     </div>
                     <div>
-                        <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-2">{lang === 'zh' ? '通知策略' : 'Warning Type'}</label>
+                        <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-2">{t('dolphinScheduler.warningType')}</label>
                         <select value={warningType} onChange={e => setWarningType(e.target.value as any)} className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900">
-                            <option value="NONE">{lang === 'zh' ? '不通知' : 'None'}</option>
-                            <option value="SUCCESS">{lang === 'zh' ? '成功时' : 'On Success'}</option>
-                            <option value="FAILURE">{lang === 'zh' ? '失败时' : 'On Failure'}</option>
-                            <option value="ALL">{lang === 'zh' ? '全部' : 'All'}</option>
+                            <option value="NONE">{t('dolphinScheduler.none')}</option>
+                            <option value="SUCCESS">{t('dolphinScheduler.onSuccess')}</option>
+                            <option value="FAILURE">{t('dolphinScheduler.onFailure')}</option>
+                            <option value="ALL">{t('dolphinScheduler.all')}</option>
                         </select>
                     </div>
                 </div>
                 <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 flex justify-end space-x-3">
-                    <button onClick={onClose} className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg">{lang === 'zh' ? '取消' : 'Cancel'}</button>
+                    <button onClick={onClose} className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg">{t('common.cancel')}</button>
                     <button onClick={handleRun} disabled={running} className="px-6 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium disabled:opacity-50 flex items-center">
                         {running && <Loader2 size={16} className="animate-spin mr-2" />}
-                        {lang === 'zh' ? '运行' : 'Run'}
+                        {t('dolphinScheduler.run')}
                     </button>
                 </div>
             </div>

@@ -6,7 +6,9 @@ import { getTexts } from '../../locales';
 import { ConnectionGrid } from './components/ConnectionGrid';
 import { Sidebar } from './components/Sidebar';
 import { TableViewer } from './components/TableViewer';
-import { ViewModeToggle } from '../../components/shared/ViewModeToggle';
+import { useToast } from '../common/Toast';
+import { Tooltip } from '../common/Tooltip';
+import { ViewModeToggle } from '../common/ViewModeToggle';
 import { useViewMode } from '../../store/globalStore';
 
 /**

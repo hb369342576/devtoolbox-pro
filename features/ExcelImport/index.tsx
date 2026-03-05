@@ -5,13 +5,13 @@ import {
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Language, DbConnection, TableInfo, TableDetail } from '../../types';
-import { useToast } from '../../components/ui/Toast';
-import { Tooltip } from '../../components/ui/Tooltip';
+import { useToast } from '../common/Toast';
+import { Tooltip } from '../common/Tooltip';
 import { DatabaseService } from '../../services/database.service';
 import { invoke } from '@tauri-apps/api/core';
 import { getTexts } from '../../locales';
 import { useGlobalStore } from '../../store/globalStore';
-import { ViewModeToggle } from '../../components/shared/ViewModeToggle';
+import { ViewModeToggle } from '../common/ViewModeToggle';
 
 interface ImportProfile {
     id: string;

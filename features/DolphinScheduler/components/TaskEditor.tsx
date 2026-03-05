@@ -8,9 +8,11 @@ import { Language, DolphinSchedulerConfig } from '../../../types';
 import { ProcessDefinition } from '../types';
 import { httpFetch } from '../../../utils/http';
 import { getWorkflowApiPath } from '../utils';
-import { useToast } from '../../../components/ui/Toast';
-import { ConfirmModal } from '../../../components/ui/ConfirmModal';
+import { Tooltip } from '../../common/Tooltip';
+import { useToast } from '../../common/Toast';
+import { ConfirmModal } from '../../common/ConfirmModal';
 import { DEFAULT_CONFIG_KEY, defaultSettingsTemplate } from './GlobalSettingsModal';
+import { getTexts } from '../../../locales';
 
 // 节点类型定义
 const NODE_TYPES = [
@@ -113,6 +115,9 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
     projectConfig,
     onClose
 }) => {
+    const texts = getTexts(lang);
+    const dsTexts = texts.dolphinScheduler;
+    const editorTexts = dsTexts.taskEditor;
     const { toast } = useToast();
     const canvasRef = useRef<HTMLDivElement>(null);
     
@@ -629,7 +634,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
             
             if (result.code === 0) {
                 toast({ 
-                    title: lang === 'zh' ? '保存成功' : 'Saved Successfully',
+                    title: editorTexts.saveSuccess,
                     variant: 'success' 
                 });
                 // 更新原始快照
@@ -641,7 +646,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
             }
         } catch (error: any) {
             toast({ 
-                title: lang === 'zh' ? '保存失败' : 'Save Failed', 
+                title: editorTexts.saveFailed, 
                 description: error.message, 
                 variant: 'destructive' 
             });
@@ -1099,20 +1104,20 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
             
             if (result.code === 0) {
                 toast({
-                    title: lang === 'zh' ? '运行成功' : 'Run Success',
-                    description: lang === 'zh' ? '任务已开始运行' : 'Task has started running'
+                    title: editorTexts.runSuccess,
+                    description: editorTexts.taskStartedRunning
                 });
                 setShowRunModal(false);
             } else {
                 toast({
-                    title: lang === 'zh' ? '运行失败' : 'Run Failed',
+                    title: editorTexts.runFailed,
                     description: result.msg || 'Unknown error',
                     variant: 'destructive'
                 });
             }
         } catch (error: any) {
             toast({
-                title: lang === 'zh' ? '运行失败' : 'Run Failed',
+                title: editorTexts.runFailed,
                 description: error.message,
                 variant: 'destructive'
             });
@@ -1228,13 +1233,13 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                             {process.name}
                             {isReadOnly && (
                                 <span className="ml-2 px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 text-xs font-medium rounded-full">
-                                    {lang === 'zh' ? '已上线' : 'ONLINE'}
+                                    {editorTexts.online}
                                 </span>
                             )}
                         </h2>
                         <span className="text-xs text-slate-500">
-                            {lang === 'zh' ? '工作流编辑器' : 'Workflow Editor'}
-                            {isReadOnly && (lang === 'zh' ? ' (只读模式)' : ' (Read Only)')}
+                            {editorTexts.workflowEditor}
+                            {isReadOnly && ` (${editorTexts.readOnly})`}
                         </span>
                     </div>
                 </div>
@@ -1263,7 +1268,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                         className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm flex items-center space-x-1 transition-colors"
                     >
                         <Settings size={16} />
-                        <span>{lang === 'zh' ? '参数' : 'Params'}</span>
+                        <span>{editorTexts.params}</span>
                     </button>
                     {!isReadOnly && (
                         <button 
@@ -1272,7 +1277,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                             className="px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm flex items-center space-x-1 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                            <span>{lang === 'zh' ? '保存' : 'Save'}</span>
+                            <span>{editorTexts.save}</span>
                         </button>
                     )}
                     <button onClick={handleClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 transition-colors">
@@ -1286,7 +1291,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                 {/* 左侧节点类型列表 */}
                 <div className="w-56 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 p-4 shrink-0 flex flex-col">
                     <h3 className="text-sm font-bold text-slate-600 dark:text-slate-300 mb-3 uppercase tracking-wide">
-                        {lang === 'zh' ? '节点类型' : 'Node Types'}
+                        {editorTexts.nodeTypes}
                     </h3>
                     <div className="space-y-1.5 flex-1 overflow-y-auto custom-scrollbar">
                         {NODE_TYPES.map(nodeType => (
@@ -1310,7 +1315,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                     {/* 工作流节点列表 */}
                     <div className="border-t border-slate-200 dark:border-slate-600 pt-4 mt-4">
                         <h3 className="text-sm font-bold text-slate-600 dark:text-slate-300 mb-3 uppercase tracking-wide">
-                            {lang === 'zh' ? '当前节点' : 'Nodes'} ({taskNodes.length})
+                            {editorTexts.currentNodes} ({taskNodes.length})
                         </h3>
                         <div className="space-y-1 max-h-[200px] overflow-y-auto custom-scrollbar">
                             {taskNodes.map(node => {
@@ -1332,7 +1337,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                             })}
                             {taskNodes.length === 0 && !loading && (
                                 <div className="text-xs text-slate-400 text-center py-4">
-                                    {lang === 'zh' ? '拖拽节点到画布' : 'Drag nodes to canvas'}
+                                    {editorTexts.dragNodesToCanvas}
                                 </div>
                             )}
                         </div>
@@ -1343,24 +1348,24 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                 <div className="flex-1 relative overflow-hidden bg-slate-50 dark:bg-slate-900/50">
                     {/* 缩放控制 */}
                     <div className="absolute top-4 right-4 z-10 flex items-center space-x-1 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 p-1">
-                        <button onClick={handleZoomOut} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300">
+                        <button onClick={handleZoomOut} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300" title={editorTexts.zoomOut}>
                             <ZoomOut size={18} />
                         </button>
                         <span className="px-2 text-sm font-medium text-slate-600 dark:text-slate-300 min-w-[50px] text-center">
                             {Math.round(scale * 100)}%
                         </span>
-                        <button onClick={handleZoomIn} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300">
+                        <button onClick={handleZoomIn} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300" title={editorTexts.zoomIn}>
                             <ZoomIn size={18} />
                         </button>
                         <div className="w-px h-5 bg-slate-200 dark:bg-slate-600" />
-                        <button onClick={handleZoomReset} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300" title={lang === 'zh' ? '重置' : 'Reset'}>
+                        <button onClick={handleZoomReset} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300" title={editorTexts.reset}>
                             <Maximize2 size={18} />
                         </button>
                         <div className="w-px h-5 bg-slate-200 dark:bg-slate-600" />
                         <button 
                             onClick={handleAutoLayout} 
                             className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300"
-                            title={lang === 'zh' ? '自动布局' : 'Auto Layout'}
+                            title={editorTexts.autoLayout}
                         >
                             <LayoutGrid size={18} />
                         </button>
@@ -1587,7 +1592,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                                     <button 
                                                         className="w-6 h-6 rounded-full bg-green-500 hover:bg-green-600 flex items-center justify-center text-white shadow-sm transition-colors"
                                                         onClick={(e) => { e.stopPropagation(); handleOpenRunModal(node); }}
-                                                        title={lang === 'zh' ? '运行此节点' : 'Run This Node'}
+                                                        title={editorTexts.runThisNode}
                                                     >
                                                         <Play size={12} fill="white" />
                                                     </button>
@@ -1637,10 +1642,10 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                 </div>
                                 <div>
                                     <h3 className="font-bold text-lg text-slate-800 dark:text-white">
-                                        {lang === 'zh' ? (isReadOnly ? '查看节点' : '编辑节点') : (isReadOnly ? 'View Node' : 'Edit Node')}
+                                        {isReadOnly ? editorTexts.viewNode : editorTexts.editNode}
                                     </h3>
                                     <div className="flex items-center gap-2 flex-wrap">
-                                        <span className="text-xs text-slate-500">{editingNode.taskType}{isReadOnly && (lang === 'zh' ? ' (只读)' : ' (Read Only)')}</span>
+                                        <span className="text-xs text-slate-500">{editingNode.taskType}{isReadOnly && editorTexts.readOnly}</span>
                                         <span className="text-xs text-blue-500 font-medium bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded-full">{process.name}</span>
                                     </div>
                                 </div>
@@ -1654,7 +1659,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                         <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                                    {lang === 'zh' ? '节点名称' : 'Node Name'}
+                                    {editorTexts.nodeName}
                                 </label>
                                 <input
                                     type="text"
@@ -1666,7 +1671,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                             
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                                    {lang === 'zh' ? '节点类型' : 'Node Type'}
+                                    {editorTexts.nodeType}
                                 </label>
                                 <select
                                     value={editingNode.taskType.toLowerCase()}
@@ -1700,7 +1705,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                                        {lang === 'zh' ? '环境变量' : 'Environment'}
+                                        {editorTexts.environment}
                                     </label>
                                     <select
                                         value={editingNode.taskParams.environmentCode || ''}
@@ -1710,7 +1715,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                         })}
                                         className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
                                     >
-                                        <option value="">{lang === 'zh' ? '无' : 'None'}</option>
+                                        <option value="">{editorTexts.none}</option>
                                         {environments.map(e => (
                                             <option key={e.code} value={e.code}>{e.name}</option>
                                         ))}
@@ -1721,7 +1726,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                             <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-4">
                                 <h4 className="text-sm font-bold text-slate-600 dark:text-slate-300 mb-3 flex items-center">
                                     <Settings size={16} className="mr-2" />
-                                    {lang === 'zh' ? '节点配置' : 'Node Configuration'}
+                                    {editorTexts.nodeConfiguration}
                                 </h4>
                                 
                                 {/* SQL 节点配置 */}
@@ -1730,7 +1735,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                         {/* 数据源选择 */}
                                         <div>
                                             <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                {lang === 'zh' ? '数据源' : 'Datasource'}
+                                                {editorTexts.datasource}
                                             </label>
                                             <select
                                                 value={editingNode.taskParams.datasource || ''}
@@ -1749,7 +1754,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                                 }}
                                                 className="w-full px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
                                             >
-                                                <option value="">{lang === 'zh' ? '请选择数据源' : 'Select datasource'}</option>
+                                                <option value="">{editorTexts.selectDatasource}</option>
                                                 {datasources.map(ds => (
                                                     <option key={ds.id} value={ds.id}>{ds.name} ({ds.type})</option>
                                                 ))}
@@ -1765,7 +1770,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                         <div className="grid grid-cols-2 gap-3">
                                             <div>
                                                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                    {lang === 'zh' ? '数据库类型' : 'DB Type'}
+                                                    {editorTexts.dbType}
                                                 </label>
                                                 <select
                                                     value={editingNode.taskParams.dbType || 'MYSQL'}
@@ -1788,7 +1793,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                             </div>
                                             <div>
                                                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                    SQL {lang === 'zh' ? '类型' : 'Type'}
+                                                    SQL {editorTexts.sqlType}
                                                 </label>
                                                 <select
                                                     value={editingNode.taskParams.sqlType || '1'}
@@ -1798,8 +1803,8 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                                     })}
                                                     className="w-full px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
                                                 >
-                                                    <option value="0">{lang === 'zh' ? '查询' : 'Query'}</option>
-                                                    <option value="1">{lang === 'zh' ? '非查询' : 'Non-Query'}</option>
+                                                    <option value="0">{editorTexts.query}</option>
+                                                    <option value="1">{editorTexts.nonQuery}</option>
                                                 </select>
                                             </div>
                                         </div>
@@ -1807,7 +1812,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                         {/* SQL 语句 */}
                                         <div>
                                             <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                SQL {lang === 'zh' ? '语句' : 'Statement'}
+                                                SQL {editorTexts.sqlStatement}
                                             </label>
                                             <textarea
                                                 value={editingNode.taskParams.sql || ''}
@@ -1828,7 +1833,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                     <div className="space-y-3">
                                         <div>
                                             <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                {lang === 'zh' ? 'JAR包路径' : 'JAR Path'}
+                                                {editorTexts.jarPath}
                                             </label>
                                             <input
                                                 type="text"
@@ -1843,7 +1848,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                         </div>
                                         <div>
                                             <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                {lang === 'zh' ? '主类' : 'Main Class'}
+                                                {editorTexts.mainClass}
                                             </label>
                                             <input
                                                 type="text"
@@ -1858,7 +1863,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                         </div>
                                         <div>
                                             <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                {lang === 'zh' ? '命令参数' : 'Arguments'}
+                                                {editorTexts.arguments}
                                             </label>
                                             <input
                                                 type="text"
@@ -1873,7 +1878,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                         </div>
                                         <div>
                                             <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                JVM {lang === 'zh' ? '参数' : 'Options'}
+                                                JVM {editorTexts.jvmOptions}
                                             </label>
                                             <input
                                                 type="text"
@@ -1895,7 +1900,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                         <div className="grid grid-cols-2 gap-3">
                                             <div>
                                                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                    {lang === 'zh' ? '运行模式' : 'Deploy Mode'}
+                                                    {editorTexts.deployMode}
                                                 </label>
                                                 <select
                                                     value={editingNode.taskParams.deployMode || 'local'}
@@ -1911,7 +1916,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                             </div>
                                             <div>
                                                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                    {lang === 'zh' ? '自定义配置' : 'Custom Config'}
+                                                    {editorTexts.customConfig}
                                                 </label>
                                                 <select
                                                     value={editingNode.taskParams.useCustom ? 'true' : 'false'}
@@ -1921,15 +1926,15 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                                     })}
                                                     className="w-full px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
                                                 >
-                                                    <option value="false">{lang === 'zh' ? '否' : 'No'}</option>
-                                                    <option value="true">{lang === 'zh' ? '是' : 'Yes'}</option>
+                                                    <option value="false">{texts.common.no}</option>
+                                                    <option value="true">{texts.common.yes}</option>
                                                 </select>
                                             </div>
                                         </div>
                                         <div className="grid grid-cols-2 gap-3">
                                             <div>
                                                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                    {lang === 'zh' ? '启动脚本' : 'Startup Script'}
+                                                    {editorTexts.startupScript}
                                                 </label>
                                                 <input
                                                     type="text"
@@ -1944,7 +1949,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                             </div>
                                             <div>
                                                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                    {lang === 'zh' ? '配置文件' : 'Config File'}
+                                                    {editorTexts.configFile}
                                                 </label>
                                                 <input
                                                     type="text"
@@ -1961,7 +1966,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                         {editingNode.taskParams.useCustom && (
                                             <div>
                                                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                    {lang === 'zh' ? '配置内容' : 'Configuration'}
+                                                    {editorTexts.nodeConfiguration}
                                                 </label>
                                                 <textarea
                                                     value={editingNode.taskParams.rawScript || ''}
@@ -1983,7 +1988,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                     <div className="space-y-3">
                                         <div>
                                             <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                {lang === 'zh' ? '脚本内容' : 'Script Content'}
+                                                {editorTexts.scriptContent}
                                             </label>
                                             <textarea
                                                 value={editingNode.taskParams.rawScript || ''}
@@ -2004,7 +2009,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                     <div className="space-y-3">
                                         <div>
                                             <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                {lang === 'zh' ? 'Python路径' : 'Python Path'}
+                                                {editorTexts.pythonPath}
                                             </label>
                                             <input
                                                 type="text"
@@ -2019,7 +2024,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                         </div>
                                         <div>
                                             <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                {lang === 'zh' ? '脚本内容' : 'Script Content'}
+                                                {editorTexts.scriptContent}
                                             </label>
                                             <textarea
                                                 value={editingNode.taskParams.rawScript || ''}
@@ -2039,7 +2044,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                 {editingNode.taskType.toLowerCase() === 'dependent' && (
                                     <div className="space-y-3">
                                         <div className="text-sm text-slate-500 bg-amber-50 dark:bg-amber-900/20 p-3 rounded border border-amber-200 dark:border-amber-800">
-                                            {lang === 'zh' ? '依赖节点用于等待上游工作流完成。' : 'Dependent nodes wait for upstream workflows to complete.'}
+                                            {editorTexts.dependentTip}
                                         </div>
                                         
                                         {/* 依赖配置详情 */}
@@ -2048,7 +2053,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                                 <div className="grid grid-cols-2 gap-3">
                                                     <div>
                                                         <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                            {lang === 'zh' ? '关系类型' : 'Relation'}
+                                                            {editorTexts.relation}
                                                         </label>
                                                         <input
                                                             type="text"
@@ -2059,7 +2064,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                                     </div>
                                                     <div>
                                                         <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                            {lang === 'zh' ? '检查间隔(秒)' : 'Check Interval(s)'}
+                                                            {editorTexts.checkInterval}
                                                         </label>
                                                         <input
                                                             type="number"
@@ -2074,7 +2079,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                                 {editingNode.taskParams.dependence.dependTaskList?.map((taskGroup: any, idx: number) => (
                                                     <div key={idx} className="bg-slate-50 dark:bg-slate-700/50 p-2 rounded text-xs">
                                                         <div className="font-medium text-slate-600 dark:text-slate-300 mb-1">
-                                                            {lang === 'zh' ? '依赖组' : 'Dependency Group'} {idx + 1} ({taskGroup.relation})
+                                                            {editorTexts.dependencyGroup} {idx + 1} ({taskGroup.relation})
                                                         </div>
                                                         {taskGroup.dependItemList?.map((item: any, itemIdx: number) => (
                                                             <div key={itemIdx} className="ml-2 text-slate-500 dark:text-slate-400">
@@ -2094,7 +2099,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                         <div className="grid grid-cols-2 gap-3">
                                             <div>
                                                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                    {lang === 'zh' ? '命名空间' : 'Namespace'}
+                                                    {editorTexts.namespace}
                                                 </label>
                                                 <input
                                                     type="text"
@@ -2109,7 +2114,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                             </div>
                                             <div>
                                                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                    {lang === 'zh' ? '镜像' : 'Image'}
+                                                    {editorTexts.image}
                                                 </label>
                                                 <input
                                                     type="text"
@@ -2125,7 +2130,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                         </div>
                                         <div>
                                             <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                {lang === 'zh' ? '命令' : 'Command'}
+                                                {editorTexts.command}
                                             </label>
                                             <input
                                                 type="text"
@@ -2145,12 +2150,12 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                             {/* 失败重试配置 */}
                             <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-4 mt-4">
                                 <h4 className="text-sm font-bold text-slate-600 dark:text-slate-300 mb-3">
-                                    {lang === 'zh' ? '失败重试' : 'Failure Retry'}
+                                    {editorTexts.failureRetry}
                                 </h4>
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
                                         <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                            {lang === 'zh' ? '重试次数' : 'Retry Times'}
+                                            {editorTexts.retryTimes}
                                         </label>
                                         <input
                                             type="number"
@@ -2162,7 +2167,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                     </div>
                                     <div>
                                         <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                            {lang === 'zh' ? '重试间隔(分钟)' : 'Retry Interval(min)'}
+                                            {editorTexts.retryInterval}
                                         </label>
                                         <input
                                             type="number"
@@ -2182,7 +2187,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                 onClick={() => setEditingNode(null)}
                                 className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
                             >
-                                {lang === 'zh' ? (isReadOnly ? '关闭' : '取消') : (isReadOnly ? 'Close' : 'Cancel')}
+                                {isReadOnly ? editorTexts.close : texts.common.cancel}
                             </button>
                             {!isReadOnly && (
                                 <button
@@ -2192,7 +2197,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                     }}
                                     className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
                                 >
-                                    {lang === 'zh' ? '确定' : 'Confirm'}
+                                    {texts.common.confirm}
                                 </button>
                             )}
                         </div>
@@ -2214,7 +2219,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                 className="w-full px-4 py-2 text-left text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center space-x-2"
                             >
                                 <Play size={16} className="text-green-500" />
-                                <span>{lang === 'zh' ? '运行此节点' : 'Run This Node'}</span>
+                                <span>{editorTexts.runThisNode}</span>
                             </button>
                         )}
                         <button
@@ -2222,7 +2227,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                             className="w-full px-4 py-2 text-left text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center space-x-2"
                         >
                             <Edit size={16} className="text-blue-500" />
-                            <span>{lang === 'zh' ? (isReadOnly ? '查看节点' : '编辑节点') : (isReadOnly ? 'View Node' : 'Edit Node')}</span>
+                            <span>{isReadOnly ? editorTexts.viewNode : editorTexts.editNode}</span>
                         </button>
                         {!isReadOnly && (
                             <>
@@ -2231,7 +2236,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                     className="w-full px-4 py-2 text-left text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center space-x-2"
                                 >
                                     <Copy size={16} className="text-green-500" />
-                                    <span>{lang === 'zh' ? '复制节点' : 'Copy Node'}</span>
+                                    <span>{editorTexts.copyNode}</span>
                                 </button>
                                 <div className="h-px bg-slate-200 dark:bg-slate-600 my-1" />
                                 <button
@@ -2239,7 +2244,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                     className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 flex items-center space-x-2"
                                 >
                                     <Trash2 size={16} />
-                                    <span>{lang === 'zh' ? '删除节点' : 'Delete Node'}</span>
+                                    <span>{editorTexts.deleteNode}</span>
                                 </button>
                             </>
                         )}
@@ -2254,7 +2259,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
                             <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center">
                                 <Play size={20} className="mr-2 text-green-500" />
-                                {lang === 'zh' ? '运行工作流' : 'Run Workflow'}
+                                {editorTexts.runWorkflow}
                             </h3>
                             <button 
                                 onClick={() => setShowRunModal(false)}
@@ -2272,45 +2277,45 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                             {/* 任务执行范围 */}
                             <div>
                                 <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                    {lang === 'zh' ? '执行范围' : 'Execution Scope'}
+                                    {editorTexts.executionScope}
                                 </label>
                                 <select
                                     value={runConfig.taskDependType}
                                     onChange={(e) => setRunConfig({ ...runConfig, taskDependType: e.target.value })}
                                     className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
                                 >
-                                    <option value="TASK_ONLY">{lang === 'zh' ? '当前节点' : 'Current Node Only'}</option>
-                                    <option value="TASK_POST">{lang === 'zh' ? '当前及以后节点' : 'Current and Downstream Nodes'}</option>
+                                    <option value="TASK_ONLY">{editorTexts.currentNodeOnly}</option>
+                                    <option value="TASK_POST">{editorTexts.currentAndDownstream}</option>
                                 </select>
                             </div>
                             
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                        {lang === 'zh' ? '失败策略' : 'Failure Strategy'}
+                                        {editorTexts.failureStrategy}
                                     </label>
                                     <select
                                         value={runConfig.failureStrategy}
                                         onChange={(e) => setRunConfig({ ...runConfig, failureStrategy: e.target.value })}
                                         className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
                                     >
-                                        <option value="CONTINUE">{lang === 'zh' ? '继续执行' : 'Continue'}</option>
-                                        <option value="END">{lang === 'zh' ? '结束执行' : 'End'}</option>
+                                        <option value="CONTINUE">{editorTexts.continue}</option>
+                                        <option value="END">{editorTexts.end}</option>
                                     </select>
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                        {lang === 'zh' ? '告警类型' : 'Warning Type'}
+                                        {editorTexts.warningType}
                                     </label>
                                     <select
                                         value={runConfig.warningType}
                                         onChange={(e) => setRunConfig({ ...runConfig, warningType: e.target.value })}
                                         className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
                                     >
-                                        <option value="NONE">{lang === 'zh' ? '无' : 'None'}</option>
-                                        <option value="SUCCESS">{lang === 'zh' ? '成功' : 'Success'}</option>
-                                        <option value="FAILURE">{lang === 'zh' ? '失败' : 'Failure'}</option>
-                                        <option value="ALL">{lang === 'zh' ? '全部' : 'All'}</option>
+                                        <option value="NONE">{editorTexts.none}</option>
+                                        <option value="SUCCESS">{dsTexts.states.success}</option>
+                                        <option value="FAILURE">{dsTexts.states.failure}</option>
+                                        <option value="ALL">{editorTexts.all}</option>
                                     </select>
                                 </div>
                             </div>
@@ -2318,18 +2323,18 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                        {lang === 'zh' ? '优先级' : 'Priority'}
+                                        {editorTexts.priority}
                                     </label>
                                     <select
                                         value={runConfig.processInstancePriority}
                                         onChange={(e) => setRunConfig({ ...runConfig, processInstancePriority: e.target.value })}
                                         className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
                                     >
-                                        <option value="HIGHEST">{lang === 'zh' ? '最高' : 'Highest'}</option>
-                                        <option value="HIGH">{lang === 'zh' ? '高' : 'High'}</option>
-                                        <option value="MEDIUM">{lang === 'zh' ? '中' : 'Medium'}</option>
-                                        <option value="LOW">{lang === 'zh' ? '低' : 'Low'}</option>
-                                        <option value="LOWEST">{lang === 'zh' ? '最低' : 'Lowest'}</option>
+                                        <option value="HIGHEST">{editorTexts.highest}</option>
+                                        <option value="HIGH">{editorTexts.high}</option>
+                                        <option value="MEDIUM">{editorTexts.medium}</option>
+                                        <option value="LOW">{editorTexts.low}</option>
+                                        <option value="LOWEST">{editorTexts.lowest}</option>
                                     </select>
                                 </div>
                                 <div>

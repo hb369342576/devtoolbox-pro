@@ -9,9 +9,9 @@ import { useComparison } from './hooks/useComparisonLogic';
 import { ConfigList } from './components/ConfigList';
 import { ConfigEditor } from './components/ConfigEditor';
 import { ComparisonResult } from './components/ComparisonResult';
-import { ViewModeToggle } from '../../components/shared/ViewModeToggle';
+import { ViewModeToggle } from '../common/ViewModeToggle';
 import { useViewMode } from '../../store/globalStore';
-import { ConfirmModal } from '../../components/ui/ConfirmModal';
+import { ConfirmModal } from '../common/ConfirmModal';
 
 export const DataCompareTool: React.FC<{
    lang: Language;

@@ -5,9 +5,9 @@ import {
 } from 'lucide-react';
 import { Language, DolphinSchedulerConnection } from '../../types';
 import { httpFetch } from '../../utils/http';
-import { useToast } from '../../components/ui/Toast';
-import { Tooltip } from '../../components/ui/Tooltip';
-import { ConfirmModal } from '../../components/ui/ConfirmModal';
+import { useToast } from '../common/Toast';
+import { ConfirmModal } from '../common/ConfirmModal';
+import { Tooltip } from '../common/Tooltip';
 
 interface DataSourceCenterProps {
     lang: Language;

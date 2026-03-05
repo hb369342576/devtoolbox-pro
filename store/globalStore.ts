@@ -9,9 +9,9 @@ import { DolphinSchedulerConnection } from '../types';
 
 interface GlobalState {
     // UI状态
-    theme: 'light' | 'dark';
+    theme: 'light' | 'dark' | 'system';
     language: 'zh' | 'en';
-    viewMode: 'grid' | 'list'; // 全局视图模式
+    viewMode: 'grid' | 'list' | 'desktop' | 'web'; // 全局视图模式
 
     // 用户状态
     isLoggedIn: boolean;
@@ -24,9 +24,9 @@ interface GlobalState {
     dsConnections: DolphinSchedulerConnection[];
     
     // Actions
-    setTheme: (theme: 'light' | 'dark') => void;
+    setTheme: (theme: 'light' | 'dark' | 'system') => void;
     setLanguage: (lang: 'zh' | 'en') => void;
-    setViewMode: (mode: 'grid' | 'list') => void;
+    setViewMode: (mode: 'grid' | 'list' | 'desktop' | 'web') => void;
     login: (username: string) => void;
     logout: () => void;
     setActiveTab: (tab: string) => void;

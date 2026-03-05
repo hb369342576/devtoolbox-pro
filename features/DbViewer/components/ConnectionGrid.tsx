@@ -1,7 +1,7 @@
 import React from 'react';
 import { Database, Plus } from 'lucide-react';
 import { Language, DbConnection } from '../../../types';
-import { Tooltip } from '../../../components/ui/Tooltip';
+import { Tooltip } from '../../common/Tooltip';
 
 interface ConnectionGridProps {
     lang: Language;

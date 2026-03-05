@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { X, Trash2, Copy, Search, Filter } from 'lucide-react';
 import { Language } from '../../../types';
-import { useToast } from '../../../components/ui/Toast';
+import { ConfirmModal } from '../../common/ConfirmModal';
+import { useToast } from '../../common/Toast';
 
 interface TruncateModalProps {
     isOpen: boolean;
@@ -21,7 +22,8 @@ export const TruncateModal: React.FC<TruncateModalProps> = ({
     const [prefix, setPrefix] = useState('');
     const [suffix, setSuffix] = useState('');
     const [search, setSearch] = useState('');
-    const { showToast } = useToast();
+    const { toast } = useToast();
+    const showToast = (title: string, variant: 'success' | 'error') => toast({ title, variant: variant === 'error' ? 'destructive' : 'success' });
 
     // 过滤表列表
     const filteredTables = useMemo(() => {

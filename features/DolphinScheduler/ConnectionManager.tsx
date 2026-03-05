@@ -5,9 +5,10 @@ import {
 } from 'lucide-react';
 import { Language, DolphinSchedulerConnection, DolphinSchedulerApiVersion } from '../../types';
 import { httpFetch } from '../../utils/http';
-import { ConfirmModal } from '../../components/ui/ConfirmModal';
-import { Tooltip } from '../../components/ui/Tooltip';
-import { ViewModeToggle } from '../../components/shared/ViewModeToggle';
+import { useToast } from '../common/Toast';
+import { ConfirmModal } from '../common/ConfirmModal';
+import { Tooltip } from '../common/Tooltip';
+import { ViewModeToggle } from '../common/ViewModeToggle';
 import { useViewMode } from '../../store/globalStore';
 
 interface ConnectionManagerProps {

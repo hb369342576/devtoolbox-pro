@@ -9,6 +9,14 @@
   </head>
   <body class="bg-gray-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100 transition-colors duration-200">
     <script>
+      window.addEventListener('error', function(event) {
+        document.body.innerHTML = '<div style="position:fixed;top:0;left:0;bottom:0;right:0;background:#900;color:#fff;padding:20px;z-index:99999;overflow:auto;"><h3>Global Error</h3><pre>' + String(event.error?.stack || event.message) + '</pre></div>';
+      });
+      window.addEventListener('unhandledrejection', function(event) {
+        document.body.innerHTML = '<div style="position:fixed;top:0;left:0;bottom:0;right:0;background:#900;color:#fff;padding:20px;z-index:99999;overflow:auto;"><h3>Unhandled Promise Rejection</h3><pre>' + String(event.reason?.stack || event.reason) + '</pre></div>';
+      });
+    </script>
+    <script>
       // 在 React 加载前立即同步主题，避免闪烁和切换异常
       (function() {
         var theme = localStorage.getItem('theme');

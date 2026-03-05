@@ -7,9 +7,9 @@ import {
 import { Language } from '../../types';
 import { SeaTunnelEngineConfig, SeaTunnelJob, JobStatus, FinishedJobState } from './types';
 import { seaTunnelApi } from './api';
-import { Tooltip } from '../../components/ui/Tooltip';
-import { useToast } from '../../components/ui/Toast';
-import { ConfirmModal } from '../../components/ui/ConfirmModal';
+import { Tooltip } from '../common/Tooltip';
+import { useToast } from '../common/Toast';
+import { ConfirmModal } from '../common/ConfirmModal';
 import { DagVisualizer } from './components/DagVisualizer';
 
 interface JobManagerProps {

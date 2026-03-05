@@ -15,7 +15,9 @@ interface PdfFileWithBlob extends PdfFile {
 
 import { PDFDocument } from 'pdf-lib';
 import JSZip from 'jszip';
-import { useToast } from '../../components/ui/Toast';
+import { useToast } from '../common/Toast';
+import { Tooltip } from '../common/Tooltip';
+import { ViewModeToggle } from '../common/ViewModeToggle';
 
 // Safe invoke wrapper
 // Safe invoke wrapper

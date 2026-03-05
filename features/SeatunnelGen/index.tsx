@@ -6,12 +6,12 @@ import {
 } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { TableInfo, ColumnInfo, TableDetail } from '../../types';
-import { ConfirmModal } from '../../components/ui/ConfirmModal';
-import { ViewModeToggle } from '../../components/shared/ViewModeToggle';
-import { useViewMode } from '../../store/globalStore';
+import { ConfirmModal } from '../common/ConfirmModal';
+import { ViewModeToggle } from '../common/ViewModeToggle';
+import { useViewMode, useGlobalStore } from '../../store/globalStore';
 import { generateConfig } from './utils/configGenerator';
-import { useToast } from '../../components/ui/Toast';
-import { Tooltip } from '../../components/ui/Tooltip';
+import { useToast } from '../common/Toast';
+import { Tooltip } from '../common/Tooltip';
 import { SeaTunnelEngineConfig } from '../SeaTunnelManager/types';
 import { seaTunnelApi } from '../SeaTunnelManager/api';
 import { convertToJson } from '../../utils/hoconParser';

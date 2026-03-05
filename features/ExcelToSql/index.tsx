@@ -4,12 +4,12 @@ import {
   Play, Plus, Trash2, ChevronLeft, Save, Table
 } from 'lucide-react';
 import { Language, ExcelTemplate } from '../../types';
-import { ViewModeToggle } from '../../components/shared/ViewModeToggle';
+import { ViewModeToggle } from '../common/ViewModeToggle';
 import { useViewMode } from '../../store/globalStore';
-import { ConfirmModal } from '../../components/ui/ConfirmModal';
-import { Tooltip } from '../../components/ui/Tooltip';
+import { ConfirmModal } from '../common/ConfirmModal';
+import { Tooltip } from '../common/Tooltip';
 import * as XLSX from 'xlsx';
-import { useToast, ToastProvider } from '../../components/ui/Toast';
+import { useToast, ToastProvider } from '../common/Toast';
 
 const DEFAULT_TEMPLATES: ExcelTemplate[] = [
   {

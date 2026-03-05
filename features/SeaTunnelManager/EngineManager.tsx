@@ -6,9 +6,10 @@ import {
 import { Language } from '../../types';
 import { SeaTunnelEngineConfig, SeaTunnelEngineType, ZetaApiVersion } from './types';
 import { seaTunnelApi } from './api';
-import { ConfirmModal } from '../../components/ui/ConfirmModal';
-import { Tooltip } from '../../components/ui/Tooltip';
-import { ViewModeToggle } from '../../components/shared/ViewModeToggle';
+import { ConfirmModal } from '../common/ConfirmModal';
+import { useToast } from '../common/Toast';
+import { Tooltip } from '../common/Tooltip';
+import { ViewModeToggle } from '../common/ViewModeToggle';
 import { useViewMode } from '../../store/globalStore';
 
 interface EngineManagerProps {

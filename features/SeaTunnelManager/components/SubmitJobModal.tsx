@@ -3,7 +3,7 @@ import { X, Upload, FileText, AlertCircle, CheckCircle, Loader2, RefreshCw } fro
 import { Language } from '../../../types';
 import { SeaTunnelEngineConfig, SubmitJobRequest } from '../types';
 import { seaTunnelApi } from '../api';
-import { useToast } from '../../../components/ui/Toast';
+import { useToast } from '../../common/Toast';
 import { isHoconFormat, convertToJson } from '../../../utils/hoconParser';
 
 interface SubmitJobModalProps {

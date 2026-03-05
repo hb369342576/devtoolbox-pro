@@ -8,9 +8,9 @@ import {
 import { Language, DolphinSchedulerConnection, DSResource } from '../../types';
 import { httpFetch } from '../../utils/http';
 import { invoke } from '@tauri-apps/api/core';
-import { useToast } from '../../components/ui/Toast';
-import { Tooltip } from '../../components/ui/Tooltip';
-import { ConfirmModal } from '../../components/ui/ConfirmModal';
+import { useToast } from '../common/Toast';
+import { Tooltip } from '../common/Tooltip';
+import { ConfirmModal } from '../common/ConfirmModal';
 import { open, save } from '@tauri-apps/plugin-dialog';
 import { writeFile, readFile } from '@tauri-apps/plugin-fs';
 

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Power, XCircle, Search, Loader2 } from 'lucide-react';
 import { httpFetch } from '../../../utils/http';
-import { useToast } from '../../../components/ui/Toast';
-import { Language, ProcessDefinition } from '../types';
+import { useToast } from '../../common/Toast';
 import { DolphinSchedulerApiVersion } from '../../../types';
 import { getWorkflowApiPath } from '../utils';
+import { Language, ProcessDefinition } from '../types';
+import { getTexts as getLocalesTexts } from '../../../locales';
 
 interface BatchPublishModalProps {
     show: boolean;
@@ -19,6 +20,8 @@ interface BatchPublishModalProps {
 }
 
 export const BatchPublishModal: React.FC<BatchPublishModalProps> = ({ show, lang, processes, projectCode, baseUrl, token, apiVersion, onClose, onSuccess }) => {
+    const texts = getLocalesTexts(lang);
+    const dsTexts = texts.dolphinScheduler;
     const { toast } = useToast();
     const [processing, setProcessing] = useState(false);
     const [selectedCodes, setSelectedCodes] = useState<number[]>([]);
@@ -51,7 +54,7 @@ export const BatchPublishModal: React.FC<BatchPublishModalProps> = ({ show, lang
     
     const handleBatchPublish = async () => {
         if (selectedCodes.length === 0) {
-            toast({ title: lang === 'zh' ? '请选择工作流' : 'Please select workflows', variant: 'destructive' });
+            toast({ title: dsTexts.pleaseSelectWorkflows, variant: 'destructive' });
             return;
         }
         
@@ -73,8 +76,13 @@ export const BatchPublishModal: React.FC<BatchPublishModalProps> = ({ show, lang
         }
         
         setProcessing(false);
-        const actionText = action === 'ONLINE' ? (lang === 'zh' ? '上线' : 'Publish') : (lang === 'zh' ? '下线' : 'Unpublish');
-        toast({ title: `${actionText}${lang === 'zh' ? '完成' : ' Complete'}: ${success} ${lang === 'zh' ? '成功' : 'success'}, ${failed} ${lang === 'zh' ? '失败' : 'failed'}`, variant: failed > 0 ? 'destructive' : 'success' });
+        const actionText = action === 'ONLINE' ? dsTexts.states.online : dsTexts.states.offline;
+        const summary = dsTexts.batchActionComplete
+            .replace('{action}', actionText)
+            .replace('{success}', String(success))
+            .replace('{fail}', String(failed));
+            
+        toast({ title: summary, variant: failed > 0 ? 'destructive' : 'success' });
         onSuccess();
         onClose();
     };
@@ -85,7 +93,7 @@ export const BatchPublishModal: React.FC<BatchPublishModalProps> = ({ show, lang
                 <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800/80">
                     <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center">
                         <Power size={20} className="mr-2 text-green-500" />
-                        {lang === 'zh' ? '批量上下线' : 'Batch Publish/Unpublish'}
+                        {dsTexts.batchPublishUnpublish}
                     </h3>
                     <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1"><XCircle size={20} /></button>
                 </div>
@@ -96,20 +104,20 @@ export const BatchPublishModal: React.FC<BatchPublishModalProps> = ({ show, lang
                             onClick={() => { setAction('ONLINE'); setSelectedCodes([]); }} 
                             className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${action === 'ONLINE' ? 'bg-green-500 text-white' : 'text-slate-600 dark:text-slate-400 hover:text-slate-800'}`}
                         >
-                            {lang === 'zh' ? '上线' : 'Publish'}
+                            {dsTexts.states.online}
                         </button>
                         <button 
                             onClick={() => { setAction('OFFLINE'); setSelectedCodes([]); }} 
                             className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${action === 'OFFLINE' ? 'bg-red-500 text-white' : 'text-slate-600 dark:text-slate-400 hover:text-slate-800'}`}
                         >
-                            {lang === 'zh' ? '下线' : 'Unpublish'}
+                            {dsTexts.states.offline}
                         </button>
                     </div>
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                         <input 
                             type="text" 
-                            placeholder={lang === 'zh' ? '搜索工作流...' : 'Search workflows...'} 
+                            placeholder={dsTexts.searchWorkflows} 
                             value={searchTerm} 
                             onChange={e => setSearchTerm(e.target.value)} 
                             className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none" 
@@ -118,11 +126,11 @@ export const BatchPublishModal: React.FC<BatchPublishModalProps> = ({ show, lang
                     <div className="flex items-center justify-between">
                         <span className="text-xs text-slate-500">
                             {action === 'ONLINE' 
-                                ? (lang === 'zh' ? `共 ${targetProcesses.length} 个可上线` : `${targetProcesses.length} offline`)
-                                : (lang === 'zh' ? `共 ${targetProcesses.length} 个可下线` : `${targetProcesses.length} online`)}
+                                ? dsTexts.canOnlineCount.replace('{total}', String(targetProcesses.length))
+                                : dsTexts.canOfflineCount.replace('{total}', String(targetProcesses.length))}
                         </span>
                         <button onClick={handleSelectAll} className="text-xs text-green-500 hover:text-green-600">
-                            {selectedCodes.length === filteredProcesses.length && filteredProcesses.length > 0 ? (lang === 'zh' ? '取消全选' : 'Deselect All') : (lang === 'zh' ? '全选' : 'Select All')}
+                            {selectedCodes.length === filteredProcesses.length && filteredProcesses.length > 0 ? dsTexts.deselectAll : dsTexts.selectAll}
                         </button>
                     </div>
                 </div>
@@ -135,16 +143,16 @@ export const BatchPublishModal: React.FC<BatchPublishModalProps> = ({ show, lang
                                 <span className={`text-xs px-2 py-0.5 rounded ${p.releaseState === 'ONLINE' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>{p.releaseState}</span>
                             </label>
                         ))}
-                        {filteredProcesses.length === 0 && <p className="text-slate-400 text-center py-4 text-sm">{searchTerm ? (lang === 'zh' ? '未找到匹配的工作流' : 'No matching workflows') : (action === 'ONLINE' ? (lang === 'zh' ? '没有可上线的工作流' : 'No offline workflows') : (lang === 'zh' ? '没有可下线的工作流' : 'No online workflows'))}</p>}
+                        {filteredProcesses.length === 0 && <p className="text-slate-400 text-center py-4 text-sm">{searchTerm ? dsTexts.noMatchingWorkflows : (action === 'ONLINE' ? dsTexts.noOfflineWorkflows : dsTexts.noOnlineWorkflows)}</p>}
                     </div>
                 </div>
                 <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 flex justify-between items-center">
-                    <span className="text-sm text-slate-500">{lang === 'zh' ? `已选 ${selectedCodes.length} 个` : `${selectedCodes.length} selected`}</span>
+                    <span className="text-sm text-slate-500">{dsTexts.selectedCount.replace('{count}', String(selectedCodes.length))}</span>
                     <div className="flex space-x-3">
-                        <button onClick={onClose} className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg">{lang === 'zh' ? '取消' : 'Cancel'}</button>
+                        <button onClick={onClose} className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg">{texts.common.cancel}</button>
                         <button onClick={handleBatchPublish} disabled={processing || selectedCodes.length === 0} className={`px-6 py-2 text-white rounded-lg font-medium disabled:opacity-50 flex items-center ${action === 'ONLINE' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}`}>
                             {processing && <Loader2 size={16} className="animate-spin mr-2" />}
-                            {action === 'ONLINE' ? (lang === 'zh' ? '上线' : 'Publish') : (lang === 'zh' ? '下线' : 'Unpublish')}
+                            {action === 'ONLINE' ? dsTexts.states.online : dsTexts.states.offline}
                         </button>
                     </div>
                 </div>

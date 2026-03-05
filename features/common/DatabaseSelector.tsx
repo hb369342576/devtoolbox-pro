@@ -1,4 +1,6 @@
-import React from 'react';
+/** 通用 ConfirmModal 确认对话框组件 */
+/** 通用数据源/数据库选择器组件 */
+import React, { useState, useEffect } from 'react';
 import { Database, RefreshCw } from 'lucide-react';
 import { DbConnection, Language } from '../../types';
 import { useDatabase } from '../../hooks/useDatabase';

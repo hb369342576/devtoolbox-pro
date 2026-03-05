@@ -3,7 +3,7 @@ import { X, Database, Code, Search } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { DbConnection, Language, TableInfo, TableDetail, CanvasNode } from '../../../types';
 import { useFieldMappingStore } from '../store';
-import { useToast } from '../../../components/ui/Toast';
+import { useToast } from '../../common/Toast';
 
 interface NodeConfigModalProps {
     isOpen: boolean;

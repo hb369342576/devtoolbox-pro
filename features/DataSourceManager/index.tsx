@@ -5,11 +5,12 @@ import {
 } from 'lucide-react';
 import { Language, DbConnection, DatabaseType } from '../../types';
 import { invoke } from '@tauri-apps/api/core';
-import { getTexts } from '../../locales';
-import { ConfirmModal } from '../../components/ui/ConfirmModal';
-import { ViewModeToggle } from '../../components/shared/ViewModeToggle';
+import { useToast } from '../common/Toast';
+import { ConfirmModal } from '../common/ConfirmModal';
+import { Tooltip } from '../common/Tooltip';
+import { ViewModeToggle } from '../common/ViewModeToggle';
 import { useViewMode } from '../../store/globalStore';
-import { Tooltip } from '../../components/ui/Tooltip';
+import { getTexts } from '../../locales'; // This line was not removed in the instruction, so keeping it.
 
 interface DataSourceManagerProps {
   lang: Language;

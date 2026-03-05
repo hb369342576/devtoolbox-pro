@@ -3,10 +3,10 @@ import { GitCompare, Plus, Edit, Trash2 } from 'lucide-react';
 import { Language } from '../../../types';
 import { SavedCompareConfig } from '../types';
 import { getTexts } from '../../../locales';
-import { ConfirmModal } from '../../../components/ui/ConfirmModal';
-import { ViewModeToggle } from '../../../components/shared/ViewModeToggle';
+import { ConfirmModal } from '../../common/ConfirmModal';
+import { ViewModeToggle } from '../../common/ViewModeToggle';
 import { useViewMode } from '../../../store/globalStore';
-import { Tooltip } from '../../../components/ui/Tooltip';
+import { Tooltip } from '../../common/Tooltip';
 
 interface ConfigListProps {
     lang: Language;

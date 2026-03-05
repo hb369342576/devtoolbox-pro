@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { Layout } from './components/ui/Layout';
-import { ToastProvider } from './components/ui/Toast';
-import { UpdateChecker } from './components/UpdateChecker';
-import { Tooltip } from './components/ui/Tooltip';
+import { Layout } from './features/common/Layout';
+import { ToastProvider } from './features/common/Toast';
+import { UpdateChecker } from './features/common/UpdateChecker';
+import { Tooltip } from './features/common/Tooltip';
 import { Login } from './features/Login';
 import { UserProfile } from './features/UserProfile';
 import { DbViewer } from './features/DbViewer';
@@ -24,6 +24,7 @@ import { DSManager } from './features/DolphinScheduler/DSManager';
 import { SeaTunnelManager } from './features/SeaTunnelManager';
 import { Language, Theme, User, DbConnection, DolphinSchedulerConfig } from './types';
 import { NAV_ITEMS } from './constants';
+import i18n from './i18n';
 
 /* --- Home Dashboard --- */
 const Dashboard: React.FC<{ onNavigate: (id: string) => void, lang: Language }> = ({ onNavigate, lang }) => {
@@ -257,6 +258,7 @@ export default function App() {
   // Persist language
   useEffect(() => {
     localStorage.setItem('language', lang);
+    i18n.changeLanguage(lang);
   }, [lang]);
 
 

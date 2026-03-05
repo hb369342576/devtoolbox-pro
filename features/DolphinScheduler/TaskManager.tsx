@@ -3,12 +3,12 @@ import {
     ListTodo, ArrowLeft, Search, Folder, Calendar, AlertCircle,
     PlayCircle, Settings, RefreshCw, CalendarClock, Plus, CheckCircle2, XCircle, Timer, User, Loader2,
     Eye, Download, Upload, Power, Clock, ChevronLeft, ChevronRight, MoreHorizontal, Tag, Copy, Edit, Container,
-    Trash2, StopCircle, AlignJustify
+    Trash2, StopCircle, AlignJustify, Moon, Sun, Monitor, Languages, Play, Square, PauseCircle
 } from 'lucide-react';
 import { Language, DolphinSchedulerConfig, DolphinSchedulerApiVersion } from '../../types';
-import { getTexts } from '../../locales';
-import { Tooltip } from '../../components/ui/Tooltip';
-import { useToast } from '../../components/ui/Toast';
+import { useTranslation } from 'react-i18next';
+import { Tooltip } from '../common/Tooltip';
+import { useToast } from '../common/Toast';
 import { save, open } from '@tauri-apps/plugin-dialog';
 import { httpFetch } from '../../utils/http';
 import { readDir } from '@tauri-apps/plugin-fs';
@@ -37,7 +37,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
     onNavigate,
     onBack
 }) => {
-    const t = getTexts(lang);
+    const { t } = useTranslation();
     const { toast } = useToast();
     const [searchTerm, setSearchTerm] = useState('');
     const [processes, setProcesses] = useState<ProcessDefinition[]>([]);
@@ -53,6 +53,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
     const [showLog, setShowLog] = useState(false);
     const [editProcess, setEditProcess] = useState<ProcessDefinition | null>(null);
     const [showCreateMenu, setShowCreateMenu] = useState(false);
+    const [selectedProcesses, setSelectedProcesses] = useState<Set<number | string>>(new Set());
     
     // 新建 K8S 工作流
     const [showCreateK8s, setShowCreateK8s] = useState(false);
@@ -151,6 +152,15 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
     });
     
     const [showConfigModal, setShowConfigModal] = useState(false);
+
+    // 全选实例逻辑
+    const handleSelectAllInstances = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.checked) {
+            setSelectedInstances(new Set(processInstances.map(inst => inst.id)));
+        } else {
+            setSelectedInstances(new Set());
+        }
+    }, [processInstances]);
 
     const handleCreateK8sClick = () => {
         // 使用保存的配置或默认配置
@@ -273,7 +283,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
         } catch (err: any) {
             console.error('[TaskManager] Fetch error:', err);
             setError(err.message);
-            toast({ title: lang === 'zh' ? '加载失败' : 'Load Failed', description: err.message, variant: 'destructive' });
+            toast({ title: t('common.failed'), description: err.message, variant: 'destructive' });
         } finally {
             setLoading(false);
         }
@@ -335,11 +345,11 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                 setProcessInstances(result.data?.totalList || []);
                 setInstanceTotal(result.data?.total || 0);
             } else {
-                toast({ title: lang === 'zh' ? '加载失败' : 'Load Failed', description: result.msg, variant: 'destructive' });
+                toast({ title: t('common.failed'), description: result.msg, variant: 'destructive' });
             }
         } catch (err: any) {
             console.error('[TaskManager] Fetch process instances error:', err);
-            toast({ title: lang === 'zh' ? '加载失败' : 'Load Failed', description: err.message, variant: 'destructive' });
+            toast({ title: t('common.failed'), description: err.message, variant: 'destructive' });
         } finally {
             setInstanceLoading(false);
         }
@@ -361,11 +371,11 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                 setSchedules(result.data?.totalList || []);
                 setScheduleTotal(result.data?.total || 0);
             } else {
-                toast({ title: lang === 'zh' ? '加载失败' : 'Load Failed', description: result.msg, variant: 'destructive' });
+                toast({ title: t('common.loadFailed'), description: result.msg, variant: 'destructive' });
             }
         } catch (err: any) {
             console.error('[TaskManager] Fetch schedules error:', err);
-            toast({ title: lang === 'zh' ? '加载失败' : 'Load Failed', description: err.message, variant: 'destructive' });
+            toast({ title: t('common.loadFailed'), description: err.message, variant: 'destructive' });
         } finally {
             setScheduleLoading(false);
         }
@@ -388,11 +398,11 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                 setTaskInstances(result.data?.totalList || []);
                 setTaskInstanceTotal(result.data?.total || 0);
             } else {
-                toast({ title: lang === 'zh' ? '加载失败' : 'Load Failed', description: result.msg, variant: 'destructive' });
+                toast({ title: t('common.loadFailed'), description: result.msg, variant: 'destructive' });
             }
         } catch (err: any) {
             console.error('[TaskManager] Fetch task instances error:', err);
-            toast({ title: lang === 'zh' ? '加载失败' : 'Load Failed', description: err.message, variant: 'destructive' });
+            toast({ title: t('common.loadFailed'), description: err.message, variant: 'destructive' });
         } finally {
             setTaskInstanceLoading(false);
         }
@@ -468,16 +478,16 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                 currentProject?.apiVersion
             );
             if (result.success) {
-                toast({ title: lang === 'zh' ? '创建成功' : 'Created', variant: 'success' });
+                toast({ title: t('common.createSuccess'), variant: 'success' });
                 setShowCreateK8s(false);
                 setCreateK8sName('');
                 setCreateK8sConfigPath('smart_cloud_pro/');
                 handleRefresh();
             } else {
-                toast({ title: lang === 'zh' ? '创建失败' : 'Failed', description: result.msg, variant: 'destructive' });
+                toast({ title: t('common.createFailed'), description: result.msg, variant: 'destructive' });
             }
         } catch (err: any) {
-            toast({ title: lang === 'zh' ? '创建失败' : 'Failed', description: err.message, variant: 'destructive' });
+            toast({ title: t('common.createFailed'), description: err.message, variant: 'destructive' });
         } finally {
             setCreatingK8s(false);
         }
@@ -512,14 +522,14 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
             
             const result = JSON.parse(responseText);
             if (result.code === 0) {
-                toast({ title: lang === 'zh' ? '操作成功' : 'Success', variant: 'success' });
+                toast({ title: t('common.operationSuccess'), variant: 'success' });
                 handleRefresh();
             } else {
                 throw new Error(result.msg);
             }
         } catch (err: any) {
             console.error('[DolphinScheduler] Toggle error:', err);
-            toast({ title: lang === 'zh' ? '操作失败' : 'Failed', description: err.message, variant: 'destructive' });
+            toast({ title: t('common.operationFailed'), description: err.message, variant: 'destructive' });
         }
     };
 
@@ -550,14 +560,14 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
             
             const result = JSON.parse(responseText);
             if (result.code === 0) {
-                toast({ title: lang === 'zh' ? '复制成功' : 'Copy Success', variant: 'success' });
+                toast({ title: t('common.copySuccess'), variant: 'success' });
                 handleRefresh();
             } else {
                 throw new Error(result.msg);
             }
         } catch (err: any) {
             console.error('[DolphinScheduler] Copy error:', err);
-            toast({ title: lang === 'zh' ? '复制失败' : 'Copy Failed', description: err.message, variant: 'destructive' });
+            toast({ title: t('common.copyFailed'), description: err.message, variant: 'destructive' });
         }
     };
 
@@ -575,7 +585,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
             const savePath = await open({
                 directory: true,
                 multiple: false,
-                title: lang === 'zh' ? '选择导出目录' : 'Select Export Directory'
+                title: t('common.selectExportDir')
             });
             
             if (!savePath) return;
@@ -593,10 +603,10 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                 exportSingleVersion
             );
             
-            toast({ title: lang === 'zh' ? `导出成功` : `Export Success`, variant: 'success' });
+            toast({ title: t('common.success'), variant: 'success' });
             setExportSingleProcess(null);
         } catch (err: any) {
-            toast({ title: lang === 'zh' ? '导出失败' : 'Export Failed', description: err.message, variant: 'destructive' });
+            toast({ title: t('common.failed'), description: err.message, variant: 'destructive' });
         } finally {
             setExportingSingle(false);
         }
@@ -608,7 +618,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
             const dirPath = await open({
                 directory: true,
                 multiple: false,
-                title: lang === 'zh' ? '选择导入目录' : 'Select Import Directory'
+                title: t('common.selectImportDir')
             });
             
             if (!dirPath) return;
@@ -616,20 +626,20 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
             const workflow = await readWorkflowFromDir(dirPath as string);
             
             if (!workflow) {
-                toast({ title: lang === 'zh' ? '未找到 workflow.json' : 'workflow.json not found', variant: 'destructive' });
+                toast({ title: t('dolphinScheduler.workflowNotFound') || 'workflow.json not found', variant: 'destructive' });
                 return;
             }
             
             // 检查工作流状态
             if (process.releaseState === 'ONLINE') {
                 toast({ 
-                    title: lang === 'zh' ? '请先下线工作流' : 'Please unpublish the workflow first', 
+                    title: t('dolphinScheduler.pleaseOfflineFirst') || 'Please unpublish the workflow first', 
                     variant: 'destructive' 
                 });
                 return;
             }
             
-            toast({ title: lang === 'zh' ? `正在导入到 ${process.name}...` : `Importing to ${process.name}...`, variant: 'default' });
+            toast({ title: t('common.loading'), variant: 'default' });
             
             const result = await importWorkflowToDS(
                 workflow,
@@ -641,45 +651,66 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
             );
             
             if (result.success) {
-                toast({ title: lang === 'zh' ? '导入成功' : 'Import Success', variant: 'success' });
+                toast({ title: t('common.success'), variant: 'success' });
                 handleRefresh();
             } else {
-                toast({ title: lang === 'zh' ? '导入失败' : 'Import Failed', description: result.msg, variant: 'destructive' });
+                toast({ title: t('common.failed'), description: result.msg, variant: 'destructive' });
             }
         } catch (err: any) {
-            toast({ title: lang === 'zh' ? '导入失败' : 'Import Failed', description: err.message, variant: 'destructive' });
+            toast({ title: t('common.failed'), description: err.message, variant: 'destructive' });
         }
     };
 
-    // 渲染状态标签
-    const renderStateTag = (state: 'ONLINE' | 'OFFLINE') => (
-        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-            state === 'ONLINE' 
-                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' 
-                : 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400'
-        }`}>
-            {state === 'ONLINE' ? <CheckCircle2 size={12} className="mr-1" /> : <XCircle size={12} className="mr-1" />}
-            {state}
-        </span>
-    );
+
+    // 状态标签渲染
+    const renderStateTag = (state: string | number) => {
+        const isOnline = state === 'ONLINE' || state === 1;
+        const color = isOnline ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400';
+        const label = isOnline ? t('dolphinScheduler.online') : t('dolphinScheduler.offline');
+        
+        return (
+            <span className={`inline-flex items-center whitespace-nowrap px-2 py-0.5 rounded text-xs font-medium ${color}`}>
+                {isOnline ? <CheckCircle2 size={12} className="mr-1" /> : <XCircle size={12} className="mr-1" />}
+                {label}
+            </span>
+        );
+    };
 
     // 实例运行状态渲染
     const renderInstanceStateTag = (state: string) => {
-        const stateMap: Record<string, { color: string; label: string }> = {
-            'SUCCESS': { color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400', label: '成功' },
-            'RUNNING_EXECUTION': { color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400', label: '运行中' },
-            'FAILURE': { color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400', label: '失败' },
-            'STOP': { color: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400', label: '停止' },
-            'PAUSE': { color: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400', label: '暂停' },
-            'KILL': { color: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400', label: '终止' },
-            'SUBMITTED_SUCCESS': { color: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400', label: '已提交' },
-            'DISPATCH': { color: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400', label: '调度中' },
+        const stateMap: Record<string, { color: string; labelKey: string }> = {
+            'SUCCESS': { color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400', labelKey: 'success' },
+            'FAILURE': { color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400', labelKey: 'failure' },
+            'RUNNING_EXECUTION': { color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400', labelKey: 'running' },
+            'READY_PAUSE': { color: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400', labelKey: 'readyPause' },
+            'PAUSE': { color: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400', labelKey: 'pause' },
+            'READY_STOP': { color: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400', labelKey: 'readyStop' },
+            'STOP': { color: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400', labelKey: 'stop' },
+            'SUBMITTED_SUCCESS': { color: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400', labelKey: 'submitted' },
+            'NEED_FAULT_TOLERANCE': { color: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400', labelKey: 'faultTolerance' },
+            'KILL': { color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400', labelKey: 'kill' },
+            'DELAY_EXECUTION': { color: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400', labelKey: 'delay' },
+            'FORCED_SUCCESS': { color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400', labelKey: 'forcedSuccess' },
+            'SERIAL_WAIT': { color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400', labelKey: 'serialWait' },
+            'WAIT_TO_RUN': { color: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400', labelKey: 'waiting' },
         };
-        const info = stateMap[state] || { color: 'bg-slate-100 text-slate-500', label: state };
-        return <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${info.color}`}>{info.label}</span>;
+        const config = stateMap[state];
+        if (!config) return <span className="inline-flex items-center whitespace-nowrap px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">{state}</span>;
+
+        const label = t(`dolphinScheduler.states.${config.labelKey}`);
+
+        return (
+            <span className={`inline-flex items-center whitespace-nowrap px-2 py-0.5 rounded text-xs font-medium ${config.color}`}>
+                {state === 'SUCCESS' || state === 'FORCED_SUCCESS' ? <CheckCircle2 size={12} className="mr-1" /> :
+                 state === 'FAILURE' || state === 'KILL' ? <XCircle size={12} className="mr-1" /> :
+                 state === 'RUNNING_EXECUTION' ? <Loader2 size={12} className="mr-1 animate-spin" /> :
+                 state === 'PAUSE' || state === 'READY_PAUSE' ? <PauseCircle size={12} className="mr-1" /> :
+                 state === 'STOP' || state === 'READY_STOP' ? <StopCircle size={12} className="mr-1" /> :
+                 <AlertCircle size={12} className="mr-1" />}
+                {label}
+            </span>
+        );
     };
-
-
 
     // 查看任务日志
     const fetchTaskLog = async (taskInstanceId: number, taskName: string) => {
@@ -729,13 +760,13 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
             });
             const result = await response.json();
             if (result.code === 0) {
-                toast({ title: lang === 'zh' ? '操作成功' : 'Success', variant: 'success' });
+                toast({ title: t('common.success'), variant: 'success' });
                 fetchSchedules();
             } else {
-                toast({ title: lang === 'zh' ? '操作失败' : 'Failed', description: result.msg, variant: 'destructive' });
+                toast({ title: t('common.failed'), description: result.msg, variant: 'destructive' });
             }
         } catch (err: any) {
-            toast({ title: lang === 'zh' ? '操作失败' : 'Failed', description: err.message, variant: 'destructive' });
+            toast({ title: t('common.failed'), description: err.message, variant: 'destructive' });
         }
     };
 
@@ -751,13 +782,13 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
             });
             const result = await response.json();
             if (result.code === 0) {
-                toast({ title: lang === 'zh' ? '已停止' : 'Stopped', variant: 'success' });
+                toast({ title: t('common.success'), variant: 'success' });
                 fetchProcessInstances();
             } else {
-                toast({ title: lang === 'zh' ? '停止失败' : 'Stop Failed', description: result.msg, variant: 'destructive' });
+                toast({ title: t('common.failed'), description: result.msg, variant: 'destructive' });
             }
         } catch (err: any) {
-            toast({ title: lang === 'zh' ? '停止失败' : 'Stop Failed', description: err.message, variant: 'destructive' });
+            toast({ title: t('common.failed'), description: err.message, variant: 'destructive' });
         }
     };
 
@@ -773,47 +804,47 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
             });
             const result = await response.json();
             if (result.code === 0) {
-                toast({ title: lang === 'zh' ? '已删除' : 'Deleted', variant: 'success' });
+                toast({ title: t('common.success'), variant: 'success' });
                 setSelectedInstances(prev => { const n = new Set(prev); n.delete(instanceId); return n; });
                 fetchProcessInstances();
             } else {
-                toast({ title: lang === 'zh' ? '删除失败' : 'Delete Failed', description: result.msg, variant: 'destructive' });
+                toast({ title: t('common.failed'), description: result.msg, variant: 'destructive' });
             }
         } catch (err: any) {
-            toast({ title: lang === 'zh' ? '删除失败' : 'Delete Failed', description: err.message, variant: 'destructive' });
+            toast({ title: t('common.failed'), description: err.message, variant: 'destructive' });
         } finally {
             setInstanceDeleting(false);
         }
     };
 
-    // 批量删除工作流实例
-    const handleBatchDeleteInstances = async () => {
+    // 批量删除工作流实例 (fire-and-forget: 请求发出即视为成功，不阻塞 UI)
+    const handleBatchDeleteInstances = () => {
         if (selectedInstances.size === 0) return;
-        setInstanceDeleting(true);
-        try {
-            const instancePath = currentProject?.apiVersion === 'v3.4' ? 'workflow-instances' : 'process-instances';
-            const paramName = currentProject?.apiVersion === 'v3.4' ? 'workflowInstanceIds' : 'processInstanceIds';
-            const ids = Array.from(selectedInstances);
-            const url = `${baseUrl}/projects/${projectCode}/${instancePath}/batch-delete`;
-            const response = await httpFetch(url, {
-                method: 'POST',
-                headers: { 'token': token, 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `${paramName}=${ids.join(',')}`
-            });
+        const instancePath = currentProject?.apiVersion === 'v3.4' ? 'workflow-instances' : 'process-instances';
+        const paramName = currentProject?.apiVersion === 'v3.4' ? 'workflowInstanceIds' : 'processInstanceIds';
+        const ids = Array.from(selectedInstances);
+        const url = `${baseUrl}/projects/${projectCode}/${instancePath}/batch-delete`;
+
+        // 立即反馈并清除选中
+        toast({ title: lang === 'zh' ? `已提交删除 ${ids.length} 个实例` : `Submitted deletion of ${ids.length} instances`, variant: 'success' });
+        setSelectedInstances(new Set());
+
+        // 后台异步发送请求，不阻塞 UI
+        httpFetch(url, {
+            method: 'POST',
+            headers: { 'token': token, 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `${paramName}=${ids.join(',')}`
+        }).then(async (response) => {
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const result = await response.json();
-            if (result.code === 0) {
-                toast({ title: lang === 'zh' ? `已删除 ${ids.length} 个实例` : `Deleted ${ids.length} instances`, variant: 'success' });
-                setSelectedInstances(new Set());
-                fetchProcessInstances();
-            } else {
-                toast({ title: lang === 'zh' ? '批量删除失败' : 'Batch Delete Failed', description: result.msg, variant: 'destructive' });
+            if (result.code !== 0) {
+                toast({ title: lang === 'zh' ? '批量删除部分失败' : 'Batch Delete Partially Failed', description: result.msg, variant: 'destructive' });
             }
-        } catch (err: any) {
+            fetchProcessInstances();
+        }).catch((err: any) => {
             toast({ title: lang === 'zh' ? '批量删除失败' : 'Batch Delete Failed', description: err.message, variant: 'destructive' });
-        } finally {
-            setInstanceDeleting(false);
-        }
+            fetchProcessInstances();
+        });
     };
 
     // 分页信息
@@ -1106,59 +1137,97 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                         ) : filteredProcesses.length === 0 ? (
                             <div className="flex-1 flex items-center justify-center text-slate-400">
                                 <ListTodo size={48} className="mr-4 opacity-20" />
-                                {lang === 'zh' ? '暂无工作流' : 'No workflows found'}
+                                {t('dolphinScheduler.noWorkflows')}
                             </div>
                         ) : (
-                            <div className="overflow-auto flex-1 min-h-0">
-                                <table className="w-full text-sm" style={{ tableLayout: 'fixed' }}>
+                            <div className="overflow-auto flex-1 min-h-0 scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-600 scrollbar-track-transparent [&::-webkit-scrollbar-corner]:bg-transparent">
+                                <table className="w-full text-sm min-w-[1000px]">
                                     <colgroup>
+                                        <col style={{ width: '40px' }} />
                                         <col style={{ width: '50px' }} />
                                         <col style={{ width: columnWidths.name }} />
                                         <col style={{ width: columnWidths.version }} />
                                         <col style={{ width: columnWidths.state }} />
                                         <col style={{ width: columnWidths.schedule }} />
-                                        <col style={{ width: columnWidths.actions }} />
                                         <col />
+                                        <col />
+                                        <col style={{ width: '1%' }} />
                                     </colgroup>
-                                    <thead className="bg-slate-50 dark:bg-slate-900/50 sticky top-0">
+                                    <thead className="bg-slate-50 dark:bg-slate-900 sticky top-0 z-30">
                                         <tr className="text-center text-slate-500 dark:text-slate-400 whitespace-nowrap">
-                                            <th className="px-2 py-3 font-medium w-12 text-center">#</th>
+                                            <th className="px-2 py-3 w-10 text-center">
+                                                <input type="checkbox"
+                                                    checked={selectedProcesses.size === filteredProcesses.length && filteredProcesses.length > 0}
+                                                    onChange={e => {
+                                                        if (e.target.checked) setSelectedProcesses(new Set(filteredProcesses.map(p => p.code)));
+                                                        else setSelectedProcesses(new Set());
+                                                    }}
+                                                    className="rounded border-slate-300"
+                                                />
+                                            </th>
+                                            <th className="px-2 py-3 font-medium w-12 text-center">{t('dolphinScheduler.tableHeaders.hash')}</th>
                                             <th className="px-4 py-3 font-medium relative text-left">
-                                                {lang === 'zh' ? '名称' : 'Name'}
+                                                {t('dolphinScheduler.tableHeaders.workflowName')}
                                                 <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-purple-400 active:bg-purple-500" onMouseDown={e => handleResizeStart(e, 'name')} />
                                             </th>
-                                            <th className="px-4 py-3 font-medium relative">
-                                                {lang === 'zh' ? '版本' : 'Ver'}
+                                            <th className="px-4 py-3 font-medium relative text-center">
+                                                {t('dolphinScheduler.tableHeaders.version')}
                                                 <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-purple-400 active:bg-purple-500" onMouseDown={e => handleResizeStart(e, 'version')} />
                                             </th>
-                                            <th className="px-4 py-3 font-medium relative">
-                                                {lang === 'zh' ? '状态' : 'State'}
+                                            <th className="px-4 py-3 font-medium relative text-center">
+                                                {t('dolphinScheduler.tableHeaders.state')}
                                                 <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-purple-400 active:bg-purple-500" onMouseDown={e => handleResizeStart(e, 'state')} />
                                             </th>
-                                            <th className="px-4 py-3 font-medium relative">
-                                                {lang === 'zh' ? '调度' : 'Schedule'}
+                                            <th className="px-4 py-3 font-medium relative text-center">
+                                                {t('dolphinScheduler.tableHeaders.scheduleTime')}
                                                 <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-purple-400 active:bg-purple-500" onMouseDown={e => handleResizeStart(e, 'schedule')} />
                                             </th>
-                                            <th className="px-4 py-3 font-medium relative">
-                                                {lang === 'zh' ? '操作' : 'Actions'}
-                                                <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-purple-400 active:bg-purple-500" onMouseDown={e => handleResizeStart(e, 'actions')} />
+                                            <th className="px-4 py-3 font-medium text-center">{t('dolphinScheduler.tableHeaders.createTime')}</th>
+                                            <th className="px-4 py-3 font-medium text-center">{t('dolphinScheduler.tableHeaders.updateTime')}</th>
+                                            <th className="px-4 py-3 font-medium sticky right-0 z-40 bg-slate-50 dark:bg-slate-900 w-px whitespace-nowrap text-center">
+                                                {t('dolphinScheduler.tableHeaders.actions')}
                                             </th>
-                                            <th className="px-4 py-3 font-medium">{lang === 'zh' ? '更新时间' : 'Updated'}</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                                         {filteredProcesses.map((process, index) => (
-                                            <tr key={process.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                                            <tr key={process.id} className={`group hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors ${selectedProcesses.has(process.code) ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}>
+                                                <td className="px-2 py-3 text-center">
+                                                    <input type="checkbox"
+                                                        checked={selectedProcesses.has(process.code)}
+                                                        onChange={e => {
+                                                            const next = new Set(selectedProcesses);
+                                                            if (e.target.checked) next.add(process.code); else next.delete(process.code);
+                                                            setSelectedProcesses(next);
+                                                        }}
+                                                        className="rounded border-slate-300"
+                                                    />
+                                                </td>
                                                 <td className="px-2 py-3 text-center text-slate-400 text-xs">{(pageNo - 1) * pageSize + index + 1}</td>
-                                                <td className="px-4 py-3">
-                                                    <button 
-                                                        onClick={() => setDetailProcess(process)}
-                                                        className="font-medium text-slate-800 dark:text-white hover:text-blue-600 text-left"
-                                                    >
-                                                        {process.name}
-                                                    </button>
+                                                <td className="px-4 py-3 relative group/name">
+                                                    <div className="flex items-center space-x-2 w-full pr-6 whitespace-nowrap">
+                                                        <button 
+                                                            onClick={() => setDetailProcess(process)}
+                                                            className="font-medium text-slate-800 dark:text-white hover:text-blue-600 text-left truncate flex-1 block overflow-hidden leading-snug"
+                                                            title={process.name}
+                                                        >
+                                                            {process.name}
+                                                        </button>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                navigator.clipboard.writeText(process.name).then(() => {
+                                                                    toast({ title: t('common.copied'), variant: 'success' });
+                                                                });
+                                                            }}
+                                                            className="absolute right-4 p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 opacity-0 group-hover/name:opacity-100 transition-opacity"
+                                                            title={t('dolphinScheduler.copyName')}
+                                                        >
+                                                            <Copy size={14} />
+                                                        </button>
+                                                    </div>
                                                     {process.description && (
-                                                        <p className="text-xs text-slate-400 truncate max-w-xs">{process.description}</p>
+                                                        <p className="text-xs text-slate-400 truncate mt-1 w-full" title={process.description}>{process.description}</p>
                                                     )}
                                                 </td>
                                                 <td className="px-4 py-3 text-slate-600 dark:text-slate-300">v{process.version}</td>
@@ -1169,35 +1238,38 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                                                             ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
                                                             : 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400'
                                                     }`}>
-                                                        {process.scheduleReleaseState || 'NONE'}
+                                                        {process.scheduleReleaseState === 'ONLINE' ? t('dolphinScheduler.online') : t('dolphinScheduler.offline')}
                                                     </span>
                                                 </td>
-                                                <td className="px-4 py-3 text-center">
+                                                <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-xs text-center">
+                                                    {process.createTime ? new Date(process.createTime).toLocaleString() : '-'}
+                                                </td>
+                                                <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-xs text-center">
+                                                    {process.updateTime ? new Date(process.updateTime).toLocaleString() : '-'}
+                                                </td>
+                                                <td className="px-4 py-3 text-center sticky right-0 z-20 bg-white dark:bg-slate-800 group-hover:bg-slate-50 dark:group-hover:bg-slate-700 w-px whitespace-nowrap">
                                                     <div className="flex items-center justify-center space-x-1">
-                                                        <Tooltip content={lang === 'zh' ? '编辑' : 'Edit'} position="top">
+                                                        <Tooltip content={t('dolphinScheduler.edit')} position="top">
                                                             <button onClick={() => setEditProcess(process)} className="p-1.5 hover:bg-cyan-100 dark:hover:bg-cyan-900/30 rounded text-cyan-600">
                                                                 <Edit size={16} />
                                                             </button>
                                                         </Tooltip>
-                                                        <Tooltip content={lang === 'zh' ? '运行' : 'Run'} position="top">
+                                                        <Tooltip content={t('dolphinScheduler.run')} position="top">
                                                             <button onClick={() => setRunProcess(process)} disabled={process.releaseState !== 'ONLINE'} className="p-1.5 hover:bg-orange-100 dark:hover:bg-orange-900/30 rounded text-orange-600 disabled:opacity-30">
                                                                 <PlayCircle size={16} />
                                                             </button>
                                                         </Tooltip>
-                                                        <Tooltip content={lang === 'zh' ? '定时' : 'Schedule'} position="top">
+                                                        <Tooltip content={t('dolphinScheduler.schedule')} position="top">
                                                             <button onClick={() => setScheduleProcess(process)} className="p-1.5 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded text-blue-600">
                                                                 <Timer size={16} />
                                                             </button>
                                                         </Tooltip>
-                                                        <Tooltip content={process.releaseState === 'ONLINE' ? '下线' : '上线'} position="top">
+                                                        <Tooltip content={process.releaseState === 'ONLINE' ? t('dolphinScheduler.offline') : t('dolphinScheduler.online')} position="top">
                                                             <button onClick={() => handleToggleOnline(process)} className={`p-1.5 rounded ${process.releaseState === 'ONLINE' ? 'text-red-600 hover:bg-red-50' : 'text-green-600 hover:bg-green-50'}`}>
                                                                 <Power size={16} />
                                                             </button>
                                                         </Tooltip>
                                                     </div>
-                                                </td>
-                                                <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-xs text-center">
-                                                    {new Date(process.updateTime).toLocaleString()}
                                                 </td>
                                             </tr>
                                         ))}
@@ -1208,13 +1280,13 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                         {/* 底部分页 - 始终显示 */}
                         <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex justify-between items-center text-sm shrink-0">
                             <div className="flex items-center space-x-2 text-slate-500">
-                                <span>共 {total} 条 · 每页</span>
+                                <span dangerouslySetInnerHTML={{ __html: t('dolphinScheduler.totalCount').replace('{total}', String(total)) }}></span>
                                 {[20, 50, 100].map(size => (
                                     <button key={size} onClick={() => { setPageSize(size); setPageNo(1); }}
                                         className={`px-2 py-0.5 rounded text-xs border ${pageSize === size ? 'bg-blue-500 text-white border-blue-500' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-blue-400'}`}
                                     >{size}</button>
                                 ))}
-                                <span>条</span>
+                                <span>{t('dolphinScheduler.pageUnit')}</span>
                             </div>
                             <div className="flex items-center space-x-2">
                                 <button onClick={() => setPageNo(p => Math.max(1, p - 1))} disabled={pageNo === 1} className="p-1 border rounded disabled:opacity-30"><ChevronLeft size={16} /></button>
@@ -1232,50 +1304,39 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                         {instanceDeleting && (
                             <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex flex-col items-center justify-center rounded-lg transition-opacity duration-300">
                                 <Loader2 size={36} className="animate-spin text-white mb-3" />
-                                <span className="text-white text-sm font-medium">删除中...</span>
+                                <span className="text-white text-sm font-medium">{t('dolphinScheduler.deleting')}</span>
                             </div>
                         )}
                         {/* 内容区：加载/空/表格 */}
                         {instanceLoading ? (
                             <div className="flex-1 flex items-center justify-center"><Loader2 className="animate-spin text-blue-500" /></div>
                         ) : processInstances.length === 0 ? (
-                            <div className="flex-1 flex items-center justify-center text-slate-400">暂无实例</div>
+                            <div className="flex-1 flex items-center justify-center text-slate-400">{t('dolphinScheduler.noInstances')}</div>
                         ) : (
-                            <div className="flex-1 overflow-x-auto overflow-y-auto min-h-0">
+                            <div className="flex-1 overflow-x-auto overflow-y-auto min-h-0 scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-600 scrollbar-track-transparent [&::-webkit-scrollbar-corner]:bg-transparent">
                                 <table className="w-full text-sm min-w-[1200px]">
-                                    <thead className="bg-slate-50 dark:bg-slate-900/50 sticky top-0 z-10">
+                                    <thead className="bg-slate-50 dark:bg-slate-900 sticky top-0 z-30">
                                         <tr className="text-slate-500 text-xs whitespace-nowrap">
                                             <th className="px-2 py-3 text-center w-10">
                                                 <input type="checkbox"
                                                     checked={selectedInstances.size === processInstances.length && processInstances.length > 0}
-                                                    onChange={e => {
-                                                        if (e.target.checked) {
-                                                            setSelectedInstances(new Set(processInstances.map(i => i.id)));
-                                                        } else {
-                                                            setSelectedInstances(new Set());
-                                                        }
-                                                    }}
-                                                    className="rounded border-slate-300"
+                                                    onChange={handleSelectAllInstances}
+                                                    className="w-4 h-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500 cursor-pointer"
                                                 />
                                             </th>
-                                            <th className="px-2 py-3 text-center w-12">#</th>
-                                            <th className="px-3 py-3 text-left min-w-[200px]">工作流实例名称</th>
-                                            <th className="px-3 py-3 text-center w-24">状态</th>
-                                            <th className="px-3 py-3 text-center w-24">运行类型</th>
-                                            <th className="px-3 py-3 text-center w-40">调度时间</th>
-                                            <th className="px-3 py-3 text-center w-40">开始时间</th>
-                                            <th className="px-3 py-3 text-center w-40">结束时间</th>
-                                            <th className="px-3 py-3 text-center w-20">运行时长</th>
-                                            <th className="px-3 py-3 text-center w-16">运行次数</th>
-                                            <th className="px-3 py-3 text-center w-16">容错标识</th>
-                                            <th className="px-3 py-3 text-center w-16">空跑标识</th>
-                                            <th className="px-3 py-3 text-center w-20">执行用户</th>
-                                            <th className="px-3 py-3 text-center w-24">操作</th>
+                                            <th className="px-3 py-3 text-left min-w-[200px]">{t('dolphinScheduler.tableHeaders.instanceName')}</th>
+                                            <th className="px-3 py-3 text-center">{t('dolphinScheduler.tableHeaders.state')}</th>
+                                            <th className="px-3 py-3 text-center">{t('dolphinScheduler.tableHeaders.runType')}</th>
+                                            <th className="px-3 py-3 text-center">{t('dolphinScheduler.tableHeaders.scheduleTime')}</th>
+                                            <th className="px-3 py-3 text-center">{t('dolphinScheduler.tableHeaders.startTime')}</th>
+                                            <th className="px-3 py-3 text-center">{t('dolphinScheduler.tableHeaders.endTime')}</th>
+                                            <th className="px-3 py-3 text-center">{t('dolphinScheduler.tableHeaders.duration')}</th>
+                                            <th className="px-3 py-3 text-center sticky right-0 z-40 bg-slate-50 dark:bg-slate-900 w-px whitespace-nowrap">{t('dolphinScheduler.tableHeaders.actions')}</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                                         {processInstances.map((inst, idx) => (
-                                            <tr key={inst.id} className={`hover:bg-slate-50 dark:hover:bg-slate-700/50 ${selectedInstances.has(inst.id) ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}>
+                                            <tr key={inst.id} className={`group hover:bg-slate-50 dark:hover:bg-slate-700/50 ${selectedInstances.has(inst.id) ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}>
                                                 <td className="px-2 py-2.5 text-center">
                                                     <input type="checkbox"
                                                         checked={selectedInstances.has(inst.id)}
@@ -1287,19 +1348,14 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                                                         className="rounded border-slate-300"
                                                     />
                                                 </td>
-                                                <td className="px-2 py-2.5 text-center text-slate-400 text-xs">{inst.id}</td>
-                                                <td className="px-3 py-2.5 font-medium text-slate-800 dark:text-slate-200 truncate max-w-[300px]" title={inst.name}>{inst.name}</td>
+                                                <td className="px-3 py-2.5 font-medium text-slate-800 dark:text-slate-200 truncate max-w-[400px]" title={inst.name}>{inst.name}</td>
                                                 <td className="px-3 py-2.5 text-center">{renderInstanceStateTag(inst.state)}</td>
-                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500">{inst.commandType === 'SCHEDULER' ? '调度执行' : inst.commandType === 'START_PROCESS' ? '手动执行' : inst.commandType || '-'}</td>
-                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500 font-mono">{inst.scheduleTime || '-'}</td>
-                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500 font-mono">{inst.startTime || '-'}</td>
-                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500 font-mono">{inst.endTime || '-'}</td>
-                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500">{inst.duration || '-'}</td>
-                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500">{inst.runTimes ?? '-'}</td>
-                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500">{inst.recovery === 'NO' ? 'NO' : inst.recovery || '-'}</td>
-                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500">{inst.dryRun === 0 ? 'NO' : 'YES'}</td>
-                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500">{inst.executorName || '-'}</td>
-                                                <td className="px-3 py-2.5 text-center">
+                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500 whitespace-nowrap">{inst.commandType === 'SCHEDULER' ? (lang === 'zh' ? '调度执行' : 'Scheduler') : inst.commandType === 'START_PROCESS' ? (lang === 'zh' ? '手动执行' : 'Manual') : inst.commandType || '-'}</td>
+                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500 font-mono whitespace-nowrap">{inst.scheduleTime || '-'}</td>
+                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500 font-mono whitespace-nowrap">{inst.startTime || '-'}</td>
+                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500 font-mono whitespace-nowrap">{inst.endTime || '-'}</td>
+                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500 whitespace-nowrap">{inst.duration || '-'}</td>
+                                                <td className="px-3 py-2.5 text-center sticky right-0 z-20 bg-white dark:bg-slate-800 group-hover:bg-slate-50 dark:group-hover:bg-slate-700 w-px whitespace-nowrap">
                                                     <div className="flex items-center justify-center space-x-1">
                                                         {(inst.state === 'RUNNING_EXECUTION' || inst.state === 'READY_PAUSE' || inst.state === 'READY_STOP') && (
                                                             <Tooltip content="停止" position="top">
@@ -1324,7 +1380,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                         {/* 底部分页 - 始终显示 */}
                         <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex justify-between items-center text-sm shrink-0">
                             <div className="flex items-center space-x-2 text-slate-500">
-                                <span>共 {instanceTotal} 条 · 每页</span>
+                                <span dangerouslySetInnerHTML={{ __html: t('dolphinScheduler.totalCount').replace('{total}', String(instanceTotal)) }}></span>
                                 {[20, 50, 100].map(size => (
                                     <button key={size} onClick={() => { setInstancePageSize(size); setInstancePageNo(1); }}
                                         className={`px-2 py-0.5 rounded text-xs border ${instancePageSize === size ? 'bg-blue-500 text-white border-blue-500' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-blue-400'}`}
@@ -1347,7 +1403,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                                     }}
                                     className="w-16 px-1.5 py-0.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs outline-none text-center"
                                 />
-                                <span>条</span>
+                                <span>{t('dolphinScheduler.pageUnit')}</span>
                             </div>
                             <div className="flex items-center space-x-2">
                                 <button onClick={() => setInstancePageNo(p => Math.max(1, p - 1))} disabled={instancePageNo === 1} className="p-1 border rounded disabled:opacity-30"><ChevronLeft size={16} /></button>
@@ -1364,45 +1420,37 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                         {scheduleLoading ? (
                             <div className="flex-1 flex items-center justify-center"><Loader2 className="animate-spin text-blue-500" /></div>
                         ) : schedules.length === 0 ? (
-                            <div className="flex-1 flex items-center justify-center text-slate-400">暂无定时</div>
+                            <div className="flex-1 flex items-center justify-center text-slate-400">{t('dolphinScheduler.noSchedules')}</div>
                         ) : (
                             <div className="flex-1 overflow-x-auto overflow-y-auto min-h-0 scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-600 scrollbar-track-transparent [&::-webkit-scrollbar-corner]:bg-transparent">
                                 <table className="w-full text-sm min-w-[1400px]">
-                                    <thead className="bg-slate-50 dark:bg-slate-900/50 sticky top-0 z-10">
+                                    <thead className="bg-slate-50 dark:bg-slate-900 sticky top-0 z-30">
                                         <tr className="text-slate-500 text-xs whitespace-nowrap">
-                                            <th className="px-3 py-3 text-center w-12">#</th>
-                                            <th className="px-3 py-3 text-left min-w-[180px]">工作流名称</th>
-                                            <th className="px-3 py-3 text-center">开始时间</th>
-                                            <th className="px-3 py-3 text-center">结束时间</th>
-                                            <th className="px-3 py-3 text-center">Crontab</th>
-                                            <th className="px-3 py-3 text-center">失败策略</th>
-                                            <th className="px-3 py-3 text-center">状态</th>
-                                            <th className="px-3 py-3 text-center">Worker分组</th>
-                                            <th className="px-3 py-3 text-center">租户</th>
-                                            <th className="px-3 py-3 text-center">环境名称</th>
-                                            <th className="px-3 py-3 text-center">创建时间</th>
-                                            <th className="px-3 py-3 text-center">更新时间</th>
-                                            <th className="px-3 py-3 text-center w-24">操作</th>
+                                            <th className="px-3 py-3 text-center w-12">{t('dolphinScheduler.tableHeaders.hash')}</th>
+                                            <th className="px-3 py-3 text-left min-w-[200px]">{t('dolphinScheduler.tableHeaders.workflowName')}</th>
+                                            <th className="px-3 py-3 text-center">{t('dolphinScheduler.tableHeaders.state')}</th>
+                                            <th className="px-3 py-3 text-center min-w-[150px]">{t('dolphinScheduler.tableHeaders.scheduleTime')}</th>
+                                            <th className="px-3 py-3 text-center">{t('dolphinScheduler.tableHeaders.executor')}</th>
+                                            <th className="px-3 py-3 text-center">{t('dolphinScheduler.tableHeaders.environment')}</th>
+                                            <th className="px-3 py-3 text-center">{t('dolphinScheduler.tableHeaders.createTime')}</th>
+                                            <th className="px-3 py-3 text-center">{t('dolphinScheduler.tableHeaders.updateTime')}</th>
+                                            <th className="px-3 py-3 text-center sticky right-0 z-40 bg-slate-50 dark:bg-slate-900 w-px whitespace-nowrap">{t('dolphinScheduler.tableHeaders.actions')}</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                                         {schedules.map((sch, idx) => (
-                                            <tr key={sch.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                                            <tr key={sch.id} className="group hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
                                                 <td className="px-3 py-2.5 text-center text-slate-400 text-xs">{idx + 1}</td>
                                                 <td className="px-3 py-2.5 font-medium text-slate-800 dark:text-slate-200 truncate max-w-[250px]" title={sch.workflowDefinitionName || sch.processDefinitionName}>{sch.workflowDefinitionName || sch.processDefinitionName}</td>
-                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500 font-mono whitespace-nowrap">{sch.startTime || '-'}</td>
-                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500 font-mono whitespace-nowrap">{sch.endTime || '-'}</td>
-                                                <td className="px-3 py-2.5 text-center text-xs font-mono text-slate-500">{sch.crontab || '-'}</td>
-                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500">{sch.failureStrategy === 'CONTINUE' ? '继续' : sch.failureStrategy === 'END' ? '结束' : sch.failureStrategy || '-'}</td>
                                                 <td className="px-3 py-2.5 text-center">{renderStateTag(sch.releaseState)}</td>
-                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500">{sch.workerGroup || 'default'}</td>
-                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500">{sch.tenantCode || '-'}</td>
-                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500">{sch.environmentName || '-'}</td>
+                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500 font-mono whitespace-nowrap">{sch.crontab || '-'}</td>
+                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500 whitespace-nowrap">{sch.userName || sch.executorName || '-'}</td>
+                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500 whitespace-nowrap">{sch.environmentName || '-'}</td>
                                                 <td className="px-3 py-2.5 text-center text-xs text-slate-500 font-mono whitespace-nowrap">{sch.createTime || '-'}</td>
                                                 <td className="px-3 py-2.5 text-center text-xs text-slate-500 font-mono whitespace-nowrap">{sch.updateTime || '-'}</td>
-                                                <td className="px-3 py-2.5 text-center">
+                                                <td className="px-3 py-2.5 text-center sticky right-0 z-20 bg-white dark:bg-slate-800 group-hover:bg-slate-50 dark:group-hover:bg-slate-700 w-px whitespace-nowrap">
                                                     <div className="flex items-center justify-center space-x-1">
-                                                        <Tooltip content={sch.releaseState === 'ONLINE' ? '下线' : '上线'} position="top">
+                                                        <Tooltip content={sch.releaseState === 'ONLINE' ? t('dolphinScheduler.offline') : t('dolphinScheduler.online')} position="top">
                                                             <button onClick={() => handleToggleSchedule(sch)} className={`p-1 rounded ${sch.releaseState === 'ONLINE' ? 'hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500' : 'hover:bg-green-100 dark:hover:bg-green-900/30 text-green-500'}`}>
                                                                 <Power size={15} />
                                                             </button>
@@ -1418,13 +1466,13 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                         {/* 底部分页 - 始终显示 */}
                         <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex justify-between items-center text-sm shrink-0">
                             <div className="flex items-center space-x-2 text-slate-500">
-                                <span>共 {scheduleTotal} 条 · 每页</span>
+                                <span>{t('dolphinScheduler.totalCount').replace('{total}', String(scheduleTotal))}</span>
                                 {[20, 50, 100].map(size => (
                                     <button key={size} onClick={() => { setSchedulePageSize(size); setSchedulePageNo(1); }}
                                         className={`px-2 py-0.5 rounded text-xs border ${schedulePageSize === size ? 'bg-blue-500 text-white border-blue-500' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-blue-400'}`}
                                     >{size}</button>
                                 ))}
-                                <span>条</span>
+                                <span>{t('dolphinScheduler.pageUnit')}</span>
                             </div>
                             <div className="flex items-center space-x-2">
                                 <button onClick={() => setSchedulePageNo(p => Math.max(1, p - 1))} disabled={schedulePageNo === 1} className="p-1 border rounded disabled:opacity-30"><ChevronLeft size={16} /></button>
@@ -1441,46 +1489,46 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                         {taskInstanceLoading ? (
                             <div className="flex-1 flex items-center justify-center"><Loader2 className="animate-spin text-blue-500" /></div>
                         ) : taskInstances.length === 0 ? (
-                            <div className="flex-1 flex items-center justify-center text-slate-400">暂无任务</div>
+                            <div className="flex-1 flex items-center justify-center text-slate-400">{t('dolphinScheduler.noTasks')}</div>
                         ) : (
                             <div className="flex-1 overflow-x-auto overflow-y-auto min-h-0 scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-600 scrollbar-track-transparent [&::-webkit-scrollbar-corner]:bg-transparent">
                                 <table className="w-full text-sm min-w-[1500px]">
-                                    <thead className="bg-slate-50 dark:bg-slate-900/50 sticky top-0 z-10">
+                                    <thead className="bg-slate-50 dark:bg-slate-900 sticky top-0 z-30">
                                         <tr className="text-slate-500 text-xs whitespace-nowrap">
-                                            <th className="px-3 py-3 text-center w-12">#</th>
-                                            <th className="px-3 py-3 text-left min-w-[180px]">任务名称</th>
-                                            <th className="px-3 py-3 text-left min-w-[200px]">工作流实例</th>
-                                            <th className="px-3 py-3 text-center">执行用户</th>
-                                            <th className="px-3 py-3 text-center">节点类型</th>
-                                            <th className="px-3 py-3 text-center">状态</th>
-                                            <th className="px-3 py-3 text-center">提交时间</th>
-                                            <th className="px-3 py-3 text-center">开始时间</th>
-                                            <th className="px-3 py-3 text-center">结束时间</th>
-                                            <th className="px-3 py-3 text-center">运行时长</th>
-                                            <th className="px-3 py-3 text-center">重试次数</th>
-                                            <th className="px-3 py-3 text-center">空跑标识</th>
-                                            <th className="px-3 py-3 text-left">主机</th>
-                                            <th className="px-3 py-3 text-center w-20">操作</th>
+                                            <th className="px-3 py-3 text-center w-12">{t('dolphinScheduler.tableHeaders.hash')}</th>
+                                            <th className="px-3 py-3 text-left min-w-[180px]">{t('dolphinScheduler.tableHeaders.taskName')}</th>
+                                            <th className="px-3 py-3 text-left min-w-[200px]">{t('dolphinScheduler.tableHeaders.instanceName')}</th>
+                                            <th className="px-3 py-3 text-center">{t('dolphinScheduler.tableHeaders.executor')}</th>
+                                            <th className="px-3 py-3 text-center">{t('dolphinScheduler.tableHeaders.taskType')}</th>
+                                            <th className="px-3 py-3 text-center">{t('dolphinScheduler.tableHeaders.state')}</th>
+                                            <th className="px-3 py-3 text-center">{t('dolphinScheduler.tableHeaders.submitTime')}</th>
+                                            <th className="px-3 py-3 text-center">{t('dolphinScheduler.tableHeaders.startTime')}</th>
+                                            <th className="px-3 py-3 text-center">{t('dolphinScheduler.tableHeaders.endTime')}</th>
+                                            <th className="px-3 py-3 text-center">{t('dolphinScheduler.tableHeaders.duration')}</th>
+                                            <th className="px-3 py-3 text-center">{t('dolphinScheduler.tableHeaders.retryTimes')}</th>
+                                            <th className="px-3 py-3 text-center">{t('dolphinScheduler.tableHeaders.dryRun')}</th>
+                                            <th className="px-3 py-3 text-center">{t('dolphinScheduler.tableHeaders.host')}</th>
+                                            <th className="px-3 py-3 text-center sticky right-0 z-40 bg-slate-50 dark:bg-slate-900 w-px whitespace-nowrap">{t('dolphinScheduler.tableHeaders.actions')}</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                                         {taskInstances.map((ti, idx) => (
-                                            <tr key={ti.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                                            <tr key={ti.id} className="group hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
                                                 <td className="px-3 py-2.5 text-center text-slate-400 text-xs">{(taskInstancePageNo - 1) * taskInstancePageSize + idx + 1}</td>
                                                 <td className="px-3 py-2.5 font-medium text-slate-800 dark:text-slate-200 truncate max-w-[250px]" title={ti.name}>{ti.name}</td>
                                                 <td className="px-3 py-2.5 text-slate-500 text-xs truncate max-w-[280px]" title={ti.workflowInstanceName || ti.processInstanceName}>{ti.workflowInstanceName || ti.processInstanceName || '-'}</td>
-                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500">{ti.executorName || '-'}</td>
-                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500">{ti.taskType || '-'}</td>
+                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500 whitespace-nowrap">{ti.executorName || '-'}</td>
+                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500 whitespace-nowrap">{ti.taskType || '-'}</td>
                                                 <td className="px-3 py-2.5 text-center">{renderInstanceStateTag(ti.state)}</td>
                                                 <td className="px-3 py-2.5 text-center text-xs text-slate-500 font-mono whitespace-nowrap">{ti.submitTime || '-'}</td>
                                                 <td className="px-3 py-2.5 text-center text-xs text-slate-500 font-mono whitespace-nowrap">{ti.startTime || '-'}</td>
                                                 <td className="px-3 py-2.5 text-center text-xs text-slate-500 font-mono whitespace-nowrap">{ti.endTime || '-'}</td>
-                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500">{ti.duration || '-'}</td>
+                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500 whitespace-nowrap">{ti.duration || '-'}</td>
                                                 <td className="px-3 py-2.5 text-center text-xs text-slate-500">{ti.retryTimes ?? 0}</td>
                                                 <td className="px-3 py-2.5 text-center text-xs text-slate-500">{ti.dryRun === 1 ? 'YES' : 'NO'}</td>
                                                 <td className="px-3 py-2.5 text-xs text-slate-500 truncate max-w-[180px]" title={ti.host}>{ti.host || '-'}</td>
-                                                <td className="px-3 py-2.5 text-center">
-                                                    <Tooltip content="查看日志" position="top">
+                                                <td className="px-3 py-2.5 text-center sticky right-0 z-20 bg-white dark:bg-slate-800 group-hover:bg-slate-50 dark:group-hover:bg-slate-700 w-px whitespace-nowrap">
+                                                    <Tooltip content={t('dolphinScheduler.viewLog')} position="top">
                                                         <button onClick={() => fetchTaskLog(ti.id, ti.name)} className="p-1 rounded hover:bg-blue-100 dark:hover:bg-blue-900/30 text-blue-500">
                                                             <Eye size={15} />
                                                         </button>
@@ -1495,13 +1543,13 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                         {/* 底部分页 - 始终显示 */}
                         <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex justify-between items-center text-sm shrink-0">
                             <div className="flex items-center space-x-2 text-slate-500">
-                                <span>共 {taskInstanceTotal} 条 · 每页</span>
+                                <span>{t('dolphinScheduler.totalCount').replace('{total}', String(taskInstanceTotal))}</span>
                                 {[20, 50, 100].map(size => (
                                     <button key={size} onClick={() => { setTaskInstancePageSize(size); setTaskInstancePageNo(1); }}
                                         className={`px-2 py-0.5 rounded text-xs border ${taskInstancePageSize === size ? 'bg-blue-500 text-white border-blue-500' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-blue-400'}`}
                                     >{size}</button>
                                 ))}
-                                <span>条</span>
+                                <span>{t('dolphinScheduler.pageUnit')}</span>
                             </div>
                             <div className="flex items-center space-x-2">
                                 <button onClick={() => setTaskInstancePageNo(p => Math.max(1, p - 1))} disabled={taskInstancePageNo === 1} className="p-1 border rounded disabled:opacity-30"><ChevronLeft size={16} /></button>
@@ -1613,7 +1661,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                                 <span className="truncate">{taskLogName}</span>
                             </h3>
                             <div className="flex items-center space-x-2 shrink-0 ml-4">
-                                <Tooltip content="重新加载" position="bottom">
+                                <Tooltip content={t('dolphinScheduler.reload')} position="bottom">
                                     <button onClick={() => { if (taskLogId) fetchTaskLog(taskLogId, taskLogName); }} className={`p-1.5 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-white transition-colors ${taskLogLoading ? 'animate-spin' : ''}`}>
                                         <RefreshCw size={16} />
                                     </button>
@@ -1627,10 +1675,10 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                             {taskLogLoading ? (
                                 <div className="flex items-center justify-center py-12">
                                     <Loader2 className="animate-spin text-blue-500 mr-2" />
-                                    <span className="text-slate-400">加载日志中...</span>
+                                    <span className="text-slate-400">{t('dolphinScheduler.loadingLog')}</span>
                                 </div>
                             ) : (
-                                <pre className="text-xs text-green-400 font-mono whitespace-pre-wrap break-all leading-relaxed">{taskLogContent || '暂无日志内容'}</pre>
+                                <pre className="text-xs text-green-400 font-mono whitespace-pre-wrap break-all leading-relaxed">{taskLogContent || t('dolphinScheduler.noLog')}</pre>
                             )}
                         </div>
                     </div>
@@ -1642,13 +1690,13 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80">
                             <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center">
                                 <Download size={20} className="mr-2 text-purple-500" />
-                                {lang === 'zh' ? '导出工作流' : 'Export Workflow'}
+                                {t('dolphinScheduler.exportWorkflow') || (lang === 'zh' ? '导出工作流' : 'Export Workflow')}
                             </h3>
                         </div>
                         <div className="p-6 space-y-4">
                             <div>
                                 <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">
-                                    {lang === 'zh' ? '工作流' : 'Workflow'}
+                                    {t('dolphinScheduler.workflowTitle') || (lang === 'zh' ? '工作流' : 'Workflow')}
                                 </label>
                                 <div className="px-3 py-2 bg-slate-100 dark:bg-slate-900 rounded-lg text-sm text-slate-600 dark:text-slate-400 truncate">
                                     {exportSingleProcess.name}
@@ -1656,7 +1704,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                             </div>
                             <div>
                                 <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">
-                                    {lang === 'zh' ? '导出版本' : 'Export Version'}
+                                    {t('dolphinScheduler.exportVersion') || (lang === 'zh' ? '导出版本' : 'Export Version')}
                                 </label>
                                 <select
                                     value={exportSingleVersion}
@@ -1668,8 +1716,8 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                                 </select>
                                 <p className="mt-1 text-xs text-slate-400">
                                     {currentProject?.apiVersion === exportSingleVersion 
-                                        ? (lang === 'zh' ? '当前连接版本' : 'Current connection version')
-                                        : (lang === 'zh' ? '将转换为此版本格式' : 'Will convert to this version format')}
+                                        ? t('dolphinScheduler.currentConnectionVersion')
+                                        : t('dolphinScheduler.convertToVersion')}
                                 </p>
                             </div>
                         </div>
@@ -1678,7 +1726,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                                 onClick={() => setExportSingleProcess(null)} 
                                 className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg"
                             >
-                                {lang === 'zh' ? '取消' : 'Cancel'}
+                                {t('common.cancel')}
                             </button>
                             <button 
                                 onClick={doExportSingle} 
@@ -1686,7 +1734,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                                 className="px-6 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg font-medium disabled:opacity-50 flex items-center"
                             >
                                 {exportingSingle && <Loader2 size={16} className="animate-spin mr-2" />}
-                                {lang === 'zh' ? '选择目录并导出' : 'Select & Export'}
+                                {t('dolphinScheduler.selectDirectoryAndExport') || (lang === 'zh' ? '选择目录并导出' : 'Select & Export')}
                             </button>
                         </div>
                     </div>
@@ -1700,14 +1748,14 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80">
                             <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center">
                                 <Plus size={20} className="mr-2 text-emerald-500" />
-                                {lang === 'zh' ? '新建 K8S 工作流' : 'New K8S Workflow'}
+                                {t('dolphinScheduler.newK8sWorkflow')}
                             </h3>
                         </div>
                         <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
                             {/* 工作流名称 */}
                             <div>
                                 <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">
-                                    {lang === 'zh' ? '工作流名称' : 'Workflow Name'} <span className="text-red-500">*</span>
+                                    {t('dolphinScheduler.workflowName')} <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     type="text"
@@ -1725,7 +1773,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                             {/* 配置文件路径 */}
                             <div>
                                 <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">
-                                    {lang === 'zh' ? '配置文件路径' : 'Config Path'} <span className="text-red-500">*</span>
+                                    {t('dolphinScheduler.configPath')} <span className="text-red-500">*</span>
                                 </label>
                                 <div className="flex space-x-2">
                                     <input
@@ -1754,7 +1802,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                                         }}
                                         className="px-3 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 rounded-lg text-sm text-slate-600 dark:text-slate-300 transition-colors whitespace-nowrap"
                                     >
-                                        📂 {lang === 'zh' ? '浏览' : 'Browse'}
+                                        📂 {t('dolphinScheduler.browse')}
                                     </button>
                                 </div>
                                 <p className="mt-1 text-xs text-slate-400">
@@ -1814,7 +1862,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                                                         finally { setResourceBrowserLoading(false); }
                                                     }
                                                 }}
-                                                placeholder={lang === 'zh' ? '🔍 全局搜索，回车搜索...' : '🔍 Global search, press Enter...'}
+                                                placeholder={t('dolphinScheduler.globalSearch')}
                                                 className="w-full px-2 py-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs focus:ring-1 focus:ring-emerald-500 outline-none"
                                             />
                                         </div>
@@ -1824,7 +1872,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                                                     <Loader2 size={16} className="animate-spin text-slate-400" />
                                                 </div>
                                             ) : resourceBrowserFiles.length === 0 ? (
-                                                <div className="text-center py-4 text-xs text-slate-400">{lang === 'zh' ? '无匹配文件' : 'No matching files'}</div>
+                                                <div className="text-center py-4 text-xs text-slate-400">{t('dolphinScheduler.noMatch')}</div>
                                             ) : (
                                                 resourceBrowserFiles.map((f: any, i: number) => (
                                                     <button
@@ -1866,7 +1914,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">
-                                        {lang === 'zh' ? '数据源实例' : 'Datasource'}
+                                        {t('dolphinScheduler.datasourceInstance')}
                                     </label>
                                     <select
                                         value={createK8sDatasource}
@@ -1879,7 +1927,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                                 </div>
                                 <div>
                                     <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">
-                                        {lang === 'zh' ? '镜像' : 'Image'}
+                                        {t('dolphinScheduler.image')}
                                     </label>
                                     <select
                                         value={createK8sImage}
@@ -1897,7 +1945,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">
-                                        {lang === 'zh' ? '命名空间' : 'Namespace'}
+                                        {t('dolphinScheduler.namespace')}
                                     </label>
                                     <select
                                         value={createK8sNamespace}
@@ -1909,7 +1957,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                                 </div>
                                 <div>
                                     <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">
-                                        {lang === 'zh' ? '环境名称' : 'Environment'}
+                                        {t('dolphinScheduler.envName')}
                                     </label>
                                     <select
                                         value={createK8sEnvCode}
@@ -1925,7 +1973,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                             <div>
                                 <div className="flex items-center mb-2">
                                     <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mr-3">
-                                        {lang === 'zh' ? '超时告警' : 'Timeout'}
+                                        {t('dolphinScheduler.timeoutPolicy')}
                                     </label>
                                     <button
                                         type="button"
@@ -1941,15 +1989,15 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                                             <span className="text-xs text-slate-500">{lang === 'zh' ? '超时策略' : 'Strategy'}</span>
                                             <label className="flex items-center space-x-1.5 text-sm text-slate-600 dark:text-slate-300 cursor-pointer">
                                                 <input type="checkbox" checked={createK8sTimeoutWarn} onChange={e => setCreateK8sTimeoutWarn(e.target.checked)} className="rounded border-slate-300" />
-                                                <span className="text-xs">{lang === 'zh' ? '超时告警' : 'Warn'}</span>
+                                                <span className="text-xs">{t('dolphinScheduler.timeoutWarn')}</span>
                                             </label>
                                             <label className="flex items-center space-x-1.5 text-sm text-slate-600 dark:text-slate-300 cursor-pointer">
                                                 <input type="checkbox" checked={createK8sTimeoutFail} onChange={e => setCreateK8sTimeoutFail(e.target.checked)} className="rounded border-slate-300" />
-                                                <span className="text-xs">{lang === 'zh' ? '超时失败' : 'Fail'}</span>
+                                                <span className="text-xs">{t('dolphinScheduler.timeoutFail')}</span>
                                             </label>
                                         </div>
                                         <div className="flex items-center space-x-3">
-                                            <span className="text-xs text-slate-500">{lang === 'zh' ? '超时时长' : 'Duration'}</span>
+                                            <span className="text-xs text-slate-500">{t('dolphinScheduler.timeoutDuration')}</span>
                                             <input
                                                 type="number"
                                                 value={createK8sTimeout}
@@ -1957,7 +2005,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                                                 min={1}
                                                 className="w-20 px-2 py-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded text-sm text-center focus:ring-2 focus:ring-emerald-500 outline-none"
                                             />
-                                            <span className="text-xs text-slate-400">{lang === 'zh' ? '分钟' : 'min'}</span>
+                                            <span className="text-xs text-slate-400">{t('dolphinScheduler.pageUnit') === '条' ? '分钟' : 'min'}</span>
                                         </div>
                                     </div>
                                 )}
@@ -1967,7 +2015,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">
-                                        {lang === 'zh' ? '失败重试次数' : 'Retry Times'}
+                                        {t('dolphinScheduler.retryTimes')}
                                     </label>
                                     <input
                                         type="number"
@@ -1979,7 +2027,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                                 </div>
                                 <div>
                                     <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">
-                                        {lang === 'zh' ? '失败重试间隔' : 'Retry Interval'}
+                                        {t('dolphinScheduler.retryInterval')}
                                     </label>
                                     <div className="flex items-center space-x-2">
                                         <input
@@ -1989,7 +2037,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                                             min={1}
                                             className="flex-1 px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
                                         />
-                                        <span className="text-xs text-slate-400 whitespace-nowrap">{lang === 'zh' ? '分钟' : 'min'}</span>
+                                        <span className="text-xs text-slate-400 whitespace-nowrap">{t('dolphinScheduler.pageUnit') === '条' ? '分钟' : 'min'}</span>
                                     </div>
                                 </div>
                             </div>
@@ -1997,7 +2045,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                             {/* 完整容器命令预览 */}
                             <div className="bg-slate-100 dark:bg-slate-900/50 rounded-lg p-3">
                                 <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
-                                    {lang === 'zh' ? '容器执行命令' : 'Container Command'}
+                                    {t('dolphinScheduler.containerCommand')}
                                 </p>
                                 <p className="text-xs font-mono text-slate-600 dark:text-slate-300 break-all">
                                     {`["./bin/seatunnel.sh", "--config", "${createK8sConfigPath || '...'}", "--download_url", "http://10.0.1.10:82", "-m", "local"]`}
@@ -2009,7 +2057,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                                 onClick={() => setShowCreateK8s(false)} 
                                 className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg"
                             >
-                                {lang === 'zh' ? '取消' : 'Cancel'}
+                                {t('common.cancel')}
                             </button>
                             <button 
                                 onClick={handleCreateK8s} 
@@ -2017,7 +2065,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                                 className="px-6 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-medium disabled:opacity-50 flex items-center"
                             >
                                 {creatingK8s && <Loader2 size={16} className="animate-spin mr-2" />}
-                                {lang === 'zh' ? '创建' : 'Create'}
+                                {t('common.save')}
                             </button>
                         </div>
                     </div>

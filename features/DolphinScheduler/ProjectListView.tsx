@@ -5,9 +5,9 @@ import {
 } from 'lucide-react';
 import { Language, DolphinSchedulerConnection, DSProject, DolphinSchedulerApiVersion } from '../../types';
 import { httpFetch } from '../../utils/http';
-import { useToast } from '../../components/ui/Toast';
-import { Tooltip } from '../../components/ui/Tooltip';
-import { ViewModeToggle } from '../../components/shared/ViewModeToggle';
+import { useToast } from '../common/Toast';
+import { Tooltip } from '../common/Tooltip';
+import { ViewModeToggle } from '../common/ViewModeToggle';
 import { useViewMode } from '../../store/globalStore';
 
 interface ProjectListViewProps {

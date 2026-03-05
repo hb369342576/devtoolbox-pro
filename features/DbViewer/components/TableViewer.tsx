@@ -5,8 +5,10 @@ import { Language } from '../../../types';
 import { useDbViewerStore } from '../store';
 import { getTexts } from '../../../locales';
 import { useTableDetail } from '../hooks/useTableDetail';
-import { ContextMenu } from '../../../components/ui/ContextMenu';
-import { useToast } from '../../../components/ui/Toast';
+import { useToast } from '../../common/Toast';
+import { ConfirmModal } from '../../common/ConfirmModal';
+import { Tooltip } from '../../common/Tooltip';
+import { ContextMenu } from '../../common/ContextMenu';
 import { invoke } from '@tauri-apps/api/core';
 import { SqlEditor } from './SqlEditor';
 
@@ -33,8 +35,8 @@ export const TableViewer: React.FC<{ lang: Language }> = ({ lang }) => {
     const ddl = useDbViewerStore((state) => state.ddl);
     const tables = useDbViewerStore((state) => state.tables);
 
-
-    const { showToast } = useToast();
+    const { toast } = useToast();
+    const showToast = (title: string, variant: 'success' | 'error') => toast({ title, variant: variant === 'error' ? 'destructive' : 'success' });
 
     // 触发数据加载
     const { loading, error } = useTableDetail();

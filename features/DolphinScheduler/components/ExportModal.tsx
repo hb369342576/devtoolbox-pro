@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Download, XCircle, Search, Loader2, FolderOpen } from 'lucide-react';
-import { useToast } from '../../../components/ui/Toast';
+import { useToast } from '../../common/Toast';
+import { Tooltip } from '../../common/Tooltip';
 import { open } from '@tauri-apps/plugin-dialog';
 import { exportWorkflowsToLocal } from '../utils';
+import { getTexts } from '../../../locales';
 import { Language, ProcessDefinition } from '../types';
 import { DolphinSchedulerApiVersion } from '../../../types';
 
@@ -19,6 +21,8 @@ interface ExportModalProps {
 }
 
 export const ExportModal: React.FC<ExportModalProps> = ({ show, lang, processes, projectCode, projectName, baseUrl, token, apiVersion, onClose }) => {
+    const texts = getTexts(lang);
+    const dsTexts = texts.dolphinScheduler;
     const { toast } = useToast();
     const [exporting, setExporting] = useState(false);
     const [selectedCodes, setSelectedCodes] = useState<number[]>([]);
@@ -43,7 +47,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({ show, lang, processes,
             const selected = await open({
                 directory: true,
                 multiple: false,
-                title: lang === 'zh' ? '选择导出目录' : 'Select Export Directory'
+                title: dsTexts.selectExportDir
             });
             if (selected) {
                 setTargetDir(selected as string);
@@ -67,12 +71,12 @@ export const ExportModal: React.FC<ExportModalProps> = ({ show, lang, processes,
     
     const handleExport = async () => {
         if (selectedCodes.length === 0) {
-            toast({ title: lang === 'zh' ? '请选择要导出的工作流' : 'Please select workflows', variant: 'destructive' });
+            toast({ title: dsTexts.pleaseSelectWorkflows, variant: 'destructive' });
             return;
         }
         
         if (!targetDir) {
-            toast({ title: lang === 'zh' ? '请先选择导出目录' : 'Please select export directory', variant: 'destructive' });
+            toast({ title: dsTexts.selectExportDir, variant: 'destructive' });
             return;
         }
         
@@ -97,11 +101,11 @@ export const ExportModal: React.FC<ExportModalProps> = ({ show, lang, processes,
                 exportVersion
             );
             
-            toast({ title: lang === 'zh' ? `导出成功，共 ${count} 个工作流` : `Exported ${count} workflows`, variant: 'success' });
+            toast({ title: dsTexts.exportSuccessWithCount.replace('{count}', String(count)), variant: 'success' });
             onClose();
         } catch (err: any) {
             console.error('[Export] Error:', err);
-            toast({ title: lang === 'zh' ? '导出失败' : 'Export Failed', description: err.message, variant: 'destructive' });
+            toast({ title: texts.common.failed, description: err.message, variant: 'destructive' });
         } finally {
             setExporting(false);
         }
@@ -113,7 +117,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({ show, lang, processes,
                 <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800/80">
                     <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center">
                         <Download size={20} className="mr-2 text-purple-500" />
-                        {lang === 'zh' ? '导出工作流' : 'Export Workflows'}
+                        {dsTexts.exportWorkflow}
                     </h3>
                     <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1"><XCircle size={20} /></button>
                 </div>
@@ -122,43 +126,43 @@ export const ExportModal: React.FC<ExportModalProps> = ({ show, lang, processes,
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                         <input 
                             type="text" 
-                            placeholder={lang === 'zh' ? '搜索工作流...' : 'Search workflows...'} 
+                            placeholder={dsTexts.searchWorkflows} 
                             value={searchTerm} 
                             onChange={e => setSearchTerm(e.target.value)} 
                             className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 outline-none" 
                         />
                     </div>
                     <div>
-                        <label className="text-xs font-medium text-slate-500 block mb-1">{lang === 'zh' ? '导出目录' : 'Export Directory'}</label>
+                        <label className="text-xs font-medium text-slate-500 block mb-1">{dsTexts.exportDirectory}</label>
                         <div className="flex items-center space-x-2">
                             <input 
                                 type="text" 
                                 value={targetDir} 
                                 readOnly
                                 className="flex-1 px-3 py-2 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-600 dark:text-slate-400 cursor-default" 
-                                placeholder={lang === 'zh' ? '点击右侧按钮选择文件夹' : 'Click button to select folder'}
+                                placeholder={dsTexts.clickToSelectFolder}
                             />
                             <button
                                 onClick={handleSelectFolder}
                                 className="px-3 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg text-sm font-medium flex items-center transition-colors"
                             >
                                 <FolderOpen size={16} className="mr-1" />
-                                {lang === 'zh' ? '选择' : 'Browse'}
+                                {texts.common.search.replace('...', '')}
                             </button>
                         </div>
                     </div>
                     <div>
-                        <label className="text-xs font-medium text-slate-500 block mb-1">{lang === 'zh' ? '项目目录名' : 'Project Folder Name'}</label>
+                        <label className="text-xs font-medium text-slate-500 block mb-1">{dsTexts.projectFolderName}</label>
                         <input 
                             type="text" 
                             value={fileName} 
                             onChange={e => setFileName(e.target.value)} 
                             className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 outline-none" 
-                            placeholder={lang === 'zh' ? '导出项目文件夹名称' : 'Export project folder name'}
+                            placeholder={dsTexts.exportFolderPlaceholder}
                         />
                     </div>
                     <div>
-                        <label className="text-xs font-medium text-slate-500 block mb-1">{lang === 'zh' ? '导出版本' : 'Export Version'}</label>
+                        <label className="text-xs font-medium text-slate-500 block mb-1">{dsTexts.exportVersion}</label>
                         <select
                             value={exportVersion}
                             onChange={e => setExportVersion(e.target.value as DolphinSchedulerApiVersion)}
@@ -169,14 +173,14 @@ export const ExportModal: React.FC<ExportModalProps> = ({ show, lang, processes,
                         </select>
                         <p className="mt-1 text-xs text-slate-400">
                             {apiVersion === exportVersion 
-                                ? (lang === 'zh' ? '当前连接版本' : 'Current connection version')
-                                : (lang === 'zh' ? '将转换为此版本格式' : 'Will convert to this version format')}
+                                ? dsTexts.currentConnectionVersion
+                                : dsTexts.convertToVersion}
                         </p>
                     </div>
                     <div className="flex items-center justify-between">
-                        <span className="text-xs text-slate-500">{lang === 'zh' ? `共 ${processes.length} 个工作流` : `${processes.length} workflows total`}</span>
+                        <span className="text-xs text-slate-500">{dsTexts.foundWorkflows.replace('{total}', String(processes.length))}</span>
                         <button onClick={handleSelectAll} className="text-xs text-purple-500 hover:text-purple-600">
-                            {selectedCodes.length === filteredProcesses.length && filteredProcesses.length > 0 ? (lang === 'zh' ? '取消全选' : 'Deselect All') : (lang === 'zh' ? '全选' : 'Select All')}
+                            {selectedCodes.length === filteredProcesses.length && filteredProcesses.length > 0 ? dsTexts.deselectAll : dsTexts.selectAll}
                         </button>
                     </div>
                 </div>
@@ -189,16 +193,16 @@ export const ExportModal: React.FC<ExportModalProps> = ({ show, lang, processes,
                                 <span className={`text-xs px-2 py-0.5 rounded ${p.releaseState === 'ONLINE' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>{p.releaseState}</span>
                             </label>
                         ))}
-                        {filteredProcesses.length === 0 && <p className="text-slate-400 text-center py-4 text-sm">{lang === 'zh' ? '未找到匹配的工作流' : 'No matching workflows'}</p>}
+                        {filteredProcesses.length === 0 && <p className="text-slate-400 text-center py-4 text-sm">{dsTexts.noMatchingWorkflows}</p>}
                     </div>
                 </div>
                 <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 flex justify-between items-center">
-                    <span className="text-sm text-slate-500">{lang === 'zh' ? `已选 ${selectedCodes.length} 个` : `${selectedCodes.length} selected`}</span>
+                    <span className="text-sm text-slate-500">{dsTexts.selectedCount.replace('{count}', String(selectedCodes.length))}</span>
                     <div className="flex space-x-3">
-                        <button onClick={onClose} className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg">{lang === 'zh' ? '取消' : 'Cancel'}</button>
+                        <button onClick={onClose} className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg">{texts.common.cancel}</button>
                         <button onClick={handleExport} disabled={exporting || selectedCodes.length === 0} className="px-6 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg font-medium disabled:opacity-50 flex items-center">
                             {exporting && <Loader2 size={16} className="animate-spin mr-2" />}
-                            {lang === 'zh' ? '导出' : 'Export'}
+                            {texts.common.export}
                         </button>
                     </div>
                 </div>

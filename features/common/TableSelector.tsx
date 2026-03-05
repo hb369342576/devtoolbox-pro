@@ -1,4 +1,5 @@
-import React from 'react';
+/** 通用数据表选择器组件 */
+import React, { useState, useEffect } from 'react';
 import { Table as TableIcon, RefreshCw, Search } from 'lucide-react';
 import { DbConnection, Language } from '../../types';
 import { useTables } from '../../hooks/useTables';
