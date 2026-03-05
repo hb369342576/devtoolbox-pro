@@ -83,8 +83,10 @@ export const ConfigList: React.FC<ConfigListProps> = ({
                                 <div className="absolute inset-0 bg-gradient-to-br from-indigo-50 via-purple-50/30 to-transparent dark:from-indigo-900/20 dark:via-purple-900/10 dark:to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
                                 <div className="relative z-10">
-                                    <div className="flex justify-between items-start mb-4">
-                                        <h3 className="font-bold text-lg text-slate-800 dark:text-white truncate flex-1 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{config.name}</h3>
+                                    <div className="flex items-start justify-between mb-4">
+                                        <div className="p-3 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform duration-300">
+                                            <GitCompare size={24} />
+                                        </div>
                                         <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                             <button
                                                 onClick={(e) => {
@@ -106,6 +108,7 @@ export const ConfigList: React.FC<ConfigListProps> = ({
                                             </button>
                                         </div>
                                     </div>
+                                    <h3 className="font-bold text-lg text-slate-800 dark:text-white mb-2 truncate flex-1 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{config.name}</h3>
                                     <div className="space-y-2 text-sm">
                                         <div className="flex items-center text-slate-600 dark:text-slate-400">
                                             <span className="font-medium mr-2">{lang === 'zh' ? '源端:' : 'Source:'}</span>

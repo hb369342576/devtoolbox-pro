@@ -389,9 +389,9 @@ const ExcelToSqlContent: React.FC<{ lang: Language }> = ({ lang }) => {
                         </div>
                       </div>
                       <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-1 truncate group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors">{tpl.name}</h3>
-                      <p className="text-sm text-slate-500 dark:text-slate-400 mb-4 line-clamp-2 h-10">{tpl.description || (lang === 'zh' ? '无描述' : 'No description')}</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 mb-2 line-clamp-2 h-10">{tpl.description || (lang === 'zh' ? '无描述' : 'No description')}</p>
 
-                      <div className="flex items-center space-x-2 text-xs font-mono text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-700/50 p-2 rounded">
+                      <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-mono text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-700/50 p-1.5 rounded">
                         <span title="Start Row">Row:{tpl.dataStartRow}</span>
                         <span className="text-slate-300">|</span>
                         <span title="Name Column">N:{tpl.nameCol}</span>

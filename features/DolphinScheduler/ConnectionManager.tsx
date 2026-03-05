@@ -147,7 +147,7 @@ export const ConnectionManager: React.FC<ConnectionManagerProps> = ({
                                     onClick={() => onSelect(conn)}
                                 >
                                     <div className="flex items-start justify-between mb-4">
-                                        <div className="p-3 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
+                                        <div className="p-[10px] rounded-lg border-2 border-blue-200 dark:border-blue-800/60 text-blue-500 group-hover:border-blue-400 dark:group-hover:border-blue-500 transition-colors duration-300">
                                             <Server size={24} />
                                         </div>
                                         <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">

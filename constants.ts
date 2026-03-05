@@ -17,7 +17,9 @@ import {
   FolderKanban,
   ListTodo,
   Server,
-  Activity
+  Activity,
+  Fish,
+  Droplet
 } from 'lucide-react';
 import { NavItem, Language } from './types';
 
@@ -93,7 +95,7 @@ export const NAV_ITEMS: NavItem[] = [
     id: 'task-dev',
     label: { en: 'Task Development', zh: '海豚调度' },
     tooltip: { en: 'DolphinScheduler workflow management', zh: 'DolphinScheduler 工作流管理' },
-    icon: CalendarClock,
+    icon: Fish,
     category: 'db',
     order: 6,
     visible: true,
@@ -114,7 +116,7 @@ export const NAV_ITEMS: NavItem[] = [
     id: 'seatunnel-manager',
     label: { en: 'SeaTunnel Manager', zh: '水滴管理' },
     tooltip: { en: 'SeaTunnel engine and job management', zh: 'SeaTunnel 引擎和作业管理' },
-    icon: Server,
+    icon: Droplet,
     category: 'db',
     order: 7,
     visible: true,

@@ -161,7 +161,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                                 onClick={() => onSelectProject(project)}
                             >
                                 <div className="flex items-start justify-between mb-4">
-                                    <div className="p-3 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 text-white">
+                                    <div className="p-[10px] rounded-lg border-2 border-indigo-200 dark:border-indigo-800/60 text-indigo-500 group-hover:border-indigo-400 dark:group-hover:border-indigo-500 transition-colors duration-300">
                                         <Folder size={24} />
                                     </div>
                                     <ListTodo size={18} className="text-slate-400 group-hover:text-blue-500 transition-colors" />

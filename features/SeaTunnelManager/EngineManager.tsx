@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
     Plus, Edit, Trash2, X, Server, CheckCircle,
-    AlertCircle, RefreshCw, Power, Settings2
+    AlertCircle, RefreshCw, Power, Settings2, Zap, Flame, Sparkles, Wrench
 } from 'lucide-react';
 import { Language } from '../../types';
 import { SeaTunnelEngineConfig, SeaTunnelEngineType, ZetaApiVersion } from './types';
@@ -138,19 +138,19 @@ export const EngineManager: React.FC<EngineManagerProps> = ({
 
     const getEngineIcon = (type: SeaTunnelEngineType) => {
         switch (type) {
-            case 'zeta': return '⚡';
-            case 'flink': return '🔥';
-            case 'spark': return '✨';
-            default: return '🔧';
+            case 'zeta': return <Zap size={24} className="text-blue-500" />;
+            case 'flink': return <Flame size={24} className="text-orange-500" />;
+            case 'spark': return <Sparkles size={24} className="text-yellow-500" />;
+            default: return <Wrench size={24} className="text-slate-500" />;
         }
     };
 
     const getEngineColor = (type: SeaTunnelEngineType) => {
         switch (type) {
-            case 'zeta': return 'from-cyan-500 to-blue-600';
-            case 'flink': return 'from-orange-500 to-red-600';
-            case 'spark': return 'from-amber-500 to-yellow-600';
-            default: return 'from-slate-500 to-slate-600';
+            case 'zeta': return 'border-blue-200 dark:border-blue-800/60 group-hover:border-blue-400 dark:group-hover:border-blue-500';
+            case 'flink': return 'border-orange-200 dark:border-orange-800/60 group-hover:border-orange-400 dark:group-hover:border-orange-500';
+            case 'spark': return 'border-yellow-200 dark:border-yellow-800/60 group-hover:border-yellow-400 dark:group-hover:border-yellow-500';
+            default: return 'border-slate-200 dark:border-slate-700 group-hover:border-slate-400 dark:group-hover:border-slate-500';
         }
     };
 
@@ -194,7 +194,7 @@ export const EngineManager: React.FC<EngineManagerProps> = ({
                                     onClick={() => handleCardClick(config)}
                                 >
                                     <div className="flex items-start justify-between mb-4">
-                                        <div className={`p-3 rounded-lg bg-gradient-to-br ${getEngineColor(config.engineType)} text-white text-2xl`}>
+                                        <div className={`p-[10px] rounded-lg border-2 bg-transparent transition-colors duration-300 ${getEngineColor(config.engineType)}`}>
                                             {getEngineIcon(config.engineType)}
                                         </div>
                                         <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -252,7 +252,7 @@ export const EngineManager: React.FC<EngineManagerProps> = ({
                                     onClick={() => onSelect(config)}
                                 >
                                     <div className="col-span-3 flex items-center space-x-3">
-                                        <span className="text-xl">{getEngineIcon(config.engineType)}</span>
+                                        <span className="flex items-center justify-center p-1 bg-slate-50 dark:bg-slate-900 rounded">{React.cloneElement(getEngineIcon(config.engineType) as React.ReactElement, { size: 18 })}</span>
                                         <span className="font-medium text-slate-800 dark:text-white truncate">{config.name}</span>
                                     </div>
                                     <div className="col-span-2 text-sm text-slate-600 dark:text-slate-300 capitalize">
