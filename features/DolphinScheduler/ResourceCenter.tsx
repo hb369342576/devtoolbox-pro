@@ -13,9 +13,9 @@ import { Tooltip } from '../common/Tooltip';
 import { ConfirmModal } from '../common/ConfirmModal';
 import { open, save } from '@tauri-apps/plugin-dialog';
 import { writeFile, readFile } from '@tauri-apps/plugin-fs';
+import { useTranslation } from "react-i18next";
 
 interface ResourceCenterProps {
-    lang: Language;
     connection: DolphinSchedulerConnection;
     onBack: () => void;
 }
@@ -24,10 +24,10 @@ interface ResourceCenterProps {
 const TEXT_EXTENSIONS = ['txt', 'sql', 'py', 'java', 'js', 'ts', 'sh', 'json', 'xml', 'yaml', 'yml', 'conf', 'properties', 'md', 'csv', 'log', 'ini', 'cfg', 'html', 'css', 'scss', 'less', 'jsx', 'tsx', 'vue', 'bat', 'cmd', 'ps1', 'rb', 'php', 'go', 'rs', 'c', 'cpp', 'h', 'hpp', 'scala', 'kt', 'groovy', 'gradle', 'make', 'dockerfile', ''];
 
 export const ResourceCenter: React.FC<ResourceCenterProps> = ({
-    lang,
     connection,
     onBack
 }) => {
+    const { t, i18n } = useTranslation();
     const { toast } = useToast();
     const [resources, setResources] = useState<DSResource[]>([]);
     const [loading, setLoading] = useState(true);
@@ -75,7 +75,7 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
             
             const responseText = await response.text();
             if (responseText.trim().startsWith('<')) {
-                toast({ title: lang === 'zh' ? '加载失败' : 'Load Failed', description: 'API error', variant: 'destructive' });
+                toast({ title: t('dolphinScheduler.loadFailed'), description: 'API error', variant: 'destructive' });
                 return;
             }
             
@@ -86,11 +86,11 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
                 setResources(Array.isArray(resourceList) ? resourceList : []);
                 setTotal(result.data?.total || resourceList.length || 0);
             } else {
-                toast({ title: lang === 'zh' ? '加载失败' : 'Load Failed', description: result.msg, variant: 'destructive' });
+                toast({ title: t('dolphinScheduler.loadFailed'), description: result.msg, variant: 'destructive' });
             }
         } catch (err: any) {
             console.error('Resources fetch error:', err);
-            toast({ title: lang === 'zh' ? '加载失败' : 'Load Failed', description: err.message, variant: 'destructive' });
+            toast({ title: t('dolphinScheduler.loadFailed'), description: err.message, variant: 'destructive' });
         } finally {
             setLoading(false);
         }
@@ -132,7 +132,7 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
     // 创建文件夹
     const handleCreateFolder = async () => {
         if (!newName.trim()) {
-            toast({ title: lang === 'zh' ? '请输入文件夹名称' : 'Please enter folder name', variant: 'destructive' });
+            toast({ title: t('dolphinScheduler.pleaseEnterFolderName'), variant: 'destructive' });
             return;
         }
         setCreating(true);
@@ -148,15 +148,15 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
             });
             const result = await response.json();
             if (result.code === 0) {
-                toast({ title: lang === 'zh' ? '创建成功' : 'Created successfully', variant: 'success' });
+                toast({ title: t('dolphinScheduler.createdSuccessfully'), variant: 'success' });
                 setCreateModal({ isOpen: false, type: 'folder' });
                 setNewName('');
                 fetchResources();
             } else {
-                toast({ title: lang === 'zh' ? '创建失败' : 'Create failed', description: result.msg, variant: 'destructive' });
+                toast({ title: t('dolphinScheduler.createFailed'), description: result.msg, variant: 'destructive' });
             }
         } catch (err: any) {
-            toast({ title: lang === 'zh' ? '创建失败' : 'Create failed', description: err.message, variant: 'destructive' });
+            toast({ title: t('dolphinScheduler.createFailed'), description: err.message, variant: 'destructive' });
         } finally {
             setCreating(false);
         }
@@ -165,7 +165,7 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
     // 创建文件（使用 DS online-create API）
     const handleCreateFile = async () => {
         if (!newName.trim()) {
-            toast({ title: lang === 'zh' ? '请输入文件名称' : 'Please enter file name', variant: 'destructive' });
+            toast({ title: t('dolphinScheduler.pleaseEnterFileName'), variant: 'destructive' });
             return;
         }
         setCreating(true);
@@ -184,16 +184,16 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
             });
             const result = await response.json();
             if (result.code === 0) {
-                toast({ title: lang === 'zh' ? '创建成功' : 'Created successfully', variant: 'success' });
+                toast({ title: t('dolphinScheduler.createdSuccessfully'), variant: 'success' });
                 setCreateModal({ isOpen: false, type: 'file' });
                 setNewName('');
                 setFileContent('');
                 fetchResources();
             } else {
-                toast({ title: lang === 'zh' ? '创建失败' : 'Create failed', description: result.msg, variant: 'destructive' });
+                toast({ title: t('dolphinScheduler.createFailed'), description: result.msg, variant: 'destructive' });
             }
         } catch (err: any) {
-            toast({ title: lang === 'zh' ? '创建失败' : 'Create failed', description: err.message, variant: 'destructive' });
+            toast({ title: t('dolphinScheduler.createFailed'), description: err.message, variant: 'destructive' });
         } finally {
             setCreating(false);
         }
@@ -204,7 +204,7 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
         try {
             const files = await open({
                 multiple: true,
-                title: lang === 'zh' ? '选择要上传的文件' : 'Select files to upload'
+                title: t('dolphinScheduler.selectFilesToUpload')
             });
             
             if (!files || (Array.isArray(files) && files.length === 0)) return;
@@ -246,7 +246,7 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
                     if (parsed.code === 0) {
                         successCount++;
                     } else {
-                        toast({ title: `${fileName} ${lang === 'zh' ? '上传失败' : 'upload failed'}`, description: parsed.msg, variant: 'destructive' });
+                        toast({ title: `${fileName} ${t('dolphinScheduler.uploadFailed')}`, description: parsed.msg, variant: 'destructive' });
                     }
                 } catch (err: any) {
                     console.error('Upload error:', err);
@@ -254,11 +254,11 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
             }
             
             if (successCount > 0) {
-                toast({ title: lang === 'zh' ? `成功上传 ${successCount} 个文件` : `Uploaded ${successCount} files`, variant: 'success' });
+                toast({ title: t('dolphinScheduler.uploadedSuccessCountFiles'), variant: 'success' });
                 fetchResources();
             }
         } catch (err: any) {
-            toast({ title: lang === 'zh' ? '上传失败' : 'Upload Failed', description: err.message, variant: 'destructive' });
+            toast({ title: t('dolphinScheduler.uploadFailed'), description: err.message, variant: 'destructive' });
         } finally {
             setUploading(false);
         }
@@ -270,7 +270,7 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
         try {
             const files = await open({
                 multiple: false,
-                title: lang === 'zh' ? '选择要上传的文件' : 'Select file to upload'
+                title: t('dolphinScheduler.selectFileToUpload')
             });
             
             if (!files) return;
@@ -302,13 +302,13 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
             const parsed = JSON.parse(result.body);
             
             if (parsed.code === 0) {
-                toast({ title: lang === 'zh' ? '上传成功' : 'Uploaded successfully', variant: 'success' });
+                toast({ title: t('dolphinScheduler.uploadedSuccessfully'), variant: 'success' });
                 fetchResources();
             } else {
-                toast({ title: lang === 'zh' ? '上传失败' : 'Upload failed', description: parsed.msg, variant: 'destructive' });
+                toast({ title: t('dolphinScheduler.uploadFailed'), description: parsed.msg, variant: 'destructive' });
             }
         } catch (err: any) {
-            toast({ title: lang === 'zh' ? '上传失败' : 'Upload Failed', description: err.message, variant: 'destructive' });
+            toast({ title: t('dolphinScheduler.uploadFailed'), description: err.message, variant: 'destructive' });
         } finally {
             setUploading(false);
         }
@@ -329,7 +329,7 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
 
         try {
             const savePath = await save({
-                title: lang === 'zh' ? '保存文件' : 'Save file',
+                title: t('dolphinScheduler.saveFile'),
                 defaultPath: resource.alias
             });
             if (!savePath) return;
@@ -348,10 +348,10 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
                 headers: { 'token': connection.token }
             });
             await writeFile(savePath, base64ToUint8Array(base64Data));
-            toast({ title: lang === 'zh' ? '下载成功' : 'Downloaded successfully', variant: 'success' });
+            toast({ title: t('dolphinScheduler.downloadedSuccessfully'), variant: 'success' });
         } catch (err: any) {
             console.error('[Download] Error:', err);
-            toast({ title: lang === 'zh' ? '下载失败' : 'Download Failed', description: err.message, variant: 'destructive' });
+            toast({ title: t('dolphinScheduler.downloadFailed'), description: err.message, variant: 'destructive' });
         } finally {
             setDownloading(false);
         }
@@ -361,14 +361,14 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
     const handleBatchDownload = async () => {
         const resourcesToDownload = resources.filter(r => selectedIds.includes(r.fullName) && !r.directory);
         if (resourcesToDownload.length === 0) {
-            toast({ title: lang === 'zh' ? '请选择要下载的文件' : 'Please select files to download', variant: 'destructive' });
+            toast({ title: t('dolphinScheduler.pleaseSelectFilesToDownlo'), variant: 'destructive' });
             return;
         }
 
         try {
             const savePath = await open({
                 directory: true,
-                title: lang === 'zh' ? '选择保存目录' : 'Select save directory'
+                title: t('dolphinScheduler.selectSaveDirectory')
             });
             if (!savePath) return;
 
@@ -390,10 +390,10 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
                 }
             }
             if (successCount > 0) {
-                toast({ title: lang === 'zh' ? `成功下载 ${successCount} 个文件` : `Downloaded ${successCount} files`, variant: 'success' });
+                toast({ title: t('dolphinScheduler.downloadedSuccessCountFil'), variant: 'success' });
             }
         } catch (err: any) {
-            toast({ title: lang === 'zh' ? '下载失败' : 'Download Failed', description: err.message, variant: 'destructive' });
+            toast({ title: t('dolphinScheduler.downloadFailed'), description: err.message, variant: 'destructive' });
         } finally {
             setDownloading(false);
         }
@@ -438,15 +438,15 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
                 }
             }
             if (successCount > 0) {
-                toast({ title: lang === 'zh' ? `成功删除 ${successCount} 项` : `Deleted ${successCount} items`, variant: 'success' });
+                toast({ title: t('dolphinScheduler.deletedSuccessCountItems'), variant: 'success' });
             }
             if (failMsg) {
-                toast({ title: lang === 'zh' ? '部分删除失败' : 'Some deletes failed', description: failMsg, variant: 'destructive' });
+                toast({ title: t('dolphinScheduler.someDeletesFailed'), description: failMsg, variant: 'destructive' });
             }
             setSelectedIds([]);
             fetchResources();
         } catch (err: any) {
-            toast({ title: lang === 'zh' ? '删除失败' : 'Delete Failed', description: err.message, variant: 'destructive' });
+            toast({ title: t('dolphinScheduler.deleteFailed'), description: err.message, variant: 'destructive' });
         }
     };
 
@@ -468,8 +468,8 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
                 if (childCount > 0) {
                     // 文件夹非空，不允许删除
                     toast({
-                        title: lang === 'zh' ? '无法删除' : 'Cannot Delete',
-                        description: lang === 'zh' ? `文件夹 "${resource.alias}" 不为空，请先清空其中的文件后再删除` : `Folder "${resource.alias}" is not empty. Please remove all files first.`,
+                        title: t('dolphinScheduler.cannotDelete'),
+                        description: t('dolphinScheduler.folderResourceAliasIsNotE'),
                         variant: 'destructive'
                     });
                     return;
@@ -500,8 +500,8 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
                     const childCount = checkResult.data?.total || (checkResult.data?.totalList?.length) || 0;
                     if (childCount > 0) {
                         toast({
-                            title: lang === 'zh' ? '无法重命名' : 'Cannot Rename',
-                            description: lang === 'zh' ? `文件夹 "${res.alias}" 不为空，无法重命名` : `Folder "${res.alias}" is not empty and cannot be renamed`,
+                            title: t('dolphinScheduler.cannotRename'),
+                            description: t('dolphinScheduler.folderResAliasIsNotEmptyA'),
                             variant: 'destructive'
                         });
                         return;
@@ -528,18 +528,18 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
             try {
                 const result = JSON.parse(responseText);
                 if (result.code === 0) {
-                    toast({ title: lang === 'zh' ? '重命名成功' : 'Renamed successfully', variant: 'success' });
+                    toast({ title: t('dolphinScheduler.renamedSuccessfully'), variant: 'success' });
                     setRenameModal({ isOpen: false, resource: null });
                     setRenameName('');
                     fetchResources();
                 } else {
-                    toast({ title: lang === 'zh' ? '重命名失败' : 'Rename failed', description: result.msg, variant: 'destructive' });
+                    toast({ title: t('dolphinScheduler.renameFailed'), description: result.msg, variant: 'destructive' });
                 }
             } catch {
-                toast({ title: lang === 'zh' ? '重命名失败' : 'Rename failed', description: responseText.substring(0, 200), variant: 'destructive' });
+                toast({ title: t('dolphinScheduler.renameFailed'), description: responseText.substring(0, 200), variant: 'destructive' });
             }
         } catch (err: any) {
-            toast({ title: lang === 'zh' ? '重命名失败' : 'Rename failed', description: err.message, variant: 'destructive' });
+            toast({ title: t('dolphinScheduler.renameFailed'), description: err.message, variant: 'destructive' });
         }
     };
 
@@ -575,11 +575,11 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
             if (viewContent || viewContent === '') {
                 setEditFileModal(prev => ({ ...prev, content: viewContent, loading: false }));
             } else {
-                toast({ title: lang === 'zh' ? '获取内容失败' : 'Failed to get content', description: '所有 API 端点均无法获取文件内容', variant: 'destructive' });
+                toast({ title: t('dolphinScheduler.failedToGetContent'), description: '所有 API 端点均无法获取文件内容', variant: 'destructive' });
                 setEditFileModal({ isOpen: false, resource: null, content: '', loading: false, saving: false });
             }
         } catch (err: any) {
-            toast({ title: lang === 'zh' ? '获取内容失败' : 'Failed to get content', description: err.message, variant: 'destructive' });
+            toast({ title: t('dolphinScheduler.failedToGetContent'), description: err.message, variant: 'destructive' });
             setEditFileModal({ isOpen: false, resource: null, content: '', loading: false, saving: false });
         }
     };
@@ -613,15 +613,15 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
             const parsed = JSON.parse(result.body);
             
             if (parsed.code === 0) {
-                toast({ title: lang === 'zh' ? '保存成功' : 'Saved successfully', variant: 'success' });
+                toast({ title: t('dolphinScheduler.savedSuccessfully'), variant: 'success' });
                 setEditFileModal({ isOpen: false, resource: null, content: '', loading: false, saving: false });
                 fetchResources();
             } else {
-                toast({ title: lang === 'zh' ? '保存失败' : 'Save failed', description: parsed.msg, variant: 'destructive' });
+                toast({ title: t('dolphinScheduler.saveFailed'), description: parsed.msg, variant: 'destructive' });
                 setEditFileModal(prev => ({ ...prev, saving: false }));
             }
         } catch (err: any) {
-            toast({ title: lang === 'zh' ? '保存失败' : 'Save failed', description: err.message, variant: 'destructive' });
+            toast({ title: t('dolphinScheduler.saveFailed'), description: err.message, variant: 'destructive' });
             setEditFileModal(prev => ({ ...prev, saving: false }));
         }
     };
@@ -654,10 +654,10 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
             {/* 删除确认模态框 */}
             <ConfirmModal
                 isOpen={confirmDelete.isOpen}
-                title={lang === 'zh' ? '确认删除' : 'Confirm Delete'}
-                message={lang === 'zh' ? `确定要删除 ${confirmDelete.names.join(', ')} 吗？` : `Delete ${confirmDelete.names.join(', ')}?`}
-                confirmText={lang === 'zh' ? '删除' : 'Delete'}
-                cancelText={lang === 'zh' ? '取消' : 'Cancel'}
+                title={t('dolphinScheduler.confirmDelete')}
+                message={t('dolphinScheduler.deleteConfirmDeleteNamesJ')}
+                confirmText={t('dolphinScheduler.delete')}
+                cancelText={t('dolphinScheduler.cancel')}
                 onConfirm={handleDeleteConfirm}
                 onCancel={() => setConfirmDelete({ isOpen: false, ids: [], names: [] })}
                 type="danger"
@@ -670,26 +670,26 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
                         <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center">
                             {createModal.type === 'folder' ? <FolderPlus className="mr-2 text-amber-500" /> : <FilePlus className="mr-2 text-blue-500" />}
                             {createModal.type === 'folder' 
-                                ? (lang === 'zh' ? '创建文件夹' : 'Create Folder')
-                                : (lang === 'zh' ? '创建文件' : 'Create File')}
+                                ? (t('dolphinScheduler.createFolder'))
+                                : (t('dolphinScheduler.createFile'))}
                         </h3>
                         <div className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                    {lang === 'zh' ? '名称' : 'Name'}
+                                    {t('dolphinScheduler.name')}
                                 </label>
                                 <input
                                     type="text"
                                     value={newName}
                                     onChange={e => setNewName(e.target.value)}
-                                    placeholder={createModal.type === 'folder' ? 'folder_name' : 'file.txt'}
+                                    placeholder={createModal.type === 'folder' ? t('dolphinScheduler.pleaseEnterFolderName') : t('dolphinScheduler.pleaseEnterFileName')}
                                     className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-800 dark:text-white focus:ring-2 focus:ring-amber-500 outline-none"
                                 />
                             </div>
                             {createModal.type === 'file' && (
                                 <div>
                                     <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                        {lang === 'zh' ? '内容（可选）' : 'Content (optional)'}
+                                        {t('dolphinScheduler.contentOptional')}
                                     </label>
                                     <textarea
                                         value={fileContent}
@@ -705,7 +705,7 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
                                 onClick={() => { setCreateModal({ isOpen: false, type: 'folder' }); setNewName(''); setFileContent(''); }}
                                 className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
                             >
-                                {lang === 'zh' ? '取消' : 'Cancel'}
+                                {t('dolphinScheduler.cancel')}
                             </button>
                             <button
                                 onClick={createModal.type === 'folder' ? handleCreateFolder : handleCreateFile}
@@ -713,7 +713,7 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
                                 className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-medium disabled:opacity-50 flex items-center"
                             >
                                 {creating && <Loader2 size={16} className="mr-2 animate-spin" />}
-                                {lang === 'zh' ? '创建' : 'Create'}
+                                {t('dolphinScheduler.create')}
                             </button>
                         </div>
                     </div>
@@ -726,12 +726,13 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
                     <div className="bg-white dark:bg-slate-800 rounded-xl p-6 w-[400px] shadow-2xl">
                         <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center">
                             <Pencil className="mr-2 text-blue-500" size={20} />
-                            {lang === 'zh' ? '重命名' : 'Rename'}
+                            {t('dolphinScheduler.rename')}
                         </h3>
                         <input
                             type="text"
                             value={renameName}
                             onChange={e => setRenameName(e.target.value)}
+                            placeholder={renameModal.resource?.directory ? t('dolphinScheduler.pleaseEnterFolderName') : t('dolphinScheduler.pleaseEnterFileName')}
                             className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
                         />
                         <div className="flex justify-end space-x-3 mt-6">
@@ -739,13 +740,13 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
                                 onClick={() => { setRenameModal({ isOpen: false, resource: null }); setRenameName(''); }}
                                 className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
                             >
-                                {lang === 'zh' ? '取消' : 'Cancel'}
+                                {t('dolphinScheduler.cancel')}
                             </button>
                             <button
                                 onClick={handleRename}
                                 className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium"
                             >
-                                {lang === 'zh' ? '确定' : 'OK'}
+                                {t('dolphinScheduler.oK')}
                             </button>
                         </div>
                     </div>
@@ -759,7 +760,7 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center">
                                 <Edit className="mr-2 text-blue-500" size={20} />
-                                {lang === 'zh' ? '编辑文件' : 'Edit File'}: {editFileModal.resource.alias}
+                                {t('dolphinScheduler.editFile')}: {editFileModal.resource.alias}
                             </h3>
                             <button onClick={() => setEditFileModal({ isOpen: false, resource: null, content: '', loading: false, saving: false })} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded">
                                 <X size={20} className="text-slate-500" />
@@ -781,7 +782,7 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
                                 onClick={() => setEditFileModal({ isOpen: false, resource: null, content: '', loading: false, saving: false })}
                                 className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
                             >
-                                {lang === 'zh' ? '取消' : 'Cancel'}
+                                {t('dolphinScheduler.cancel')}
                             </button>
                             <button
                                 onClick={handleSaveEditFile}
@@ -789,7 +790,7 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
                                 className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium disabled:opacity-50 flex items-center"
                             >
                                 {editFileModal.saving ? <Loader2 size={16} className="mr-2 animate-spin" /> : <Save size={16} className="mr-2" />}
-                                {lang === 'zh' ? '保存' : 'Save'}
+                                {t('dolphinScheduler.save')}
                             </button>
                         </div>
                     </div>
@@ -799,7 +800,7 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
             {/* 顶部导航 */}
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center space-x-4">
-                    <Tooltip content={lang === 'zh' ? '返回项目列表' : 'Back to projects'} position="right">
+                    <Tooltip content={t('dolphinScheduler.backToProjects')} position="right">
                         <button onClick={onBack} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
                             <ArrowLeft size={20} className="text-slate-600 dark:text-slate-400" />
                         </button>
@@ -807,12 +808,12 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
                     <div>
                         <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center">
                             <HardDrive className="mr-3 text-amber-500" />
-                            {lang === 'zh' ? '资源中心' : 'Resource Center'}
+                            {t('dolphinScheduler.resourceCenter')}
                         </h2>
                         <p className="text-xs text-slate-500">{connection.name}</p>
                     </div>
                 </div>
-                <Tooltip content={lang === 'zh' ? '刷新' : 'Refresh'} position="bottom">
+                <Tooltip content={t('dolphinScheduler.refresh')} position="bottom">
                     <button onClick={fetchResources} disabled={loading} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors disabled:opacity-50">
                         <RefreshCw size={18} className={`text-slate-600 dark:text-slate-400 ${loading ? 'animate-spin' : ''}`} />
                     </button>
@@ -826,7 +827,7 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                         <input
                             type="text"
-                            placeholder={lang === 'zh' ? '搜索资源...' : 'Search resources...'}
+                            placeholder={t('dolphinScheduler.searchResources')}
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
                             onKeyDown={e => e.key === 'Enter' && fetchResources()}
@@ -834,7 +835,7 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
                         />
                     </div>
                     <span className="text-sm text-slate-500">
-                        {selectedIds.length > 0 ? (lang === 'zh' ? `已选 ${selectedIds.length} 项` : `${selectedIds.length} selected`) : (lang === 'zh' ? `共 ${total} 项` : `${total} items`)}
+                        {selectedIds.length > 0 ? (t('dolphinScheduler.SelectedIdsLengthSelected', { count: selectedIds.length })) : (t('dolphinScheduler.TotalItems', { count: total }))}
                     </span>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -843,14 +844,14 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
                         className="px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-medium flex items-center text-sm transition-colors"
                     >
                         <FolderPlus size={16} className="mr-1" />
-                        {lang === 'zh' ? '新建文件夹' : 'New Folder'}
+                        {t('dolphinScheduler.newFolder')}
                     </button>
                     <button
                         onClick={() => setCreateModal({ isOpen: true, type: 'file' })}
                         className="px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium flex items-center text-sm transition-colors"
                     >
                         <FilePlus size={16} className="mr-1" />
-                        {lang === 'zh' ? '新建文件' : 'New File'}
+                        {t('dolphinScheduler.newFile')}
                     </button>
                     <button
                         onClick={handleUpload}
@@ -858,7 +859,7 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
                         className="px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium flex items-center text-sm transition-colors disabled:opacity-50"
                     >
                         {uploading ? <Loader2 size={16} className="mr-1 animate-spin" /> : <Upload size={16} className="mr-1" />}
-                        {lang === 'zh' ? '上传文件' : 'Upload'}
+                        {t('dolphinScheduler.upload')}
                     </button>
                     {selectedIds.length > 0 && (
                         <>
@@ -868,13 +869,13 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
                                 className="px-3 py-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg font-medium flex items-center text-sm transition-colors disabled:opacity-50"
                             >
                                 {downloading ? <Loader2 size={16} className="mr-1 animate-spin" /> : <Download size={16} className="mr-1" />}
-                                {lang === 'zh' ? '批量下载' : 'Download'}
+                                {t('dolphinScheduler.download')}
                             </button>
                             <button
                                 onClick={() => {
                                     const fileOnly = resources.filter(r => selectedIds.includes(r.fullName) && !r.directory);
                                     if (fileOnly.length === 0) {
-                                        toast({ title: lang === 'zh' ? '文件夹不支持批量删除' : 'Folders cannot be batch deleted', variant: 'destructive' });
+                                        toast({ title: t('dolphinScheduler.foldersCannotBeBatchDelet'), variant: 'destructive' });
                                         return;
                                     }
                                     setConfirmDelete({ isOpen: true, ids: fileOnly.map(r => r.fullName), names: fileOnly.map(r => r.alias) });
@@ -882,7 +883,7 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
                                 className="px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium flex items-center text-sm transition-colors"
                             >
                                 <Trash2 size={16} className="mr-1" />
-                                {lang === 'zh' ? '批量删除' : 'Delete'}
+                                {t('dolphinScheduler.delete')}
                             </button>
                         </>
                     )}
@@ -926,10 +927,10 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
                                             {(() => { const sel = resources.filter(r => !r.directory); return sel.length > 0 && sel.every(r => selectedIds.includes(r.fullName)); })() ? <CheckSquare size={15} className="text-amber-500" /> : <Square size={15} />}
                                         </button>
                                     </th>
-                                    <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{lang === 'zh' ? '名称' : 'Name'}</th>
-                                    <th className="w-20 px-3 py-2.5 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{lang === 'zh' ? '大小' : 'Size'}</th>
-                                    <th className="w-44 px-3 py-2.5 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{lang === 'zh' ? '更新时间' : 'Updated'}</th>
-                                    <th className="w-40 px-3 py-2.5 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{lang === 'zh' ? '操作' : 'Actions'}</th>
+                                    <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('dolphinScheduler.name')}</th>
+                                    <th className="w-20 px-3 py-2.5 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('dolphinScheduler.size')}</th>
+                                    <th className="w-44 px-3 py-2.5 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('dolphinScheduler.updated')}</th>
+                                    <th className="w-40 px-3 py-2.5 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('dolphinScheduler.actions')}</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white dark:bg-slate-800/40">
@@ -967,7 +968,7 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
                                             <div className="flex items-center justify-end space-x-0.5 opacity-60 group-hover:opacity-100 transition-opacity">
                                                 {!resource.directory && (
                                                     <>
-                                                        <Tooltip content={lang === 'zh' ? '上传替换' : 'Upload Replace'} position="top">
+                                                        <Tooltip content={t('dolphinScheduler.uploadReplace')} position="top">
                                                             <button
                                                                 onClick={(e) => handleUploadSingle(resource, e)}
                                                                 className="p-1 hover:bg-green-500/10 dark:hover:bg-green-500/15 rounded-md text-green-500 transition-colors"
@@ -976,7 +977,7 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
                                                             </button>
                                                         </Tooltip>
                                                         {isTextFile(resource) && (
-                                                            <Tooltip content={lang === 'zh' ? '编辑' : 'Edit'} position="top">
+                                                            <Tooltip content={t('dolphinScheduler.edit')} position="top">
                                                                 <button
                                                                     onClick={(e) => handleOpenEditFile(resource, e)}
                                                                     className="p-1 hover:bg-purple-500/10 dark:hover:bg-purple-500/15 rounded-md text-purple-400 transition-colors"
@@ -985,7 +986,7 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
                                                                 </button>
                                                             </Tooltip>
                                                         )}
-                                                        <Tooltip content={lang === 'zh' ? '下载' : 'Download'} position="top">
+                                                        <Tooltip content={t('dolphinScheduler.download')} position="top">
                                                             <button
                                                                 onClick={(e) => handleDownloadSingle(resource, e)}
                                                                 className="p-1 hover:bg-blue-500/10 dark:hover:bg-blue-500/15 rounded-md text-blue-400 transition-colors"
@@ -995,7 +996,7 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
                                                         </Tooltip>
                                                     </>
                                                 )}
-                                                <Tooltip content={lang === 'zh' ? '重命名' : 'Rename'} position="top">
+                                                <Tooltip content={t('dolphinScheduler.rename')} position="top">
                                                     <button
                                                         onClick={(e) => { e.stopPropagation(); setRenameModal({ isOpen: true, resource }); setRenameName(resource.alias); }}
                                                         className="p-1 hover:bg-slate-500/10 dark:hover:bg-slate-500/15 rounded-md text-slate-400 transition-colors"
@@ -1003,7 +1004,7 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
                                                         <Pencil size={15} />
                                                     </button>
                                                 </Tooltip>
-                                                <Tooltip content={lang === 'zh' ? '删除' : 'Delete'} position="top">
+                                                <Tooltip content={t('dolphinScheduler.delete')} position="top">
                                                     <button
                                                         onClick={(e) => handleDeleteSingle(resource, e)}
                                                         className="p-1 hover:bg-red-500/10 dark:hover:bg-red-500/15 rounded-md text-red-400 transition-colors"
@@ -1018,7 +1019,7 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
                                 {resources.length === 0 && !loading && (
                                     <tr>
                                         <td colSpan={5} className="px-6 py-12 text-center text-slate-400 dark:text-slate-500 text-sm">
-                                            {lang === 'zh' ? '暂无资源' : 'No resources found'}
+                                            {t('dolphinScheduler.noResourcesFound')}
                                         </td>
                                     </tr>
                                 )}
@@ -1036,7 +1037,7 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
                         disabled={pageNo === 1}
                         className="px-3 py-1 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded disabled:opacity-50"
                     >
-                        {lang === 'zh' ? '上一页' : 'Prev'}
+                        {t('dolphinScheduler.prev')}
                     </button>
                     <span className="text-sm text-slate-500">{pageNo} / {totalPages}</span>
                     <button
@@ -1044,7 +1045,7 @@ export const ResourceCenter: React.FC<ResourceCenterProps> = ({
                         disabled={pageNo === totalPages}
                         className="px-3 py-1 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded disabled:opacity-50"
                     >
-                        {lang === 'zh' ? '下一页' : 'Next'}
+                        {t('dolphinScheduler.next')}
                     </button>
                 </div>
             )}

@@ -1,11 +1,11 @@
 import React, { useState, useRef } from 'react';
 import { User, Mail, Shield, Save, Camera, Key, Lock, CheckCircle, Smartphone, Briefcase, MapPin, Globe, Flag } from 'lucide-react';
 import { Language, User as UserType } from '../../types';
+import { useTranslation } from "react-i18next";
 
 interface UserProfileProps {
   user: UserType;
   onUpdate: (updatedUser: UserType) => void;
-  lang: Language;
 }
 
 const COUNTRIES = [
@@ -20,7 +20,8 @@ const COUNTRIES = [
   { code: 'OT', name: 'Other', flag: '🌍' },
 ];
 
-export const UserProfile: React.FC<UserProfileProps> = ({ user, onUpdate, lang }) => {
+export const UserProfile: React.FC<UserProfileProps> = ({ user, onUpdate}) => {
+    const { t, i18n } = useTranslation();
   const [formData, setFormData] = useState<UserType>({
     ...user,
     gender: user.gender || 'male',
@@ -38,7 +39,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ user, onUpdate, lang }
     setTimeout(() => {
       onUpdate(formData);
       setIsSaving(false);
-      setMessage({ type: 'success', text: lang === 'zh' ? '个人信息已更新' : 'Profile updated successfully' });
+      setMessage({ type: 'success', text: t('common.profileUpdatedSuccessfull') });
       setTimeout(() => setMessage(null), 3000);
     }, 800);
   };
@@ -46,14 +47,14 @@ export const UserProfile: React.FC<UserProfileProps> = ({ user, onUpdate, lang }
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (passwords.new !== passwords.confirm) {
-      setMessage({ type: 'error', text: lang === 'zh' ? '两次输入的密码不一致' : 'New passwords do not match' });
+      setMessage({ type: 'error', text: t('common.newPasswordsDoNotMatch') });
       return;
     }
     setIsSaving(true);
     setTimeout(() => {
       setIsSaving(false);
       setPasswords({ current: '', new: '', confirm: '' });
-      setMessage({ type: 'success', text: lang === 'zh' ? '密码修改成功' : 'Password changed successfully' });
+      setMessage({ type: 'success', text: t('common.passwordChangedSuccessful') });
       setTimeout(() => setMessage(null), 3000);
     }, 1000);
   };
@@ -124,7 +125,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ user, onUpdate, lang }
                  : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
              }`}
            >
-             {lang === 'zh' ? '基本信息' : 'Basic Info'}
+             {t('common.basicInfo')}
            </button>
            <button 
              onClick={() => setActiveTab('security')}
@@ -134,7 +135,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ user, onUpdate, lang }
                  : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
              }`}
            >
-             {lang === 'zh' ? '安全设置' : 'Security'}
+             {t('common.security')}
            </button>
         </div>
 
@@ -151,7 +152,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ user, onUpdate, lang }
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                    <div className="space-y-2">
                       <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                        {lang === 'zh' ? '用户名 (只读)' : 'Username (Read-only)'}
+                        {t('common.usernameReadOnly')}
                       </label>
                       <div className="relative">
                          <User className="absolute left-3 top-2.5 text-slate-400" size={18} />
@@ -165,7 +166,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ user, onUpdate, lang }
                    </div>
                    <div className="space-y-2">
                       <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                        {lang === 'zh' ? '昵称' : 'Nickname'}
+                        {t('common.nickname')}
                       </label>
                       <div className="relative">
                          <User className="absolute left-3 top-2.5 text-slate-400" size={18} />
@@ -183,21 +184,21 @@ export const UserProfile: React.FC<UserProfileProps> = ({ user, onUpdate, lang }
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                    <div className="space-y-2">
                       <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                        {lang === 'zh' ? '性别' : 'Gender'}
+                        {t('common.gender')}
                       </label>
                       <select
                         value={formData.gender}
                         onChange={(e) => setFormData({...formData, gender: e.target.value as any})}
                         className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none dark:text-white"
                       >
-                         <option value="male">{lang === 'zh' ? '男' : 'Male'}</option>
-                         <option value="female">{lang === 'zh' ? '女' : 'Female'}</option>
-                         <option value="other">{lang === 'zh' ? '其他' : 'Other'}</option>
+                         <option value="male">{t('common.male')}</option>
+                         <option value="female">{t('common.female')}</option>
+                         <option value="other">{t('common.other')}</option>
                       </select>
                    </div>
                    <div className="space-y-2">
                       <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                        {lang === 'zh' ? '手机号码' : 'Mobile'}
+                        {t('common.mobile')}
                       </label>
                       <div className="relative">
                          <Smartphone className="absolute left-3 top-2.5 text-slate-400" size={18} />
@@ -216,7 +217,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ user, onUpdate, lang }
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                    <div className="space-y-2">
                       <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                        {lang === 'zh' ? '职业' : 'Occupation'}
+                        {t('common.occupation')}
                       </label>
                       <div className="relative">
                          <Briefcase className="absolute left-3 top-2.5 text-slate-400" size={18} />
@@ -231,7 +232,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ user, onUpdate, lang }
                    </div>
                    <div className="space-y-2">
                       <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                        {lang === 'zh' ? '国家/地区' : 'Country/Region'}
+                        {t('common.countryRegion')}
                       </label>
                       <div className="relative">
                          <Flag className="absolute left-3 top-2.5 text-slate-400" size={18} />
@@ -252,7 +253,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ user, onUpdate, lang }
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                    <div className="space-y-2">
                       <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                        {lang === 'zh' ? '城市' : 'City'}
+                        {t('common.city')}
                       </label>
                       <div className="relative">
                          <MapPin className="absolute left-3 top-2.5 text-slate-400" size={18} />
@@ -266,7 +267,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ user, onUpdate, lang }
                    </div>
                    <div className="space-y-2">
                       <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                        {lang === 'zh' ? '个人主页' : 'Website'}
+                        {t('common.website')}
                       </label>
                       <div className="relative">
                          <Globe className="absolute left-3 top-2.5 text-slate-400" size={18} />
@@ -283,7 +284,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ user, onUpdate, lang }
 
                 <div className="space-y-2">
                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                     {lang === 'zh' ? '邮箱' : 'Email'}
+                     {t('common.email')}
                    </label>
                    <div className="relative">
                       <Mail className="absolute left-3 top-2.5 text-slate-400" size={18} />
@@ -298,14 +299,14 @@ export const UserProfile: React.FC<UserProfileProps> = ({ user, onUpdate, lang }
 
                 <div className="space-y-2">
                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                     {lang === 'zh' ? '个人简介' : 'Bio'}
+                     {t('common.bio')}
                    </label>
                    <textarea 
                      rows={3}
                      value={formData.bio || ''}
                      onChange={(e) => setFormData({...formData, bio: e.target.value})}
                      className="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none dark:text-white resize-none"
-                     placeholder={lang === 'zh' ? '介绍一下你自己...' : 'Tell us about yourself...'}
+                     placeholder={t('common.tellUsAboutYourself')}
                    />
                 </div>
 
@@ -320,7 +321,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ user, onUpdate, lang }
                      ) : (
                         <Save size={18} className="mr-2" />
                      )}
-                     {lang === 'zh' ? '保存修改' : 'Save Changes'}
+                     {t('common.saveChanges')}
                    </button>
                 </div>
              </form>
@@ -328,7 +329,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ user, onUpdate, lang }
              <form onSubmit={handlePasswordSubmit} className="space-y-6 max-w-md">
                 <div className="space-y-2">
                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                     {lang === 'zh' ? '当前密码' : 'Current Password'}
+                     {t('common.currentPassword')}
                    </label>
                    <div className="relative">
                       <Key className="absolute left-3 top-2.5 text-slate-400" size={18} />
@@ -343,7 +344,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ user, onUpdate, lang }
 
                 <div className="space-y-2">
                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                     {lang === 'zh' ? '新密码' : 'New Password'}
+                     {t('common.newPassword')}
                    </label>
                    <div className="relative">
                       <Lock className="absolute left-3 top-2.5 text-slate-400" size={18} />
@@ -358,7 +359,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ user, onUpdate, lang }
 
                 <div className="space-y-2">
                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                     {lang === 'zh' ? '确认新密码' : 'Confirm New Password'}
+                     {t('common.confirmNewPassword')}
                    </label>
                    <div className="relative">
                       <Lock className="absolute left-3 top-2.5 text-slate-400" size={18} />
@@ -382,7 +383,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ user, onUpdate, lang }
                      ) : (
                         <Key size={18} className="mr-2" />
                      )}
-                     {lang === 'zh' ? '修改密码' : 'Change Password'}
+                     {t('common.changePassword')}
                    </button>
                 </div>
              </form>

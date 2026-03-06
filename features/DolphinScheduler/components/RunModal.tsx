@@ -7,7 +7,6 @@ import { Language, ProcessDefinition } from '../types';
 
 interface RunModalProps {
     process: ProcessDefinition | null;
-    lang: Language;
     projectCode: string;
     baseUrl: string;
     token: string;
@@ -15,8 +14,8 @@ interface RunModalProps {
     onSuccess: () => void;
 }
 
-export const RunModal: React.FC<RunModalProps> = ({ process, lang, projectCode, baseUrl, token, onClose, onSuccess }) => {
-    const { t } = useTranslation();
+export const RunModal: React.FC<RunModalProps> = ({process, projectCode, baseUrl, token, onClose, onSuccess }) => {
+  const { t, i18n } = useTranslation();
     const { toast } = useToast();
     const [running, setRunning] = useState(false);
     const [failureStrategy, setFailureStrategy] = useState<'CONTINUE' | 'END'>('CONTINUE');

@@ -25,99 +25,13 @@ import { SeaTunnelManager } from './features/SeaTunnelManager';
 import { Language, Theme, User, DbConnection, DolphinSchedulerConfig } from './types';
 import { NAV_ITEMS } from './constants';
 import i18n from './i18n';
+import { useTranslation } from "react-i18next";
 
 /* --- Home Dashboard --- */
-const Dashboard: React.FC<{ onNavigate: (id: string) => void, lang: Language }> = ({ onNavigate, lang }) => {
+const Dashboard: React.FC<{ onNavigate: (id: string) => void }> = ({ onNavigate }) => {
+    const { t, i18n } = useTranslation();
 
-  const getDescription = (id: string, lang: Language) => {
-    const descriptions: Record<string, Record<Language, string>> = {
-      'data-source-manager': {
-        en: 'Manage all your database connections in one place.',
-        zh: '统一管理您的所有数据库连接'
-      },
-      'text-docs': {
-        en: 'Notes, Interview Questions, PDF Tools.',
-        zh: '知识库与文档工具 (笔记、面试题、PDF)'
-      },
-      'data-dev': {
-        en: 'DB Viewer, Data Compare, Excel Builder, etc.',
-        zh: '数据库开发工具集 (表结构、对比、同步等)'
-      },
-      'db-viewer': {
-        en: 'View database table structures and generate create table statements.',
-        zh: '查看数据库表结构并生成建表语句'
-      },
-      'excel-import': {
-        en: 'Import data from Excel to target database with column mapping.',
-        zh: '将 Excel 数据导入指定表，支持灵活的字段映射'
-      },
-      'data-compare': {
-        en: 'Compare data between two tables with custom keys.',
-        zh: '对比两张表的数据差异，支持自定义主键和过滤条件'
-      },
-      'excel-sql': {
-        en: 'Convert Excel spreadsheets to MySQL/Doris DDL statements.',
-        zh: '将Excel表格转换为Doris和MySQL建表语句'
-      },
-      'seatunnel': {
-        en: 'Automatically generate data synchronization task scripts.',
-        zh: '自动生成数据同步任务脚本'
-      },
-      'field-mapping': {
-        en: 'Map source and target fields for data synchronization.',
-        zh: '配置数据同步的源表和目标表字段映射关系'
-      },
-      'task-dev': {
-        en: 'DolphinScheduler workflow and task management.',
-        zh: 'DolphinScheduler 工作流与任务调度管理'
-      },
-      'dolphin-project': {
-        en: 'Manage DolphinScheduler projects and workflows.',
-        zh: '管理 DolphinScheduler 项目和工作流'
-      },
-      'seatunnel-manager': {
-        en: 'SeaTunnel engine management, job monitoring, and config generation.',
-        zh: 'SeaTunnel 引擎管理、作业监控和配置生成'
-      },
-      'seatunnel-engine': {
-        en: 'Manage SeaTunnel engine instances and configurations.',
-        zh: '管理 SeaTunnel 引擎实例和配置'
-      },
-      'seatunnel-job': {
-        en: 'Monitor and manage SeaTunnel synchronization jobs.',
-        zh: '监控和管理 SeaTunnel 数据同步作业'
-      },
-      'tools': {
-        en: 'PDF processing, time utilities, and system monitoring.',
-        zh: 'PDF 处理、时间工具和系统监控等实用工具'
-      },
-      'pdf-tools': {
-        en: 'Merge, split, and compress PDF files.',
-        zh: '提供PDF合并、分割、压缩等功能'
-      },
-      'time-tools': {
-        en: 'Timestamp conversion, clock, and timers.',
-        zh: '时间戳转换、时钟和计时器'
-      },
-      'monitor': {
-        en: 'Real-time system resource monitoring.',
-        zh: '系统资源实时监控'
-      },
-      'system-management': {
-        en: 'User profile and system settings.',
-        zh: '用户中心和系统设置管理'
-      },
-      'profile': {
-        en: 'Manage your personal account information.',
-        zh: '管理个人账户信息'
-      },
-      'settings': {
-        en: 'Language, theme, and system preferences.',
-        zh: '语言、主题和系统偏好设置'
-      }
-    };
-    return descriptions[id]?.[lang] || '';
-  };
+
 
   const tools = NAV_ITEMS.filter(item => item.id !== 'dashboard');
 
@@ -125,18 +39,16 @@ const Dashboard: React.FC<{ onNavigate: (id: string) => void, lang: Language }> 
     <div className="flex flex-col items-center space-y-12 pt-8 pb-8">
       <div className="space-y-4 text-center max-w-3xl px-4">
         <h1 className="text-4xl md:text-5xl font-bold text-slate-900 dark:text-white tracking-tight">
-          {lang === 'zh' ? '欢迎使用' : 'Welcome to'} <span className="text-blue-600">DevToolbox</span>
+          {t('common.welcome')} <span className="text-blue-600">DevToolbox</span>
         </h1>
         <p className="text-lg md:text-xl text-slate-600 dark:text-slate-400">
-          {lang === 'zh'
-            ? '一站式开发者工具箱，集成数据库管理、PDF处理、系统监控等核心功能。'
-            : 'One-stop developer toolkit integrating database management, PDF processing, and system monitoring.'}
+          {t('common.appDescription')}
         </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-7xl px-4">
         {tools.map((tool) => (
-          <Tooltip key={tool.id} content={tool.label[lang]} position="top">
+          <Tooltip key={tool.id} content={tool.tooltip ? t(tool.tooltip) : ''} position="top">
             <button
               onClick={() => onNavigate(tool.id)}
               className="group relative p-6 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border-2 border-slate-200 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-2xl hover:shadow-blue-500/20 hover:-translate-y-2 transition-all duration-300 text-left overflow-hidden w-full"
@@ -160,10 +72,10 @@ const Dashboard: React.FC<{ onNavigate: (id: string) => void, lang: Language }> 
                 </div>
 
                 <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-300">
-                  {tool.label[lang]}
+                  {t(tool.label)}
                 </h3>
                 <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed group-hover:text-slate-700 dark:group-hover:text-slate-300 transition-colors duration-300">
-                  {getDescription(tool.id, lang)}
+                  {tool.tooltip ? t(tool.tooltip) : ''}
                 </p>
               </div>
             </button>
@@ -175,6 +87,7 @@ const Dashboard: React.FC<{ onNavigate: (id: string) => void, lang: Language }> 
 };
 
 export default function App() {
+    const { i18n } = useTranslation();
   // Tabs State with persistence
   const [activeTab, setActiveTab] = useState(() => {
     const saved = localStorage.getItem('activeTab');
@@ -257,9 +170,8 @@ export default function App() {
 
   // Persist language
   useEffect(() => {
-    localStorage.setItem('language', lang);
-    i18n.changeLanguage(lang);
-  }, [lang]);
+    localStorage.setItem('language', i18n.language);
+  }, [i18n.language]);
 
 
   // Persist monitor enabled
@@ -406,34 +318,34 @@ export default function App() {
   };
 
   if (!user) {
-    return <Login onLogin={handleLogin} lang={lang} />;
+    return <Login onLogin={handleLogin} />;
   }
 
   const renderView = (id: string) => {
     switch (id) {
-      case 'dashboard': return <Dashboard onNavigate={handleNavigate} lang={lang} />;
-      case 'data-source-manager': return <DataSourceManager lang={lang} connections={connections} onAdd={handleAddConnection} onUpdate={handleUpdateConnection} onDelete={handleDeleteConnection} />;
-      case 'db-viewer': return <DbViewer lang={lang} connections={connections} onNavigate={handleNavigate} />;
-      case 'excel-import': return <ExcelImport lang={lang} connections={connections} />; // New Tool
-      case 'data-compare': return <DataCompareTool lang={lang} connections={connections} />; // New Route
-      case 'excel-sql': return <ExcelToSql lang={lang} />;
-      case 'seatunnel': return <SeatunnelGen lang={lang} connections={connections} onNavigate={handleNavigate} />;
+      case 'dashboard': return <Dashboard onNavigate={handleNavigate} />;
+      case 'data-source-manager': return <DataSourceManager connections={connections} onAdd={handleAddConnection} onUpdate={handleUpdateConnection} onDelete={handleDeleteConnection} />;
+      case 'db-viewer': return <DbViewer connections={connections} onNavigate={handleNavigate} />;
+      case 'excel-import': return <ExcelImport connections={connections} />; // New Tool
+      case 'data-compare': return <DataCompareTool connections={connections} />; // New Route
+      case 'excel-sql': return <ExcelToSql />;
+      case 'seatunnel': return <SeatunnelGen connections={connections} onNavigate={handleNavigate} />;
 
-      case 'field-mapping': return <FieldMappingTool lang={lang} connections={connections} onNavigate={handleNavigate} />;
+      case 'field-mapping': return <FieldMappingTool connections={connections} onNavigate={handleNavigate} />;
 
       // DolphinScheduler Routes
-      case 'dolphin-project': return <DSManager lang={lang} onNavigate={handleNavigate} />;
-      case 'dolphin-task': return <TaskManager lang={lang} currentProject={currentProject} configs={dolphinConfigs} onSelectProject={handleSelectProject} onNavigate={handleNavigate} />;
+      case 'dolphin-project': return <DSManager onNavigate={handleNavigate} />;
+      case 'dolphin-task': return <TaskManager currentProject={currentProject} configs={dolphinConfigs} onSelectProject={handleSelectProject} onNavigate={handleNavigate} />;
 
       // SeaTunnel Routes
-      case 'seatunnel-engine': return <SeaTunnelManager lang={lang} activeSubPage="engine" onNavigate={handleNavigate} />;
-      case 'seatunnel-job': return <SeaTunnelManager lang={lang} activeSubPage="job" onNavigate={handleNavigate} />;
+      case 'seatunnel-engine': return <SeaTunnelManager activeSubPage="engine" onNavigate={handleNavigate} />;
+      case 'seatunnel-job': return <SeaTunnelManager activeSubPage="job" onNavigate={handleNavigate} />;
 
-      case 'pdf-tools': return <PdfTools lang={lang} />;
-      case 'time-tools': return <TimeUtility lang={lang} />;
-      case 'monitor': return <SystemMonitor lang={lang} enabled={monitorEnabled} />;
-      case 'profile': return <UserProfile user={user} onUpdate={handleUserUpdate} lang={lang} />;
-      case 'settings': return <Settings lang={lang} onLangChange={setLang} theme={theme} onThemeChange={setTheme} monitorEnabled={monitorEnabled} onMonitorToggle={setMonitorEnabled} />;
+      case 'pdf-tools': return <PdfTools />;
+      case 'time-tools': return <TimeUtility />;
+      case 'monitor': return <SystemMonitor enabled={monitorEnabled} />;
+      case 'profile': return <UserProfile user={user} onUpdate={handleUserUpdate} />;
+      case 'settings': return <Settings onLangChange={(l: Language) => { setLang(l); i18n.changeLanguage(l); }} lang={lang} theme={theme} onThemeChange={setTheme} monitorEnabled={monitorEnabled} onMonitorToggle={setMonitorEnabled} />;
       default: return null;
     }
   };
@@ -445,8 +357,7 @@ export default function App() {
         onTabChange={handleNavigate}
         openTabs={openTabs}
         onCloseTab={handleCloseTab}
-        lang={lang}
-        onLangChange={setLang}
+        onLangChange={(l: Language) => { setLang(l); i18n.changeLanguage(l); }}
         theme={theme}
         onThemeChange={setTheme}
         user={user}
@@ -464,7 +375,7 @@ export default function App() {
         ))}
       </Layout>
       {/* 自动更新检查 */}
-      <UpdateChecker lang={lang} />
+      <UpdateChecker />
     </ToastProvider>
   );
 }

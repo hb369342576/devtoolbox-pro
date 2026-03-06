@@ -3,17 +3,16 @@ import {
   Database, Plus, Edit, Trash2, RefreshCw, CheckCircle, X,
   DatabaseZap, AlertCircle, Server, HardDrive, Layers, Table2, FileCode, Power
 } from 'lucide-react';
-import { Language, DbConnection, DatabaseType } from '../../types';
+import { useTranslation } from 'react-i18next';
+import { DbConnection, DatabaseType } from '../../types';
 import { invoke } from '@tauri-apps/api/core';
 import { useToast } from '../common/Toast';
 import { ConfirmModal } from '../common/ConfirmModal';
 import { Tooltip } from '../common/Tooltip';
 import { ViewModeToggle } from '../common/ViewModeToggle';
 import { useViewMode } from '../../store/globalStore';
-import { getTexts } from '../../locales'; // This line was not removed in the instruction, so keeping it.
 
 interface DataSourceManagerProps {
-  lang: Language;
   connections: DbConnection[];
   onAdd: (conn: Omit<DbConnection, 'id'>) => void;
   onUpdate: (conn: DbConnection) => void;
@@ -27,11 +26,10 @@ interface AlertProps {
   title: string;
   message: string;
   type: 'success' | 'error';
-  lang: Language;
 }
 
-const AlertModal: React.FC<AlertProps> = ({ isOpen, onClose, title, message, type, lang }) => {
-  const t = getTexts(lang);
+const AlertModal: React.FC<AlertProps> = ({ isOpen, onClose, title, message, type}) => {
+  const { t } = useTranslation();
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in">
@@ -54,7 +52,7 @@ const AlertModal: React.FC<AlertProps> = ({ isOpen, onClose, title, message, typ
             onClick={onClose}
             className="px-4 py-2 bg-slate-800 dark:bg-slate-700 hover:bg-slate-900 dark:hover:bg-slate-600 text-white rounded-lg text-sm font-medium transition-colors"
           >
-            {t.common.close}
+            {t('common.close')}
           </button>
         </div>
       </div>
@@ -75,13 +73,12 @@ const getDbConfig = (type: DatabaseType) => {
 };
 
 export const DataSourceManager: React.FC<{
-  lang: Language;
   connections: DbConnection[];
   onAdd: (conn: Omit<DbConnection, 'id'>) => void;
   onUpdate: (conn: DbConnection) => void;
   onDelete: (id: string) => void;
-}> = ({ lang, connections, onAdd, onUpdate, onDelete }) => {
-  const t = getTexts(lang); // Get Translations
+}> = ({ connections, onAdd, onUpdate, onDelete }) => {
+  const { t } = useTranslation();
   // Reliable check for Tauri v2
   const isTauri = !!(window as any).__TAURI_INTERNALS__ || !!(window as any).__TAURI__;
 
@@ -97,7 +94,7 @@ export const DataSourceManager: React.FC<{
     : !!(editingConn.name && editingConn.host && editingConn.port && editingConn.user);
 
   const handleAddNew = () => {
-    setEditingConn({ type: 'MySQL', name: t.dataSource.addTitle, host: '127.0.0.1', port: '3306', user: 'root' });
+    setEditingConn({ type: 'MySQL', name: t('dataSource.addTitle'), host: '127.0.0.1', port: '3306', user: 'root' });
     setTestStatus('none');
     setShowModal(true);
   };
@@ -137,21 +134,21 @@ export const DataSourceManager: React.FC<{
         await invoke<string>('db_test_connection', { payload: editingConn });
         // 成功
         setTestStatus('success');
-        setAlertState({ isOpen: true, title: t.common.success, message: t.dataSource.connSuccess, type: 'success' });
+        setAlertState({ isOpen: true, title: t('common.success'), message: t('dataSource.connSuccess'), type: 'success' });
         // 2秒后重置状态
         setTimeout(() => setTestStatus('none'), 2000);
       } catch (error) {
         // 失败 - error 是 Err(string)
         setTestStatus('failed');
         const errorMsg = typeof error === 'string' ? error : String(error);
-        setAlertState({ isOpen: true, title: t.common.failed, message: errorMsg, type: 'error' });
+        setAlertState({ isOpen: true, title: t('common.failed'), message: errorMsg, type: 'error' });
         // 3秒后重置状态
         setTimeout(() => setTestStatus('none'), 3000);
       }
     } else {
       setTimeout(() => {
         setTestStatus('failed');
-        setAlertState({ isOpen: true, title: 'Web Mode', message: 'Connection testing is mocked in web mode.', type: 'error' });
+        setAlertState({ isOpen: true, title: t('common.webMode'), message: t('common.webModeConnMsg'), type: 'error' });
         setTimeout(() => setTestStatus('none'), 3000);
       }, 800);
     }
@@ -159,13 +156,13 @@ export const DataSourceManager: React.FC<{
 
   return (
     <div className="h-full flex flex-col">
-      <AlertModal {...alertState} onClose={() => setAlertState({ ...alertState, isOpen: false })} lang={lang} />
+      <AlertModal {...alertState} onClose={() => setAlertState({ ...alertState, isOpen: false })} />
       <ConfirmModal
         isOpen={confirmDelete.isOpen}
-        title={lang === 'zh' ? '确认删除' : 'Confirm Delete'}
-        message={t.dataSource.deleteConfirm}
-        confirmText={lang === 'zh' ? '删除' : 'Delete'}
-        cancelText={lang === 'zh' ? '取消' : 'Cancel'}
+        title={t('common.confirmDelete')}
+        message={t('dataSource.deleteConfirm')}
+        confirmText={t('common.delete')}
+        cancelText={t('common.cancel')}
         onConfirm={handleConfirmDelete}
         onCancel={() => setConfirmDelete({ isOpen: false, id: '' })}
         type="danger"
@@ -174,13 +171,14 @@ export const DataSourceManager: React.FC<{
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center">
           <DatabaseZap className="mr-3 text-blue-600" />
-          {t.dataSource.title}
+          {t('dataSource.title')}
         </h2>
         <div className="flex items-center space-x-3">
-          <ViewModeToggle />                  <button
+          <ViewModeToggle />
+          <button
             onClick={handleAddNew}
             className="min-w-[140px] px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium flex items-center justify-center shadow-lg transition-colors"
-          >      <Plus size={18} className="mr-2" />{lang === 'zh' ? '新建连接' : 'New Connection'}
+          >      <Plus size={18} className="mr-2" />{t('dataSource.addTitle')}
           </button>
         </div>
       </div>
@@ -208,11 +206,11 @@ export const DataSourceManager: React.FC<{
                     <h3 className="font-bold text-lg text-slate-800 dark:text-white mb-1 truncate">{conn.name}</h3>
                     <div className="space-y-1">
                       <div className="flex items-center text-sm text-slate-500 dark:text-slate-400">
-                        <span className="w-16 text-xs font-bold uppercase opacity-70">{t.dataSource.type}</span>
+                        <span className="w-16 text-xs font-bold uppercase opacity-70">{t('dataSource.type')}</span>
                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-100 dark:bg-slate-700`}>{conn.type}</span>
                       </div>
                       <div className="flex items-center text-sm text-slate-500 dark:text-slate-400">
-                        <span className="w-16 text-xs font-bold uppercase opacity-70">{t.dataSource.host}</span>
+                        <span className="w-16 text-xs font-bold uppercase opacity-70">{t('dataSource.host')}</span>
                         <span className="truncate font-mono">{conn.host}:{conn.port}</span>
                       </div>
                     </div>
@@ -227,16 +225,16 @@ export const DataSourceManager: React.FC<{
               <div className="p-4 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform duration-300 mb-4">
                 <Plus size={32} />
               </div>
-              <span className="font-bold text-lg text-slate-600 dark:text-slate-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{t.common.add}</span>
+              <span className="font-bold text-lg text-slate-600 dark:text-slate-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{t('common.add')}</span>
             </button>
           </div>
         ) : (
           <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
             <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-500 uppercase tracking-wider sticky top-0 z-10">
-              <div className="col-span-4">{t.common.name}</div>
-              <div className="col-span-2">{t.dataSource.type}</div>
-              <div className="col-span-4">{t.dataSource.host}</div>
-              <div className="col-span-2 text-right">{t.common.actions}</div>
+              <div className="col-span-4">{t('common.name')}</div>
+              <div className="col-span-2">{t('dataSource.type')}</div>
+              <div className="col-span-4">{t('dataSource.host')}</div>
+              <div className="col-span-2 text-right">{t('common.actions')}</div>
             </div>
             <div className="divide-y divide-slate-100 dark:divide-slate-700">
               {connections.map(conn => {
@@ -266,7 +264,7 @@ export const DataSourceManager: React.FC<{
                   </div>
                 );
               })}
-              {connections.length === 0 && <div className="px-6 py-8 text-center text-slate-400 text-sm italic">{t.common.noData}</div>}
+              {connections.length === 0 && <div className="px-6 py-8 text-center text-slate-400 text-sm italic">{t('common.noData')}</div>}
             </div>
           </div>
         )}
@@ -276,26 +274,26 @@ export const DataSourceManager: React.FC<{
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in zoom-in-95">
           <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200 dark:border-slate-700">
             <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800/80">
-              <h3 className="font-bold text-lg text-slate-800 dark:text-white">{editingConn.id ? t.dataSource.editTitle : t.dataSource.addTitle}</h3>
+              <h3 className="font-bold text-lg text-slate-800 dark:text-white">{editingConn.id ? t('dataSource.editTitle') : t('dataSource.addTitle')}</h3>
               <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><X size={20} /></button>
             </div>
 
             <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
               {/* Connection Name */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t.dataSource.connectionName} <span className="text-red-500">*</span></label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('dataSource.connectionName')} <span className="text-red-500">*</span></label>
                 <input
                   type="text"
                   value={editingConn.name || ''}
                   onChange={e => setEditingConn({ ...editingConn, name: e.target.value })}
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white"
-                  placeholder={t.dataSource.placeholderName}
+                  placeholder={t('dataSource.placeholderName')}
                 />
               </div>
 
               {/* Connection Type */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t.dataSource.type}</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('dataSource.type')}</label>
                 <select
                   value={editingConn.type}
                   onChange={e => setEditingConn({ ...editingConn, type: e.target.value as DatabaseType })}
@@ -308,30 +306,30 @@ export const DataSourceManager: React.FC<{
               {/* Dynamic Fields */}
               {editingConn.type === 'SQLite' ? (
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t.dataSource.filePath} <span className="text-red-500">*</span></label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('dataSource.filePath')} <span className="text-red-500">*</span></label>
                   <input
                     type="text"
                     value={editingConn.host || ''}
                     onChange={e => setEditingConn({ ...editingConn, host: e.target.value })}
                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white"
-                    placeholder={t.dataSource.placeholderPath}
+                    placeholder={t('dataSource.placeholderPath')}
                   />
                 </div>
               ) : (
                 <>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t.dataSource.host} <span className="text-red-500">*</span></label>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('dataSource.host')} <span className="text-red-500">*</span></label>
                       <input
                         type="text"
                         value={editingConn.host || ''}
                         onChange={e => setEditingConn({ ...editingConn, host: e.target.value })}
                         className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white"
-                        placeholder={t.dataSource.placeholderHost}
+                        placeholder={t('dataSource.placeholderHost')}
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t.dataSource.port} <span className="text-red-500">*</span></label>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('dataSource.port')} <span className="text-red-500">*</span></label>
                       <input
                         type="text"
                         value={editingConn.port || ''}
@@ -343,7 +341,7 @@ export const DataSourceManager: React.FC<{
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t.dataSource.user} <span className="text-red-500">*</span></label>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('dataSource.user')} <span className="text-red-500">*</span></label>
                       <input
                         type="text"
                         value={editingConn.user || ''}
@@ -353,7 +351,7 @@ export const DataSourceManager: React.FC<{
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t.dataSource.password}</label>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('dataSource.password')}</label>
                       <input
                         type="password"
                         value={editingConn.password || ''}
@@ -363,7 +361,7 @@ export const DataSourceManager: React.FC<{
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t.dataSource.defaultDb} ({t.common.optional})</label>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('dataSource.defaultDb')} ({t('common.optional')})</label>
                     <input
                       type="text"
                       value={editingConn.defaultDatabase || ''}
@@ -384,20 +382,20 @@ export const DataSourceManager: React.FC<{
               >
                 {testStatus === 'testing' ? <RefreshCw className="animate-spin" size={16} /> : <Power size={16} />}
                 <span>
-                  {testStatus === 'testing' ? t.dataSource.testing :
-                    testStatus === 'success' ? t.dataSource.connSuccess :
-                      testStatus === 'failed' ? t.dataSource.connFailed :
-                        t.dataSource.testConn}
+                  {testStatus === 'testing' ? t('dataSource.testing') :
+                    testStatus === 'success' ? t('dataSource.connSuccess') :
+                      testStatus === 'failed' ? t('dataSource.connFailed') :
+                        t('dataSource.testConn')}
                 </span>
               </button>
               <div className="flex space-x-3">
-                <button onClick={() => setShowModal(false)} className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors">{t.common.cancel}</button>
+                <button onClick={() => setShowModal(false)} className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors">{t('common.cancel')}</button>
                 <button
                   onClick={handleSave}
                   disabled={!isFormValid}
                   className={`px-6 py-2 rounded-lg font-medium transition-colors ${isFormValid ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/20' : 'bg-slate-300 dark:bg-slate-700 text-slate-500 cursor-not-allowed'}`}
                 >
-                  {t.dataSource.saveConn}
+                  {t('dataSource.saveConn')}
                 </button>
               </div>
             </div>

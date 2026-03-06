@@ -3,13 +3,13 @@ import React, { useState, useEffect } from 'react';
 import { Table as TableIcon, RefreshCw, Search } from 'lucide-react';
 import { DbConnection, Language } from '../../types';
 import { useTables } from '../../hooks/useTables';
+import { useTranslation } from 'react-i18next';
 
 interface TableSelectorProps {
     connection: DbConnection | null;
     database: string;
     value: string;
     onChange: (table: string) => void;
-    lang: Language;
     disabled?: boolean;
     showSearch?: boolean;
     className?: string;
@@ -24,13 +24,13 @@ export const TableSelector: React.FC<TableSelectorProps> = ({
     database,
     value,
     onChange,
-    lang,
     disabled = false,
     showSearch = true,
     className = ''
 }) => {
     const { tables, loading, error, refetch } = useTables(connection, database);
     const [searchTerm, setSearchTerm] = React.useState('');
+    const { t } = useTranslation();
 
     const filteredTables = React.useMemo(() => {
         if (!searchTerm) return tables;
@@ -42,7 +42,7 @@ export const TableSelector: React.FC<TableSelectorProps> = ({
     return (
         <div className={className}>
             <label className="block text-xs font-bold text-slate-400 uppercase mb-1">
-                {lang === 'zh' ? '选择表' : 'Select Table'}
+                {t('common.selectTable', 'Select Table')}
             </label>
 
             {/* 搜索框 */}
@@ -51,7 +51,7 @@ export const TableSelector: React.FC<TableSelectorProps> = ({
                     <Search size={14} className="absolute left-2 top-2 text-slate-400" />
                     <input
                         type="text"
-                        placeholder={lang === 'zh' ? '搜索表...' : 'Search tables...'}
+                        placeholder={t('common.searchTable', 'Search tables...')}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         disabled={disabled || !database}
@@ -67,7 +67,7 @@ export const TableSelector: React.FC<TableSelectorProps> = ({
                     disabled={disabled || !database || loading}
                     className="w-full p-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg text-sm outline-none dark:text-white disabled:opacity-50 truncate pr-10"
                 >
-                    <option value="">-- {lang === 'zh' ? '选择表' : 'Select Table'} --</option>
+                    <option value="">-- {t('common.selectTable', 'Select Table')} --</option>
                     {filteredTables.map((table) => (
                         <option key={table.name} value={table.name}>
                             {table.name}
@@ -96,8 +96,8 @@ export const TableSelector: React.FC<TableSelectorProps> = ({
             {tables.length > 0 && (
                 <p className="mt-1 text-xs text-slate-500">
                     {filteredTables.length !== tables.length
-                        ? `${filteredTables.length} / ${tables.length} ${lang === 'zh' ? '个表' : 'tables'}`
-                        : `${tables.length} ${lang === 'zh' ? '个表' : 'tables'}`}
+                        ? `${filteredTables.length} / ${tables.length} ${t('common.tablesStr', 'tables')}`
+                        : `${tables.length} ${t('common.tablesStr', 'tables')}`}
                 </p>
             )}
 

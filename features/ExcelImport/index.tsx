@@ -7,11 +7,11 @@ import * as XLSX from 'xlsx';
 import { Language, DbConnection, TableInfo, TableDetail } from '../../types';
 import { useToast } from '../common/Toast';
 import { Tooltip } from '../common/Tooltip';
+import { ViewModeToggle } from '../common/ViewModeToggle';
 import { DatabaseService } from '../../services/database.service';
 import { invoke } from '@tauri-apps/api/core';
-import { getTexts } from '../../locales';
 import { useGlobalStore } from '../../store/globalStore';
-import { ViewModeToggle } from '../common/ViewModeToggle';
+import { useTranslation } from "react-i18next";
 
 interface ImportProfile {
     id: string;
@@ -25,7 +25,6 @@ interface ImportProfile {
 }
 
 interface ExcelImportProps {
-    lang: Language;
     connections: DbConnection[];
 }
 
@@ -38,9 +37,9 @@ interface ColumnMapping {
     customValue?: string; // For fixed values
 }
 
-export const ExcelImport: React.FC<ExcelImportProps> = ({ lang, connections }) => {
+export const ExcelImport: React.FC<ExcelImportProps> = ({ connections }) => {
     const { toast } = useToast();
-    const t = getTexts(lang);
+    const { t } = useTranslation();
     const viewMode = useGlobalStore(state => state.viewMode);
 
     // Global View State
@@ -97,7 +96,7 @@ export const ExcelImport: React.FC<ExcelImportProps> = ({ lang, connections }) =
         const now = Date.now();
         const profile: ImportProfile = {
             id: activeProfileId || now.toString(),
-            title: profileTitle || (lang === 'zh' ? '未命名导入' : 'Untitled Import'),
+            title: profileTitle || t('excel_import.untitled'),
             targetTable: selectedTable,
             connId: selectedConnId,
             db: selectedDb,
@@ -113,12 +112,12 @@ export const ExcelImport: React.FC<ExcelImportProps> = ({ lang, connections }) =
         setProfiles(updated);
         saveProfilesToLocal(updated);
         setActiveProfileId(profile.id);
-        toast({ title: t.common.success });
+        toast({ message: t('common.success'), type: 'success' });
     };
 
     const handleNewImport = () => {
         setActiveProfileId(null);
-        setProfileTitle(lang === 'zh' ? '新建导入任务' : 'New Import Task');
+        setProfileTitle(t('excel_import.newImportTask'));
         resetEditor();
         setView('editor');
     };
@@ -237,15 +236,14 @@ export const ExcelImport: React.FC<ExcelImportProps> = ({ lang, connections }) =
                 } catch (e) {
                     console.error(e);
                     toast({
-                        title: lang === 'zh' ? '加载失败' : 'Load Failed',
-                        description: lang === 'zh' ? '无法获取数据库列表' : 'Could not fetch databases',
-                        variant: 'destructive'
+                        title: t('common.loadFailed'),
+                        variant: 'error'
                     });
                 }
             };
             fetchDbs();
         }
-    }, [selectedConnId, connections]);
+    }, [selectedConnId, connections, t]);
 
     useEffect(() => {
         if (selectedConnId && selectedDb) {
@@ -307,9 +305,9 @@ export const ExcelImport: React.FC<ExcelImportProps> = ({ lang, connections }) =
                 } catch (e: any) {
                     console.error('Failed to fetch columns:', e);
                     toast({
-                        title: lang === 'zh' ? '加载结构失败' : 'Failed to load schema',
-                        description: e.message || (lang === 'zh' ? '无法获取表结构信息' : 'Could not fetch table schema'),
-                        variant: 'destructive'
+                        message: t('excel_import.failedToLoadSchema'),
+                        description: e.message || t('excel_import.couldNotFetchTableSchema'),
+                        variant: 'error'
                     });
                 } finally {
                     setIsLoadingColumns(false);
@@ -320,7 +318,7 @@ export const ExcelImport: React.FC<ExcelImportProps> = ({ lang, connections }) =
             setTableSchema([]);
             setMappings([]);
         }
-    }, [selectedConnId, selectedDb, selectedTable, sheetHeaders, connections, lang, toast]);
+    }, [selectedConnId, selectedDb, selectedTable, sheetHeaders, connections, t]);
 
 
     // --- Logic ---
@@ -331,14 +329,11 @@ export const ExcelImport: React.FC<ExcelImportProps> = ({ lang, connections }) =
         const keys = mappings.filter(m => m.excelHeader || m.customValue);
 
         if (keys.length === 0) {
-            setGeneratedSql('-- No mappings configured');
+            setGeneratedSql(`-- ${t('excel_import.noMappings')}`);
             return;
         }
 
         let sql = `-- Import to ${selectedTable}\n`;
-        // Batch INSERT? Or Multi-Value? 
-        // Let's do batches of 100 for display
-
         const columns = keys.map(k => `\`${k.dbColumn}\``).join(', ');
         let valuesBatch: string[] = [];
 
@@ -367,7 +362,7 @@ export const ExcelImport: React.FC<ExcelImportProps> = ({ lang, connections }) =
             sql += `INSERT INTO \`${selectedTable}\` (${columns}) VALUES\n`;
             sql += valuesBatch.join(',\n') + ';';
         } else {
-            sql += '-- No data found';
+            sql += `-- ${t('common.noRecords')}`;
         }
 
         setGeneratedSql(sql);
@@ -390,7 +385,7 @@ export const ExcelImport: React.FC<ExcelImportProps> = ({ lang, connections }) =
                 <div className="flex justify-between items-center mb-6">
                     <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center">
                         <FileSpreadsheet className="mr-3 text-green-600" />
-                        {t.excelImport.title}
+                        {t('excel_import.title')}
                     </h2>
                     <div className="flex items-center space-x-3">
                         <ViewModeToggle />
@@ -399,7 +394,7 @@ export const ExcelImport: React.FC<ExcelImportProps> = ({ lang, connections }) =
                             className="min-w-[140px] px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium flex items-center justify-center shadow-lg transition-colors"
                         >
                             <Plus size={18} className="mr-2" />
-                            {lang === 'zh' ? '新建导入任务' : 'New Import Task'}
+                            {t('excel_import.newImportTask')}
                         </button>
                     </div>
                 </div>
@@ -435,7 +430,7 @@ export const ExcelImport: React.FC<ExcelImportProps> = ({ lang, connections }) =
                                             {p.title}
                                         </h3>
                                         <div className="text-sm text-slate-500 font-mono mb-auto truncate">
-                                            {p.targetTable ? `-> ${p.targetTable}` : 'No target'}
+                                            {p.targetTable ? `-> ${p.targetTable}` : t('excel_import.noTarget')}
                                         </div>
                                         <div className="flex items-center text-xs text-slate-400 pt-4 border-t border-slate-100 dark:border-slate-700/50 mt-4">
                                             <Settings size={12} className="mr-1" />
@@ -455,22 +450,22 @@ export const ExcelImport: React.FC<ExcelImportProps> = ({ lang, connections }) =
                                 <Plus size={32} />
                             </div>
                             <span className="font-bold text-lg text-slate-600 dark:text-slate-300 group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors">
-                                {lang === 'zh' ? '新建导入任务' : 'New Import Task'}
+                                {t('excel_import.newImportTask')}
                             </span>
                         </div>
                     </div>
                 ) : (
                     <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
                         <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-500 uppercase tracking-wider sticky top-0 z-10">
-                            <div className="col-span-4">{lang === 'zh' ? '任务名称' : 'Profile Name'}</div>
-                            <div className="col-span-4">{lang === 'zh' ? '目标表' : 'Target Table'}</div>
-                            <div className="col-span-3">{lang === 'zh' ? '更新时间' : 'Last Updated'}</div>
-                            <div className="col-span-1 text-center">{lang === 'zh' ? '操作' : 'Actions'}</div>
+                            <div className="col-span-4">{t('excel_import.profileName')}</div>
+                            <div className="col-span-4">{t('common.selectTable')}</div>
+                            <div className="col-span-3">{t('common.updated')}</div>
+                            <div className="col-span-1 text-center">{t('common.actions')}</div>
                         </div>
                         <div className="divide-y divide-slate-100 dark:divide-slate-700">
                             {profiles.length === 0 && (
                                 <div className="px-6 py-8 text-center text-slate-400 italic text-sm">
-                                    {lang === 'zh' ? '暂无记录，请点击右上角新建' : 'No profiles found'}
+                                    {t('common.noRecords')}
                                 </div>
                             )}
                             {profiles.map(p => (
@@ -516,7 +511,7 @@ export const ExcelImport: React.FC<ExcelImportProps> = ({ lang, connections }) =
                     <button
                         onClick={() => setView('home')}
                         className="p-2 text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
-                        title={t.excelImport.exit}
+                        title={t('excel_import.exit')}
                     >
                         <ArrowRight className="rotate-180" size={20} />
                     </button>
@@ -546,7 +541,7 @@ export const ExcelImport: React.FC<ExcelImportProps> = ({ lang, connections }) =
                     className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium flex items-center shadow-md transition-all active:scale-95"
                 >
                     <Save size={18} className="mr-2" />
-                    {t.common.save}
+                    {t('common.save')}
                 </button>
             </div>
 
@@ -554,7 +549,7 @@ export const ExcelImport: React.FC<ExcelImportProps> = ({ lang, connections }) =
                 {/* LEFT: File Source */}
                 <div className="w-80 flex flex-col bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden shrink-0">
                     <div className="p-4 border-b border-slate-200 dark:border-slate-700 font-bold text-slate-700 dark:text-slate-200">
-                        {lang === 'zh' ? '源文件 (Excel)' : 'Source File'}
+                        {t('excel_import.sourceFile')}
                     </div>
                     <div className="p-4 flex-1 flex flex-col gap-4">
                         <div
@@ -576,7 +571,7 @@ export const ExcelImport: React.FC<ExcelImportProps> = ({ lang, connections }) =
                             ) : (
                                 <div className="text-center text-slate-400">
                                     <Upload className="w-6 h-6 mx-auto mb-2" />
-                                    <span className="text-xs">{lang === 'zh' ? '点击或拖拽上传' : 'Click/Drag to Upload'}</span>
+                                    <span className="text-xs">{t('common.uploadTip')}</span>
                                 </div>
                             )}
                         </div>
@@ -584,7 +579,7 @@ export const ExcelImport: React.FC<ExcelImportProps> = ({ lang, connections }) =
                         <div className="flex-1 overflow-hidden flex flex-col border border-slate-200 dark:border-slate-700 rounded-lg">
                             <div className="bg-slate-50 dark:bg-slate-800 px-3 py-2 border-b border-slate-200 dark:border-slate-700 flex items-center">
                                 <Layers size={14} className="mr-2 text-slate-500" />
-                                <span className="text-xs font-bold text-slate-500 uppercase">{lang === 'zh' ? '工作表' : 'Sheets'}</span>
+                                <span className="text-xs font-bold text-slate-500 uppercase">{t('common.sheets')}</span>
                             </div>
                             <div className="flex-1 overflow-y-auto p-2 space-y-1">
                                 {sheets.map(sheet => (
@@ -600,12 +595,12 @@ export const ExcelImport: React.FC<ExcelImportProps> = ({ lang, connections }) =
                                         {selectedSheet === sheet && <Check size={14} />}
                                     </button>
                                 ))}
-                                {sheets.length === 0 && <div className="text-center py-4 text-xs text-slate-400 italic">No sheets</div>}
+                                {sheets.length === 0 && <div className="text-center py-4 text-xs text-slate-400 italic">{t('excel_import.noSheets')}</div>}
                             </div>
                         </div>
 
                         <div>
-                            <label className="text-xs font-bold text-slate-500 uppercase">{lang === 'zh' ? '标题行号' : 'Header Row'}</label>
+                            <label className="text-xs font-bold text-slate-500 uppercase">{t('excel_import.headerRow')}</label>
                             <input
                                 type="number"
                                 min="1"
@@ -622,37 +617,37 @@ export const ExcelImport: React.FC<ExcelImportProps> = ({ lang, connections }) =
                     <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-4">
                         <div className="flex items-end gap-4">
                             <div className="flex-1">
-                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t.dataCompare.selectConn}</label>
+                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t('common.selectConnection')}</label>
                                 <select
                                     value={selectedConnId}
                                     onChange={e => setSelectedConnId(e.target.value)}
                                     className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg text-sm text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/50"
                                 >
-                                    <option value="" className="text-slate-400">Select Connection</option>
+                                    <option value="" className="text-slate-400">{t('excel_import.placeholderSelectConnection')}</option>
                                     {connections.map(c => <option key={c.id} value={c.id} className="bg-white dark:bg-slate-800">{c.name} ({c.type})</option>)}
                                 </select>
                             </div>
                             <div className="flex-1">
-                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t.dataCompare.selectDb}</label>
+                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t('common.selectDb')}</label>
                                 <select
                                     value={selectedDb}
                                     onChange={e => setSelectedDb(e.target.value)}
                                     className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg text-sm text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/50"
                                     disabled={!selectedConnId}
                                 >
-                                    <option value="" className="text-slate-400">Select Database</option>
+                                    <option value="" className="text-slate-400">{t('excel_import.placeholderSelectDatabase')}</option>
                                     {dbs.map(d => <option key={d} value={d} className="bg-white dark:bg-slate-800">{d}</option>)}
                                 </select>
                             </div>
                             <div className="flex-1">
-                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t.dataCompare.selectTable}</label>
+                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t('common.selectTable')}</label>
                                 <select
                                     value={selectedTable}
                                     onChange={e => setSelectedTable(e.target.value)}
                                     className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg text-sm text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/50"
                                     disabled={!selectedDb}
                                 >
-                                    <option value="" className="text-slate-400">Select Table</option>
+                                    <option value="" className="text-slate-400">{t('excel_import.placeholderSelectTable')}</option>
                                     {tables.map(t => <option key={t} value={t} className="bg-white dark:bg-slate-800">{t}</option>)}
                                 </select>
                             </div>
@@ -662,32 +657,32 @@ export const ExcelImport: React.FC<ExcelImportProps> = ({ lang, connections }) =
                                 className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-lg transition-transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                             >
                                 <Play size={16} className="mr-2" />
-                                {t.common.generate}
+                                {t('common.generate')}
                             </button>
                         </div>
                     </div>
 
                     <div className="flex-1 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col min-h-0 overflow-hidden">
                         <div className="p-3 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 flex justify-between items-center">
-                            <span className="font-bold text-sm text-slate-700 dark:text-slate-200">{t.excelImport.title}</span>
+                            <span className="font-bold text-sm text-slate-700 dark:text-slate-200">{t('excel_import.title')}</span>
                         </div>
                         <div className="flex-1 overflow-auto p-4">
                             {isLoadingColumns ? (
                                 <div className="h-full flex flex-col items-center justify-center text-slate-400">
                                     <RefreshCw className="w-10 h-10 mb-2 animate-spin opacity-20" />
-                                    <p>{t.common.loading}</p>
+                                    <p>{t('common.loading')}</p>
                                 </div>
                             ) : tableSchema.length === 0 ? (
                                 <div className="h-full flex flex-col items-center justify-center text-slate-400">
                                     <Settings className="w-10 h-10 mb-2 opacity-20" />
-                                    <p>{lang === 'zh' ? '请先选择目标表' : 'Please select a target table'}</p>
+                                    <p>{t('excel_import.selectTargetTableFirst')}</p>
                                 </div>
                             ) : (
                                 <div className="grid grid-cols-12 gap-x-4 gap-y-2 items-center text-sm">
-                                    <div className="col-span-4 font-bold text-slate-500 text-[10px] uppercase mb-2">{t.excelImport.targetCol}</div>
-                                    <div className="col-span-1 text-center font-bold text-slate-500 text-[10px] uppercase mb-2">{t.excelImport.arrow}</div>
-                                    <div className="col-span-4 font-bold text-slate-500 text-[10px] uppercase mb-2">{t.excelImport.sourceHeader}</div>
-                                    <div className="col-span-3 font-bold text-slate-500 text-[10px] uppercase mb-2">{t.excelImport.defaultValue}</div>
+                                    <div className="col-span-4 font-bold text-slate-500 text-[10px] uppercase mb-2">{t('excel_import.targetCol')}</div>
+                                    <div className="col-span-1 text-center font-bold text-slate-500 text-[10px] uppercase mb-2">{t('excel_import.arrow')}</div>
+                                    <div className="col-span-4 font-bold text-slate-500 text-[10px] uppercase mb-2">{t('excel_import.sourceHeader')}</div>
+                                    <div className="col-span-3 font-bold text-slate-500 text-[10px] uppercase mb-2">{t('excel_import.defaultValue')}</div>
 
                                     {mappings.map((m, idx) => (
                                         <React.Fragment key={m.dbColumn}>
@@ -709,7 +704,7 @@ export const ExcelImport: React.FC<ExcelImportProps> = ({ lang, connections }) =
                                                     }}
                                                     className={`w-full px-2 py-1.5 bg-white dark:bg-slate-900 border rounded text-xs text-slate-800 dark:text-white outline-none ${m.excelHeader ? 'border-green-300 dark:border-green-800' : 'border-slate-200 dark:border-slate-700'}`}
                                                 >
-                                                    <option value="">(Ignore)</option>
+                                                    <option value="">{t('excel_import.ignore')}</option>
                                                     {sheetHeaders.map(h => <option key={h} value={h} className="bg-white dark:bg-slate-800">{h}</option>)}
                                                 </select>
                                             </div>
@@ -742,11 +737,11 @@ export const ExcelImport: React.FC<ExcelImportProps> = ({ lang, connections }) =
                         {/* Bottom: SQL Preview */}
                         <div style={{ height: splitHeight }} className="bg-slate-900 flex flex-col shrink-0 overflow-hidden relative group">
                             <div className="px-3 py-1.5 border-b border-slate-800 bg-slate-850 flex justify-between items-center">
-                                <span className="font-bold text-[10px] text-slate-500 uppercase">SQL Preview</span>
+                                <span className="font-bold text-[10px] text-slate-500 uppercase">{t('excel_import.sqlPreview')}</span>
                                 <button
                                     onClick={() => {
                                         navigator.clipboard.writeText(generatedSql);
-                                        toast({ title: t.common.copied });
+                                        toast({ title: t('common.copied') });
                                     }}
                                     className="text-[10px] text-blue-400 hover:text-blue-300 flex items-center bg-blue-900/20 px-2 py-0.5 rounded"
                                     disabled={!generatedSql}

@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { Database, ArrowRight, Box, AlertCircle, Code } from 'lucide-react';
+import { useTranslation } from "react-i18next";
 
 interface DagVertex {
     vertexId: number;
@@ -25,15 +26,16 @@ interface JobDagData {
 
 interface DagVisualizerProps {
     dagData: string | object;
-    lang?: 'zh' | 'en';
 }
 
 /**
  * SeaTunnel DAG 可视化组件
  * 将 jobDag JSON 解析为流程图形式展示
  */
-export const DagVisualizer: React.FC<DagVisualizerProps> = ({ dagData, lang = 'zh' }) => {
+export const DagVisualizer: React.FC<DagVisualizerProps> = ({ dagData }) => {
+    const { t, i18n } = useTranslation();
     const parsedDag = useMemo(() => {
+        
         try {
             if (typeof dagData === 'string') {
                 return JSON.parse(dagData) as JobDagData;
@@ -48,7 +50,7 @@ export const DagVisualizer: React.FC<DagVisualizerProps> = ({ dagData, lang = 'z
         return (
             <div className="flex items-center justify-center p-4 text-slate-500">
                 <AlertCircle size={16} className="mr-2" />
-                {lang === 'zh' ? '无法解析 DAG 数据' : 'Unable to parse DAG data'}
+                {t('seatunnel.unableToParseDAGData')}
             </div>
         );
     }
@@ -169,7 +171,7 @@ export const DagVisualizer: React.FC<DagVisualizerProps> = ({ dagData, lang = 'z
             return (
                 <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-lg">
                     <div className="text-sm text-slate-500 mb-2">
-                        {lang === 'zh' ? '环境配置' : 'Environment Options'}
+                        {t('seatunnel.environmentOptions')}
                     </div>
                     <pre className="text-xs text-slate-600 dark:text-slate-400">
                         {JSON.stringify(parsedDag.envOptions, null, 2)}
@@ -179,7 +181,7 @@ export const DagVisualizer: React.FC<DagVisualizerProps> = ({ dagData, lang = 'z
         }
         return (
             <div className="text-sm text-slate-500 p-4">
-                {lang === 'zh' ? '暂无 DAG 节点数据' : 'No DAG vertices data'}
+                {t('seatunnel.noDAGVerticesData')}
             </div>
         );
     }
@@ -192,7 +194,7 @@ export const DagVisualizer: React.FC<DagVisualizerProps> = ({ dagData, lang = 'z
                 <div className="flex flex-col gap-2">
                     {sources.length > 0 && (
                         <div className="text-xs text-green-600 font-medium text-center mb-1">
-                            {lang === 'zh' ? '数据源' : 'Source'}
+                            {t('seatunnel.source')}
                         </div>
                     )}
                     {sources.map(v => renderNode(v))}
@@ -205,7 +207,7 @@ export const DagVisualizer: React.FC<DagVisualizerProps> = ({ dagData, lang = 'z
                     <>
                         <div className="flex flex-col gap-2">
                             <div className="text-xs text-blue-600 font-medium text-center mb-1">
-                                {lang === 'zh' ? '转换' : 'Transform'}
+                                {t('seatunnel.transform')}
                             </div>
                             {transforms.map(v => renderNode(v))}
                         </div>
@@ -217,7 +219,7 @@ export const DagVisualizer: React.FC<DagVisualizerProps> = ({ dagData, lang = 'z
                 {sinks.length > 0 && (
                     <div className="flex flex-col gap-2">
                         <div className="text-xs text-purple-600 font-medium text-center mb-1">
-                            {lang === 'zh' ? '目标' : 'Sink'}
+                            {t('seatunnel.sink')}
                         </div>
                         {sinks.map(v => renderNode(v))}
                     </div>
@@ -228,7 +230,7 @@ export const DagVisualizer: React.FC<DagVisualizerProps> = ({ dagData, lang = 'z
             {parsedDag.envOptions && Object.keys(parsedDag.envOptions).length > 0 && (
                 <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
                     <div className="text-xs text-amber-600 font-medium mb-1">
-                        {lang === 'zh' ? '环境配置' : 'Env Options'}
+                        {t('seatunnel.envOptions')}
                     </div>
                     <div className="flex flex-wrap gap-2">
                         {Object.entries(parsedDag.envOptions).slice(0, 5).map(([key, value]) => (
@@ -245,8 +247,8 @@ export const DagVisualizer: React.FC<DagVisualizerProps> = ({ dagData, lang = 'z
 
             {/* 统计信息 */}
             <div className="flex items-center gap-4 text-xs text-slate-500">
-                <span>{lang === 'zh' ? '节点' : 'Vertices'}: {vertices.length}</span>
-                <span>{lang === 'zh' ? '边' : 'Edges'}: {allEdges.length}</span>
+                <span>{t('seatunnel.vertices')}: {vertices.length}</span>
+                <span>{t('seatunnel.edges')}: {allEdges.length}</span>
                 {sources.length > 0 && <span>Source: {sources.length}</span>}
                 {transforms.length > 0 && <span>Transform: {transforms.length}</span>}
                 {sinks.length > 0 && <span>Sink: {sinks.length}</span>}

@@ -3,22 +3,21 @@ import { X, Trash2, Copy, Search, Filter } from 'lucide-react';
 import { Language } from '../../../types';
 import { ConfirmModal } from '../../common/ConfirmModal';
 import { useToast } from '../../common/Toast';
+import { useTranslation } from "react-i18next";
 
 interface TruncateModalProps {
     isOpen: boolean;
     onClose: () => void;
     tables: string[];
     databaseName: string;
-    lang: Language;
 }
 
 export const TruncateModal: React.FC<TruncateModalProps> = ({
     isOpen,
     onClose,
     tables,
-    databaseName,
-    lang
-}) => {
+    databaseName}) => {
+    const { t, i18n } = useTranslation();
     const [prefix, setPrefix] = useState('');
     const [suffix, setSuffix] = useState('');
     const [search, setSearch] = useState('');
@@ -42,15 +41,15 @@ export const TruncateModal: React.FC<TruncateModalProps> = ({
 
     const handleCopy = async () => {
         if (!truncateStatements) {
-            showToast(lang === 'zh' ? '没有可复制的语句' : 'No statements to copy', 'error');
+            showToast(t('dbViewer.noStatementsToCopy'), 'error');
             return;
         }
         try {
             await navigator.clipboard.writeText(truncateStatements);
-            showToast(lang === 'zh' ? '复制成功' : 'Copied successfully', 'success');
+            showToast(t('dbViewer.copiedSuccessfully'), 'success');
         } catch (err) {
             console.error('Failed to copy:', err);
-            showToast(lang === 'zh' ? '复制失败' : 'Failed to copy', 'error');
+            showToast(t('dbViewer.failedToCopy'), 'error');
         }
     };
 
@@ -70,7 +69,7 @@ export const TruncateModal: React.FC<TruncateModalProps> = ({
                     <div className="flex items-center space-x-2">
                         <Trash2 className="text-red-500" size={20} />
                         <h3 className="font-bold text-slate-800 dark:text-white">
-                            {lang === 'zh' ? '清理数据库' : 'Truncate Database'}
+                            {t('dbViewer.truncateDatabase')}
                         </h3>
                         <span className="text-sm text-slate-500 dark:text-slate-400">
                             - {databaseName}
@@ -88,7 +87,7 @@ export const TruncateModal: React.FC<TruncateModalProps> = ({
                 <div className="p-4 border-b border-slate-200 dark:border-slate-700 space-y-3 shrink-0">
                     <div className="flex items-center space-x-2 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">
                         <Filter size={14} />
-                        <span>{lang === 'zh' ? '过滤条件' : 'Filters'}</span>
+                        <span>{t('dbViewer.filters')}</span>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -99,7 +98,7 @@ export const TruncateModal: React.FC<TruncateModalProps> = ({
                                 type="text"
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
-                                placeholder={lang === 'zh' ? '搜索表名...' : 'Search tables...'}
+                                placeholder={t('dbViewer.searchTables')}
                                 className="w-full pl-9 pr-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg text-sm text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                         </div>
@@ -110,7 +109,7 @@ export const TruncateModal: React.FC<TruncateModalProps> = ({
                                 type="text"
                                 value={prefix}
                                 onChange={(e) => setPrefix(e.target.value)}
-                                placeholder={lang === 'zh' ? '前缀过滤...' : 'Prefix filter...'}
+                                placeholder={t('dbViewer.prefixFilter')}
                                 className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg text-sm text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                         </div>
@@ -121,7 +120,7 @@ export const TruncateModal: React.FC<TruncateModalProps> = ({
                                 type="text"
                                 value={suffix}
                                 onChange={(e) => setSuffix(e.target.value)}
-                                placeholder={lang === 'zh' ? '后缀过滤...' : 'Suffix filter...'}
+                                placeholder={t('dbViewer.suffixFilter')}
                                 className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg text-sm text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                         </div>
@@ -129,16 +128,14 @@ export const TruncateModal: React.FC<TruncateModalProps> = ({
 
                     <div className="flex items-center justify-between">
                         <span className="text-sm text-slate-600 dark:text-slate-300">
-                            {lang === 'zh'
-                                ? `匹配 ${filteredTables.length} / ${tables.length} 个表`
-                                : `Matching ${filteredTables.length} / ${tables.length} tables`}
+                            {t('dbViewer.matchingFilteredTablesLen')}
                         </span>
                         {(prefix || suffix || search) && (
                             <button
                                 onClick={handleClear}
                                 className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
                             >
-                                {lang === 'zh' ? '清除过滤' : 'Clear Filters'}
+                                {t('dbViewer.clearFilters')}
                             </button>
                         )}
                     </div>
@@ -156,13 +153,13 @@ export const TruncateModal: React.FC<TruncateModalProps> = ({
                             className="flex items-center space-x-1 px-2 py-1 text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <Copy size={12} />
-                            <span>{lang === 'zh' ? '复制全部' : 'Copy All'}</span>
+                            <span>{t('dbViewer.copyAll')}</span>
                         </button>
                     </div>
                     <div className="flex-1 overflow-auto p-4 bg-slate-50 dark:bg-slate-900 font-mono text-xs text-slate-700 dark:text-slate-300 whitespace-pre custom-scrollbar">
                         {filteredTables.length === 0 ? (
                             <span className="text-slate-400 italic">
-                                {lang === 'zh' ? '没有匹配的表' : 'No matching tables'}
+                                {t('dbViewer.noMatchingTables')}
                             </span>
                         ) : (
                             truncateStatements
@@ -176,7 +173,7 @@ export const TruncateModal: React.FC<TruncateModalProps> = ({
                         onClick={onClose}
                         className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors"
                     >
-                        {lang === 'zh' ? '关闭' : 'Close'}
+                        {t('dbViewer.close')}
                     </button>
                     <button
                         onClick={handleCopy}
@@ -184,7 +181,7 @@ export const TruncateModal: React.FC<TruncateModalProps> = ({
                         className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
                     >
                         <Copy size={16} />
-                        <span>{lang === 'zh' ? '复制语句' : 'Copy Statements'}</span>
+                        <span>{t('dbViewer.copyStatements')}</span>
                     </button>
                 </div>
             </div>

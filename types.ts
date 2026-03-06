@@ -6,12 +6,12 @@ export type Theme = 'light' | 'dark';
 
 export interface NavItem {
   id: string;
-  label: Record<Language, string>;
+  label: string;
   icon: LucideIcon;
   category: 'core' | 'db' | 'office' | 'system' | 'user' | 'knowledge';
   order: number; // 排序编号
   visible: boolean; // 是否显示
-  tooltip?: Record<Language, string>; // 功能说明
+  tooltip?: string; // 功能说明
   children?: NavItem[]; // 子菜单
 }
 

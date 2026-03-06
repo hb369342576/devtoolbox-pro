@@ -1,0 +1,19 @@
+{
+  "days": "天",
+  "hours": "小时",
+  "mins": "分钟",
+  "secs": "秒",
+  "lessThan1Min": "少于1分钟",
+  "disabledTitle": "系统监控已关闭",
+  "disabledDesc": "您可以在「设置」中开启系统监控功能，查看 CPU 和内存使用情况。",
+  "sysInfo": "系统信息",
+  "os": "操作系统",
+  "hostname": "主机名",
+  "uptime": "运行时间",
+  "memory": "内存",
+  "cpuUsage": "CPU 使用率",
+  "memUsage": "内存使用率",
+  "network": "网络",
+  "active": "活动",
+  "realtimePerf": "实时性能"
+}

@@ -1,0 +1,23 @@
+{
+  "title": "Excel Data Import",
+  "newImport": "New Import Task",
+  "newImportTask": "New Import Task",
+  "untitled": "Untitled Import",
+  "homeDesc": "Map and import Excel/CSV data to DB tables with saved profiles.",
+  "targetCol": "Target Column (DB)",
+  "arrow": "Mapping",
+  "sourceHeader": "Source Header (Excel)",
+  "defaultValue": "Fixed/Default",
+  "exit": "Exit Editor",
+  "save": "Save Profile",
+  "saveProfile": "Save Profile",
+  "profileName": "Profile Name",
+  "deleteConfirm": "Are you sure you want to delete this import profile?",
+  "couldNotFetchDbs": "Could not fetch databases",
+  "failedToLoadSchema": "Failed to load schema",
+  "couldNotFetchTableSchema": "Could not fetch table schema",
+  "noMappings": "No mappings configured",
+  "sourceFile": "Source File (Excel)",
+  "headerRow": "Header Row",
+  "selectTargetTableFirst": "Please select a target table first"
+}

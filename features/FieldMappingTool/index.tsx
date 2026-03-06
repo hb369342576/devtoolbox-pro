@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import {
    ArrowRightLeft, Plus, Save, Trash2, ChevronLeft, Play, Upload, FileJson
 } from 'lucide-react';
-import { Language, DbConnection, CanvasNode } from '../../types';
+import { useTranslation } from 'react-i18next';
+import { DbConnection, CanvasNode } from '../../types';
 import { useFieldMappingStore } from './store';
 import { ConfirmModal } from '../common/ConfirmModal';
-import { ViewModeToggle } from '../common/ViewModeToggle';
 import { useViewMode } from '../../store/globalStore';
 import { Sidebar } from './components/Sidebar';
 import { Canvas } from './components/Canvas';
@@ -14,6 +14,7 @@ import { NodeConfigModal } from './components/NodeConfigModal';
 import { PathSelectModal } from './components/PathSelectModal';
 import { ToastProvider, useToast } from '../common/Toast';
 import { Tooltip } from '../common/Tooltip';
+import { ViewModeToggle } from '../common/ViewModeToggle';
 import { SeaTunnelEngineConfig } from '../SeaTunnelManager/types';
 import { seaTunnelApi } from '../SeaTunnelManager/api';
 import { convertToJson } from '../../utils/hoconParser';
@@ -26,10 +27,10 @@ import { generateMappingConfig, detectCompletePaths, generateConfigForPath } fro
  * 原文件：667行 -> 现在：~200行（主文件） + 子组件
  */
 export const FieldMappingTool: React.FC<{
-   lang: Language;
    connections: DbConnection[];
    onNavigate: (id: string) => void;
-}> = ({ lang, connections, onNavigate }) => {
+}> = ({ connections, onNavigate }) => {
+   const { t } = useTranslation();
    // Zustand Store（状态管理）
    const profiles = useFieldMappingStore((state) => state.profiles);
    const activeProfile = useFieldMappingStore((state) => state.activeProfile);
@@ -113,7 +114,7 @@ export const FieldMappingTool: React.FC<{
    const handleNewProfile = () => {
       const newProfile = {
          id: Date.now().toString(),
-         name: lang === 'zh' ? '新映射项目' : 'New Project',
+         name: t('fieldMapping.newProject'),
          updatedAt: Date.now(),
          nodes: [],
          links: []
@@ -146,10 +147,10 @@ export const FieldMappingTool: React.FC<{
          <div className="h-full flex flex-col">
             <ConfirmModal
                isOpen={confirmDelete.isOpen}
-               title={lang === 'zh' ? '确认删除' : 'Confirm Delete'}
-               message={lang === 'zh' ? '确定要删除这个映射项目吗？' : 'Are you sure you want to delete this mapping project?'}
-               confirmText={lang === 'zh' ? '删除' : 'Delete'}
-               cancelText={lang === 'zh' ? '取消' : 'Cancel'}
+               title={t('common.confirmDelete')}
+               message={t('fieldMapping.deleteConfirm')}
+               confirmText={t('common.delete')}
+               cancelText={t('common.cancel')}
                onConfirm={() => {
                   deleteProfile(confirmDelete.profileId);
                   setConfirmDelete({ isOpen: false, profileId: '' });
@@ -162,7 +163,7 @@ export const FieldMappingTool: React.FC<{
             <div className="flex justify-between items-center mb-6">
                <h2 className="text-xl font-bold dark:text-white flex items-center">
                   <ArrowRightLeft className="mr-3 text-indigo-600" />
-                  {lang === 'zh' ? '可视化数据映射' : 'Visual Mapping'}
+                  {t('fieldMapping.title')}
                </h2>
                <div className="flex items-center space-x-3">
                   <ViewModeToggle />
@@ -171,7 +172,7 @@ export const FieldMappingTool: React.FC<{
                      className="min-w-[140px] px-4 py-2 bg-indigo-600 text-white rounded-lg flex items-center justify-center shadow-lg hover:bg-indigo-700 transition-colors"
                   >
                      <Plus size={18} className="mr-2" />
-                     {lang === 'zh' ? '新建项目' : 'New Project'}
+                     {t('fieldMapping.newProject')}
                   </button>
                </div>
             </div>
@@ -205,7 +206,7 @@ export const FieldMappingTool: React.FC<{
                                     {profile.name}
                                  </h3>
                                  <div className="flex items-center justify-between text-xs text-slate-500">
-                                    <span>{profile.nodes?.length || 0} {lang === 'zh' ? '个节点' : 'nodes'}</span>
+                                    <span>{profile.nodes?.length || 0} {t('fieldMapping.nodesCount')}</span>
                                     <span>{new Date(profile.updatedAt).toLocaleString()}</span>
                                  </div>
                               </div>
@@ -222,16 +223,16 @@ export const FieldMappingTool: React.FC<{
                            <Plus size={32} />
                         </div>
                         <span className="font-bold text-lg text-slate-600 dark:text-slate-300 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                           {lang === 'zh' ? '新建项目' : 'New Project'}
+                           {t('fieldMapping.newProject')}
                         </span>
                      </div>
                   </div>
                ) : (
                   <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border dark:border-slate-700 overflow-hidden">
                      <div className="grid grid-cols-12 gap-4 px-6 py-3 border-b dark:border-slate-700 font-bold text-xs text-slate-500 uppercase sticky top-0 bg-slate-50 dark:bg-slate-900 z-10">
-                        <div className="col-span-8">{lang === 'zh' ? '项目名称' : 'Name'}</div>
-                        <div className="col-span-2">{lang === 'zh' ? '更新时间' : 'Updated'}</div>
-                        <div className="col-span-2 text-right">{lang === 'zh' ? '操作' : 'Action'}</div>
+                        <div className="col-span-8">{t('fieldMapping.projectName')}</div>
+                        <div className="col-span-2">{t('fieldMapping.updateTime')}</div>
+                        <div className="col-span-2 text-right">{t('common.actions')}</div>
                      </div>
                      <div className="divide-y divide-slate-100 dark:divide-slate-700">
                         {profiles.map(p => (
@@ -281,13 +282,13 @@ export const FieldMappingTool: React.FC<{
             );
             setGeneratedConfig(config);
             toast({
-               title: lang === 'zh' ? '生成成功' : 'Generated',
-               description: lang === 'zh' ? '配置文件已生成' : 'Configuration generated',
+               title: t('fieldMapping.configGenerated'),
+               description: t('fieldMapping.configGenerated'),
                variant: 'success'
             });
          } catch (err: any) {
             toast({
-               title: lang === 'zh' ? '生成失败' : 'Generate Failed',
+               title: t('fieldMapping.generateFailed'),
                description: err.message,
                variant: 'destructive'
             });
@@ -313,20 +314,20 @@ export const FieldMappingTool: React.FC<{
             });
             if (result.success) {
                toast({
-                  title: lang === 'zh' ? '提交成功' : 'Submit Success',
+                  title: t('fieldMapping.submitSuccess'),
                   description: `Job ID: ${result.data}`,
                   variant: 'success'
                });
             } else {
                toast({
-                  title: lang === 'zh' ? '提交失败' : 'Submit Failed',
+                  title: t('fieldMapping.submitFailed'),
                   description: result.error,
                   variant: 'destructive'
                });
             }
          } catch (err: any) {
             toast({
-               title: lang === 'zh' ? '提交失败' : 'Submit Failed',
+               title: t('fieldMapping.submitFailed'),
                description: err.message,
                variant: 'destructive'
             });
@@ -355,12 +356,12 @@ export const FieldMappingTool: React.FC<{
                         }
                      }}
                      className="font-medium text-sm text-slate-700 dark:text-white bg-transparent outline-none border-b border-transparent focus:border-purple-500 transition-colors max-w-[150px]"
-                     placeholder={lang === 'zh' ? '任务名称' : 'Task Name'}
+                     placeholder={t('fieldMapping.taskName')}
                   />
                   <button 
                      onClick={() => {
                         useFieldMappingStore.getState().saveCurrentProfile();
-                        toast({ title: lang === 'zh' ? '保存成功' : 'Saved', variant: 'success' });
+                        toast({ title: t('common.saveSuccess'), variant: 'success' });
                      }} 
                      className="p-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
                   >
@@ -372,7 +373,7 @@ export const FieldMappingTool: React.FC<{
                      onChange={(e) => setSelectedEngineId(e.target.value)}
                      className="px-3 py-1.5 bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm outline-none"
                   >
-                     <option value="">{lang === 'zh' ? '-- 选择项目 --' : '-- Select Project --'}</option>
+                     <option value="">{t('fieldMapping.selectProject')}</option>
                      {engines.filter(e => e.engineType === 'zeta').map(engine => (
                         <option key={engine.id} value={engine.id}>{engine.name}</option>
                      ))}
@@ -386,7 +387,7 @@ export const FieldMappingTool: React.FC<{
                      className="px-3 py-1.5 bg-purple-600 text-white rounded-lg text-sm font-medium flex items-center hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                      <Play size={14} className="mr-1.5" />
-                     {isGenerating ? (lang === 'zh' ? '生成中...' : 'Generating...') : (lang === 'zh' ? '生成配置' : 'Generate')}
+                     {isGenerating ? t('fieldMapping.generating') : t('fieldMapping.generateConfig')}
                   </button>
                   <button
                      onClick={handleSubmit}
@@ -394,14 +395,14 @@ export const FieldMappingTool: React.FC<{
                      className="px-3 py-1.5 bg-cyan-600 text-white rounded-lg text-sm font-medium flex items-center hover:bg-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                      <Upload size={14} className="mr-1.5" />
-                     {isSubmitting ? (lang === 'zh' ? '提交中...' : 'Submitting...') : (lang === 'zh' ? '提交作业' : 'Submit')}
+                     {isSubmitting ? t('fieldMapping.submitting') : t('fieldMapping.submitJob')}
                   </button>
                </div>
             </div>
 
             {/* Canvas Area */}
             <div className="flex-1 min-h-[200px] overflow-hidden relative">
-               <Canvas lang={lang} connections={connections} />
+               <Canvas connections={connections} />
             </div>
 
             {/* Draggable Divider */}
@@ -430,7 +431,7 @@ export const FieldMappingTool: React.FC<{
             {/* Config Panel */}
             <div className="bg-[#1e1e1e] rounded-t-lg overflow-hidden flex-shrink-0" style={{ height: configPanelHeight }}>
                <div className="h-8 bg-[#252526] border-b border-slate-700 flex items-center justify-between px-4">
-                  <span className="text-xs text-slate-400 font-mono">{lang === 'zh' ? '配置文件' : 'Configuration'}</span>
+                  <span className="text-xs text-slate-400 font-mono">{t('fieldMapping.configuration')}</span>
                   <div className="flex items-center space-x-3">
                      <button
                         onClick={() => {
@@ -439,9 +440,9 @@ export const FieldMappingTool: React.FC<{
                                  const convertResult = convertToJson(generatedConfig);
                                  if (convertResult.error) throw new Error(convertResult.error);
                                  setGeneratedConfig(convertResult.json);
-                                 toast({ title: lang === 'zh' ? '已转换为 JSON' : 'Converted to JSON', variant: 'success' });
+                                 toast({ title: t('fieldMapping.convertedToJson'), variant: 'success' });
                               } catch (err: any) {
-                                 toast({ title: lang === 'zh' ? '转换失败' : 'Convert Failed', description: err.message, variant: 'destructive' });
+                                 toast({ title: t('fieldMapping.convertFailed'), description: err.message, variant: 'destructive' });
                               }
                            }
                         }}
@@ -454,7 +455,7 @@ export const FieldMappingTool: React.FC<{
                         onClick={() => {
                            if (generatedConfig) {
                               navigator.clipboard.writeText(generatedConfig);
-                              toast({ title: lang === 'zh' ? '已复制' : 'Copied', variant: 'success' });
+                              toast({ title: t('common.copySuccess'), variant: 'success' });
                            }
                         }}
                         disabled={!generatedConfig}
@@ -468,7 +469,7 @@ export const FieldMappingTool: React.FC<{
                   {generatedConfig ? (
                      <pre className="whitespace-pre-wrap">{generatedConfig}</pre>
                   ) : (
-                     <span className="text-slate-500"># {lang === 'zh' ? '点击"生成配置"按钮预览配置文件...' : 'Click "Generate" to preview configuration...'}</span>
+                     <span className="text-slate-500"># {t('fieldMapping.clickToPreview')}</span>
                   )}
                </div>
             </div>
@@ -509,7 +510,7 @@ export const FieldMappingTool: React.FC<{
                         }
                      }}
                      className="font-medium text-sm text-slate-700 dark:text-white bg-transparent outline-none border-b border-transparent focus:border-purple-500 transition-colors max-w-[150px]"
-                     placeholder={lang === 'zh' ? '任务名称' : 'Task Name'}
+                     placeholder={t('fieldMapping.taskName')}
                   />
                   <button 
                      onClick={() => {
@@ -527,7 +528,7 @@ export const FieldMappingTool: React.FC<{
                      onChange={(e) => setSelectedEngineId(e.target.value)}
                      className="px-3 py-1.5 bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm outline-none"
                   >
-                     <option value="">{lang === 'zh' ? '-- 选择项目 --' : '-- Select Project --'}</option>
+                     <option value="">{t('fieldMapping.selectProject')}</option>
                      {engines.filter(e => e.engineType === 'zeta').map(engine => (
                         <option key={engine.id} value={engine.id}>{engine.name}</option>
                      ))}
@@ -544,9 +545,7 @@ export const FieldMappingTool: React.FC<{
                            }
                            
                            if (result.paths.length === 0) {
-                              alert(lang === 'zh' 
-                                 ? '未找到完整的 Source → Sink 路径，请确保节点已正确连接' 
-                                 : 'No complete Source → Sink path found');
+                              alert(t('fieldMapping.noPathFound'));
                               return;
                            }
                            
@@ -571,7 +570,7 @@ export const FieldMappingTool: React.FC<{
                      className="px-3 py-1.5 bg-purple-600 text-white rounded-lg text-sm font-medium flex items-center hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                      <Play size={14} className="mr-1.5" />
-                     {lang === 'zh' ? '生成配置' : 'Generate'}
+                     {t('fieldMapping.generateConfig')}
                   </button>
                   <button
                      onClick={async () => {
@@ -593,7 +592,7 @@ export const FieldMappingTool: React.FC<{
                      className="px-3 py-1.5 bg-cyan-600 text-white rounded-lg text-sm font-medium flex items-center hover:bg-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                      <Upload size={14} className="mr-1.5" />
-                     {isSubmitting ? (lang === 'zh' ? '提交中...' : 'Submitting...') : (lang === 'zh' ? '提交作业' : 'Submit')}
+                     {isSubmitting ? t('fieldMapping.submitting') : t('fieldMapping.submitJob')}
                   </button>
                </div>
             </div>
@@ -601,13 +600,13 @@ export const FieldMappingTool: React.FC<{
             {/* 下方内容区 */}
             <div className="flex-1 flex min-h-0 overflow-hidden">
                {/* 左侧节点面板 */}
-               <Sidebar lang={lang} />
+               <Sidebar />
 
                {/* 右侧画布 + 配置 */}
                <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
                   {/* 画布 */}
                   <div className="flex-1 min-h-[200px] overflow-hidden relative">
-                     <Canvas lang={lang} connections={connections} onNodeClick={(node) => setNodeConfigModal({ isOpen: true, node })} />
+                     <Canvas connections={connections} onNodeClick={(node) => setNodeConfigModal({ isOpen: true, node })} />
                   </div>
 
                   {/* 拖动分隔线 */}
@@ -637,8 +636,8 @@ export const FieldMappingTool: React.FC<{
                   <div className="bg-[#1e1e1e] rounded-t-lg overflow-hidden flex-shrink-0" style={{ height: configPanelHeight }}>
                      <div className="h-8 bg-[#252526] border-b border-slate-700 flex items-center justify-between px-4">
                         <span className="text-xs text-slate-400 font-mono">
-                           {lang === 'zh' ? '配置文件' : 'Configuration'}
-                           {isConfigEditing && <span className="ml-2 text-amber-400">(编辑中)</span>}
+                           {t('fieldMapping.configuration')}
+                           {isConfigEditing && <span className="ml-2 text-amber-400">({t('fieldMapping.editing')})</span>}
                         </span>
                         <div className="flex items-center space-x-3">
                            {isConfigEditing ? (
@@ -650,7 +649,7 @@ export const FieldMappingTool: React.FC<{
                                     }}
                                     className="text-xs text-green-400 hover:text-green-300 flex items-center"
                                  >
-                                    <Save size={12} className="mr-1" /> {lang === 'zh' ? '保存' : 'Save'}
+                                    <Save size={12} className="mr-1" /> {t('common.save')}
                                  </button>
                                  <button
                                     onClick={() => {
@@ -659,7 +658,7 @@ export const FieldMappingTool: React.FC<{
                                     }}
                                     className="text-xs text-slate-400 hover:text-white"
                                  >
-                                    {lang === 'zh' ? '取消' : 'Cancel'}
+                                    {t('common.cancel')}
                                  </button>
                               </>
                            ) : (
@@ -672,7 +671,7 @@ export const FieldMappingTool: React.FC<{
                                     disabled={!generatedConfig}
                                     className="text-xs text-blue-400 hover:text-blue-300 flex items-center disabled:opacity-30"
                                  >
-                                    {lang === 'zh' ? '编辑' : 'Edit'}
+                                    {t('common.edit')}
                                  </button>
                                  <button
                                     onClick={() => {
@@ -708,20 +707,20 @@ export const FieldMappingTool: React.FC<{
                         ) : generatedConfig ? (
                            <pre className="p-3 text-green-300 whitespace-pre-wrap">{generatedConfig}</pre>
                         ) : (
-                           <span className="p-3 text-slate-500 block">#{lang === 'zh' ? ' 点击"生成配置"按钮预览配置文件...' : ' Click "Generate" to preview...'}</span>
+                           <span className="p-3 text-slate-500 block">#{t('fieldMapping.clickToPreview')}</span>
                         )}
                      </div>
                   </div>
                </div>
             </div>
 
-            <MappingModal lang={lang} />
+            <MappingModal />
 
             <NodeConfigModal
                isOpen={nodeConfigModal.isOpen}
                onClose={() => setNodeConfigModal({ isOpen: false, node: null })}
                node={nodeConfigModal.node}
-               lang={lang}
+
                connections={connections}
             />
 
@@ -729,7 +728,7 @@ export const FieldMappingTool: React.FC<{
                isOpen={pathSelectModal.isOpen}
                onClose={() => setPathSelectModal({ isOpen: false, paths: [] })}
                paths={pathSelectModal.paths}
-               lang={lang}
+
                onSelect={(pathId) => {
                   try {
                      const result = detectCompletePaths(nodes, links);
@@ -749,12 +748,10 @@ export const FieldMappingTool: React.FC<{
             {/* 退出确认弹窗 */}
             <ConfirmModal
                isOpen={exitConfirmModal}
-               title={lang === 'zh' ? '退出确认' : 'Confirm Exit'}
-               message={lang === 'zh' 
-                  ? '是否保存当前项目后退出？' 
-                  : 'Save current project before exit?'}
-               confirmText={lang === 'zh' ? '保存并退出' : 'Save & Exit'}
-               cancelText={lang === 'zh' ? '不保存' : 'Discard'}
+               title={t('fieldMapping.exitConfirm')}
+               message={t('fieldMapping.saveAndExit')}
+               confirmText={t('fieldMapping.saveThenExit')}
+               cancelText={t('fieldMapping.discard')}
                type="info"
                onConfirm={() => {
                   useFieldMappingStore.getState().saveCurrentProfile();

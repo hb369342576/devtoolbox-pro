@@ -2,12 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { PlayCircle, XCircle, Search, Loader2 } from 'lucide-react';
 import { httpFetch } from '../../../utils/http';
 import { useToast } from '../../common/Toast';
-import { getTexts } from '../../../locales';
 import { Language, ProcessDefinition } from '../types';
+import { useTranslation } from "react-i18next";
 
 interface BatchRunModalProps {
     show: boolean;
-    lang: Language;
     processes: ProcessDefinition[];
     projectCode: string;
     baseUrl: string;
@@ -16,9 +15,8 @@ interface BatchRunModalProps {
     onSuccess: () => void;
 }
 
-export const BatchRunModal: React.FC<BatchRunModalProps> = ({ show, lang, processes, projectCode, baseUrl, token, onClose, onSuccess }) => {
-    const texts = getTexts(lang);
-    const dsTexts = texts.dolphinScheduler;
+export const BatchRunModal: React.FC<BatchRunModalProps> = ({show, processes, projectCode, baseUrl, token, onClose, onSuccess }) => {
+    const { t, i18n } = useTranslation();
     const { toast } = useToast();
     const [running, setRunning] = useState(false);
     const [selectedCodes, setSelectedCodes] = useState<number[]>([]);
@@ -39,7 +37,7 @@ export const BatchRunModal: React.FC<BatchRunModalProps> = ({ show, lang, proces
     
     const handleBatchRun = async () => {
         if (selectedCodes.length === 0) {
-            toast({ title: dsTexts.pleaseSelectWorkflows, variant: 'destructive' });
+            toast({ title: t('dolphinScheduler.pleaseSelectWorkflows'), variant: 'destructive' });
             return;
         }
         
@@ -77,7 +75,7 @@ export const BatchRunModal: React.FC<BatchRunModalProps> = ({ show, lang, proces
         }
         
         setRunning(false);
-        const summary = dsTexts.batchRunComplete
+        const summary = t('dolphinScheduler.batchRunComplete')
             .replace('{success}', String(success))
             .replace('{fail}', String(failed));
             
@@ -100,7 +98,7 @@ export const BatchRunModal: React.FC<BatchRunModalProps> = ({ show, lang, proces
                 <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800/80">
                     <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center">
                         <PlayCircle size={20} className="mr-2 text-orange-500" />
-                        {dsTexts.batchRunWorkflows}
+                        {t('dolphinScheduler.batchRunWorkflows')}
                     </h3>
                     <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1"><XCircle size={20} /></button>
                 </div>
@@ -109,16 +107,16 @@ export const BatchRunModal: React.FC<BatchRunModalProps> = ({ show, lang, proces
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                         <input 
                             type="text" 
-                            placeholder={dsTexts.searchWorkflows} 
+                            placeholder={t('dolphinScheduler.searchWorkflows')} 
                             value={searchTerm} 
                             onChange={e => setSearchTerm(e.target.value)} 
                             className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 outline-none" 
                         />
                     </div>
                     <div className="flex items-center justify-between mt-3">
-                        <span className="text-xs text-slate-500">{dsTexts.onlineWorkflowsCount.replace('{total}', String(onlineProcesses.length))}</span>
+                        <span className="text-xs text-slate-500">{t('dolphinScheduler.onlineWorkflowsCount').replace('{total}', String(onlineProcesses.length))}</span>
                         <button onClick={handleSelectAll} className="text-xs text-orange-500 hover:text-orange-600">
-                            {selectedCodes.length === filteredProcesses.length && filteredProcesses.length > 0 ? dsTexts.deselectAll : dsTexts.selectAll}
+                            {selectedCodes.length === filteredProcesses.length && filteredProcesses.length > 0 ? t('dolphinScheduler.deselectAll') : t('dolphinScheduler.selectAll')}
                         </button>
                     </div>
                 </div>
@@ -130,16 +128,16 @@ export const BatchRunModal: React.FC<BatchRunModalProps> = ({ show, lang, proces
                                 <span className="text-slate-700 dark:text-slate-300 text-sm">{p.name}</span>
                             </label>
                         ))}
-                        {filteredProcesses.length === 0 && <p className="text-slate-400 text-center py-4 text-sm">{searchTerm ? dsTexts.noMatchingWorkflows : dsTexts.noOnlineWorkflows}</p>}
+                        {filteredProcesses.length === 0 && <p className="text-slate-400 text-center py-4 text-sm">{searchTerm ? t('dolphinScheduler.noMatchingWorkflows') : t('dolphinScheduler.noOnlineWorkflows')}</p>}
                     </div>
                 </div>
                 <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 flex justify-between items-center">
-                    <span className="text-sm text-slate-500">{dsTexts.selectedCount.replace('{count}', String(selectedCodes.length))}</span>
+                    <span className="text-sm text-slate-500">{t('dolphinScheduler.selectedCount').replace('{count}', String(selectedCodes.length))}</span>
                     <div className="flex space-x-3">
-                        <button onClick={onClose} className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg">{texts.common.cancel}</button>
+                        <button onClick={onClose} className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg">{t('common.cancel')}</button>
                         <button onClick={handleBatchRun} disabled={running || selectedCodes.length === 0} className="px-6 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium disabled:opacity-50 flex items-center">
                             {running && <Loader2 size={16} className="animate-spin mr-2" />}
-                            {dsTexts.run}
+                            {t('dolphinScheduler.run')}
                         </button>
                     </div>
                 </div>

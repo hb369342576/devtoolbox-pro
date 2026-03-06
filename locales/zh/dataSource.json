@@ -1,0 +1,22 @@
+{
+  "title": "数据源管理",
+  "addTitle": "新建数据源连接",
+  "editTitle": "编辑数据源连接",
+  "connectionName": "连接名称",
+  "type": "数据库类型",
+  "host": "主机 / IP",
+  "port": "端口",
+  "user": "用户名",
+  "password": "密码",
+  "defaultDb": "默认数据库",
+  "filePath": "数据库文件路径",
+  "testConn": "测试连接",
+  "testing": "连接中...",
+  "connSuccess": "连接成功",
+  "connFailed": "连接失败",
+  "saveConn": "保存连接",
+  "deleteConfirm": "确定要删除此数据源吗？",
+  "placeholderName": "例如：生产环境主库",
+  "placeholderHost": "例如：127.0.0.1",
+  "placeholderPath": "例如：/path/to/db.sqlite"
+}

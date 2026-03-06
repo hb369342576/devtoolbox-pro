@@ -3,6 +3,7 @@ import { Moon, Sun, Monitor, Globe, Check, Activity, Download, RefreshCw, Info }
 import { check, Update } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
 import { Language, Theme } from '../../types';
+import { useTranslation } from "react-i18next";
 
 interface SettingsProps {
     lang: Language;
@@ -18,6 +19,7 @@ interface SettingsProps {
  * 简单工具，无需拆分组件
  */
 export const Settings: React.FC<SettingsProps> = ({ lang, onLangChange, theme, onThemeChange, monitorEnabled, onMonitorToggle }) => {
+    const { t, i18n } = useTranslation();
     const [checking, setChecking] = useState(false);
     const [updateInfo, setUpdateInfo] = useState<Update | null>(null);
     const [downloading, setDownloading] = useState(false);
@@ -66,10 +68,10 @@ export const Settings: React.FC<SettingsProps> = ({ lang, onLangChange, theme, o
             {/* Header */}
             <div>
                 <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">
-                    {lang === 'zh' ? '系统设置' : 'Settings'}
+                    {t('settings.settings')}
                 </h2>
                 <p className="text-slate-500 dark:text-slate-400">
-                    {lang === 'zh' ? '管理应用的外观和语言偏好' : 'Manage application appearance and language preferences'}
+                    {t('settings.manageApplicationAppearan')}
                 </p>
             </div>
 
@@ -81,7 +83,7 @@ export const Settings: React.FC<SettingsProps> = ({ lang, onLangChange, theme, o
                             <Monitor size={20} />
                         </div>
                         <h3 className="text-lg font-bold text-slate-800 dark:text-white">
-                            {lang === 'zh' ? '外观主题' : 'Appearance'}
+                            {t('settings.appearance')}
                         </h3>
                     </div>
 
@@ -102,10 +104,10 @@ export const Settings: React.FC<SettingsProps> = ({ lang, onLangChange, theme, o
                                 {theme === 'light' && <Check className="text-blue-500" size={20} />}
                             </div>
                             <p className="font-bold text-slate-800 dark:text-white">
-                                {lang === 'zh' ? '浅色模式' : 'Light Mode'}
+                                {t('settings.lightMode')}
                             </p>
                             <p className="text-xs text-slate-500 mt-1">
-                                {lang === 'zh' ? '适合明亮环境，清晰易读' : 'Best for bright environments'}
+                                {t('settings.bestForBrightEnvironments')}
                             </p>
                         </button>
 
@@ -125,10 +127,10 @@ export const Settings: React.FC<SettingsProps> = ({ lang, onLangChange, theme, o
                                 {theme === 'dark' && <Check className="text-blue-500" size={20} />}
                             </div>
                             <p className="font-bold text-slate-800 dark:text-white">
-                                {lang === 'zh' ? '深色模式' : 'Dark Mode'}
+                                {t('settings.darkMode')}
                             </p>
                             <p className="text-xs text-slate-500 mt-1">
-                                {lang === 'zh' ? '保护视力，适合夜间使用' : 'Easy on the eyes, best for night'}
+                                {t('settings.easyOnTheEyesBestForNight')}
                             </p>
                         </button>
                     </div>
@@ -141,7 +143,7 @@ export const Settings: React.FC<SettingsProps> = ({ lang, onLangChange, theme, o
                             <Globe size={20} />
                         </div>
                         <h3 className="text-lg font-bold text-slate-800 dark:text-white">
-                            {lang === 'zh' ? '语言设置' : 'Language'}
+                            {t('settings.language')}
                         </h3>
                     </div>
 
@@ -158,8 +160,8 @@ export const Settings: React.FC<SettingsProps> = ({ lang, onLangChange, theme, o
                             <div className="flex items-center space-x-3">
                                 <span className="text-2xl">🇨🇳</span>
                                 <div className="text-left">
-                                    <p className="font-bold text-slate-800 dark:text-white">简体中文</p>
-                                    <p className="text-xs text-slate-500">Chinese (Simplified)</p>
+                                    <p className="font-bold text-slate-800 dark:text-white">{t('settings.chineseSimplified') || '简体中文'}</p>
+                                    <p className="text-xs text-slate-500">{t('settings.chineseSimplifiedSub') || 'Chinese (Simplified)'}</p>
                                 </div>
                             </div>
                             {lang === 'zh' && <Check className="text-blue-500" size={20} />}
@@ -177,8 +179,8 @@ export const Settings: React.FC<SettingsProps> = ({ lang, onLangChange, theme, o
                             <div className="flex items-center space-x-3">
                                 <span className="text-2xl">🇺🇸</span>
                                 <div className="text-left">
-                                    <p className="font-bold text-slate-800 dark:text-white">English</p>
-                                    <p className="text-xs text-slate-500">United States</p>
+                                    <p className="font-bold text-slate-800 dark:text-white">{t('settings.english') || 'English'}</p>
+                                    <p className="text-xs text-slate-500">{t('settings.englishSub') || 'United States'}</p>
                                 </div>
                             </div>
                             {lang === 'en' && <Check className="text-blue-500" size={20} />}
@@ -193,17 +195,17 @@ export const Settings: React.FC<SettingsProps> = ({ lang, onLangChange, theme, o
                             <Activity size={20} />
                         </div>
                         <h3 className="text-lg font-bold text-slate-800 dark:text-white">
-                            {lang === 'zh' ? '系统监控' : 'System Monitor'}
+                            {t('settings.systemMonitor')}
                         </h3>
                     </div>
 
                     <div className="flex items-center justify-between p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
                         <div>
                             <p className="font-medium text-slate-800 dark:text-white">
-                                {lang === 'zh' ? '启用系统监控' : 'Enable System Monitor'}
+                                {t('settings.enableSystemMonitor')}
                             </p>
                             <p className="text-xs text-slate-500 mt-1">
-                                {lang === 'zh' ? '显示 CPU、内存使用情况。关闭可减少资源占用' : 'Show CPU/Memory usage. Disable to save resources'}
+                                {t('settings.showCPUMemoryUsageDisable')}
                             </p>
                         </div>
                         <button
@@ -222,7 +224,7 @@ export const Settings: React.FC<SettingsProps> = ({ lang, onLangChange, theme, o
                             <Info size={20} />
                         </div>
                         <h3 className="text-lg font-bold text-slate-800 dark:text-white">
-                            {lang === 'zh' ? '关于与更新' : 'About & Update'}
+                            {t('settings.aboutUpdate')}
                         </h3>
                     </div>
 
@@ -244,7 +246,7 @@ export const Settings: React.FC<SettingsProps> = ({ lang, onLangChange, theme, o
                                     ) : (
                                         <Download size={16} />
                                     )}
-                                    <span>{lang === 'zh' ? '检查更新' : 'Check Updates'}</span>
+                                    <span>{t('settings.checkUpdates')}</span>
                                 </button>
                             </div>
                         </div>
@@ -253,13 +255,13 @@ export const Settings: React.FC<SettingsProps> = ({ lang, onLangChange, theme, o
                         {checkResult === 'latest' && (
                             <div className="p-4 rounded-xl border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 flex items-center space-x-2">
                                 <Check size={16} />
-                                <span>{lang === 'zh' ? '已是最新版本' : 'You are on the latest version'}</span>
+                                <span>{t('settings.youAreOnTheLatestVersion')}</span>
                             </div>
                         )}
 
                         {checkResult === 'error' && (
                             <div className="p-4 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300">
-                                {lang === 'zh' ? '检查更新失败，请稍后重试' : 'Failed to check for updates. Please try again later.'}
+                                {t('settings.failedToCheckForUpdatesPl')}
                             </div>
                         )}
 
@@ -269,7 +271,7 @@ export const Settings: React.FC<SettingsProps> = ({ lang, onLangChange, theme, o
                                 <div className="flex items-center justify-between mb-3">
                                     <div>
                                         <p className="font-medium text-blue-700 dark:text-blue-300">
-                                            {lang === 'zh' ? '发现新版本' : 'New Version Available'}
+                                            {t('settings.newVersionAvailable')}
                                         </p>
                                         <p className="text-sm text-blue-600 dark:text-blue-400">v{updateInfo.version}</p>
                                     </div>
@@ -283,7 +285,7 @@ export const Settings: React.FC<SettingsProps> = ({ lang, onLangChange, theme, o
                                         ) : (
                                             <Download size={16} />
                                         )}
-                                        <span>{lang === 'zh' ? '立即更新' : 'Update Now'}</span>
+                                        <span>{t('settings.updateNow')}</span>
                                     </button>
                                 </div>
                                 {downloading && (

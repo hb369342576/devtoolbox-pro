@@ -1,15 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { RefreshCcw, Play, Pause, RotateCcw, Calendar as CalendarIcon, Globe, Check, ChevronLeft, ChevronRight, Clock, ChevronDown, Flag, Copy } from 'lucide-react';
 import { Language } from '../../types';
+import { useTranslation } from "react-i18next";
 
 /* --- Modern Date Picker (现代日期选择器组件) --- */
 interface ModernDatePickerProps {
   value: Date;
   onChange: (date: Date) => void;
-  lang: Language;
 }
 
-const ModernDatePicker: React.FC<ModernDatePickerProps> = ({ value, onChange, lang }) => {
+const ModernDatePicker: React.FC<ModernDatePickerProps> = ({ value, onChange}) => {
+    const { t, i18n } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [viewDate, setViewDate] = useState(new Date(value));
   const [inputValue, setInputValue] = useState('');
@@ -100,7 +101,7 @@ const ModernDatePicker: React.FC<ModernDatePickerProps> = ({ value, onChange, la
           <div className="flex items-center justify-between mb-4">
             <button onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1))} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full text-slate-500"><ChevronLeft size={16} /></button>
             <span className="font-bold text-slate-700 dark:text-slate-200 text-sm">
-              {viewDate.toLocaleString(lang === 'zh' ? 'zh-CN' : 'en-US', { month: 'short', year: 'numeric' })}
+              {viewDate.toLocaleString(t('time.locale'), { month: 'short', year: 'numeric' })}
             </span>
             <button onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1))} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full text-slate-500"><ChevronRight size={16} /></button>
           </div>
@@ -116,7 +117,7 @@ const ModernDatePicker: React.FC<ModernDatePickerProps> = ({ value, onChange, la
 
           {/* 时间输入区 */}
           <div className="pt-3 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between mb-3">
-            <span className="text-xs font-bold text-slate-400 uppercase flex items-center"><Clock size={12} className="mr-1" /> {lang === 'zh' ? '时间' : 'Time'}</span>
+            <span className="text-xs font-bold text-slate-400 uppercase flex items-center"><Clock size={12} className="mr-1" /> {t('common.time')}</span>
             <div className="flex items-center space-x-1">
               <input type="number" min="0" max="23" value={pad(value.getHours())} onChange={(e) => handleTimeChange('h', e.target.value)} className="w-10 p-1 text-center bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded text-xs font-mono dark:text-white outline-none focus:border-blue-500" />
               <span className="text-slate-400">:</span>
@@ -128,7 +129,7 @@ const ModernDatePicker: React.FC<ModernDatePickerProps> = ({ value, onChange, la
 
           {/* 底部按钮 */}
           <button onClick={setToday} className="w-full py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-xs font-bold rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
-            {lang === 'zh' ? '回到今天' : 'Today'}
+            {t('time.today')}
           </button>
         </div>
       )}
@@ -143,7 +144,8 @@ const CLOCK_THEMES = {
   cyber: { bg: 'bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900', text: 'text-neon-blue' }
 };
 
-export const TimeUtility: React.FC<{ lang: Language }> = ({ lang }) => {
+export const TimeUtility: React.FC<{}> = ({}) => {
+  const { t, i18n } = useTranslation();
   // 时钟状态
   const [now, setNow] = useState(new Date());
   const [selectedTz, setSelectedTz] = useState('local');
@@ -162,8 +164,8 @@ export const TimeUtility: React.FC<{ lang: Language }> = ({ lang }) => {
   const [displayFormat, setDisplayFormat] = useState('local');
 
   const DATE_FORMATS = [
-    { value: 'local', label: lang === 'zh' ? '本地 (YYYY-MM-DD HH:mm:ss)' : 'Local' },
-    { value: 'date', label: lang === 'zh' ? '仅日期 (YYYY-MM-DD)' : 'Date Only' },
+    { value: 'local', label: t('time.local') },
+    { value: 'date', label: t('time.dateOnly') },
     { value: 'iso', label: 'ISO 8601' },
     { value: 'utc', label: 'UTC' }
   ];
@@ -203,9 +205,9 @@ export const TimeUtility: React.FC<{ lang: Language }> = ({ lang }) => {
           const pad = (n: number) => n.toString().padStart(2, '0');
           setOutputStr(`${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`);
         }
-      } catch (e) { setOutputStr(lang === 'zh' ? '无效日期' : 'Invalid Date'); }
+      } catch (e) { setOutputStr(t('time.invalidDate')); }
     }
-  }, [tsInput, tsUnit, displayFormat, lang]);
+  }, [tsInput, tsUnit, displayFormat, i18n.language]);
 
   // 处理单位切换
   const handleUnitChange = (unit: 'ms' | 's') => {
@@ -240,7 +242,7 @@ export const TimeUtility: React.FC<{ lang: Language }> = ({ lang }) => {
 
   // 辅助信息
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const weekday = currentDateObj.toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', { weekday: 'long' });
+  const weekday = currentDateObj.toLocaleDateString(t('time.locale'), { weekday: 'long' });
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
@@ -253,7 +255,7 @@ export const TimeUtility: React.FC<{ lang: Language }> = ({ lang }) => {
             <div className="flex items-center bg-white/10 px-3 py-1.5 rounded-lg border border-white/20">
               <Globe size={14} className="text-white/80 mr-2" />
               <select value={selectedTz} onChange={(e) => setSelectedTz(e.target.value)} className="bg-transparent border-none outline-none text-xs font-medium text-white min-w-[80px] cursor-pointer">
-                <option className="text-slate-900" value="local">{lang === 'zh' ? '本地时间' : 'Local'}</option>
+                <option className="text-slate-900" value="local">{t('time.local')}</option>
                 <option className="text-slate-900" value="UTC">UTC</option>
                 <option className="text-slate-900" value="Asia/Shanghai">Beijing</option>
                 <option className="text-slate-900" value="America/New_York">New York</option>
@@ -269,13 +271,13 @@ export const TimeUtility: React.FC<{ lang: Language }> = ({ lang }) => {
           </div>
           <div className="flex-1 flex flex-col items-center justify-center z-10">
             <h2 className="text-6xl md:text-7xl font-mono font-bold mb-2 tracking-tight drop-shadow-lg">{now.toLocaleTimeString('en-US', { hour12: false, timeZone: selectedTz === 'local' ? undefined : selectedTz })}</h2>
-            <p className="text-lg opacity-90 font-medium">{now.toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: selectedTz === 'local' ? undefined : selectedTz })}</p>
+            <p className="text-lg opacity-90 font-medium">{now.toLocaleDateString(t('common.locale'), { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: selectedTz === 'local' ? undefined : selectedTz })}</p>
           </div>
         </div>
 
         {/* 计时器 (高度固定为 28rem 约 450px) */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 flex flex-col items-center justify-start h-[28rem]">
-          <div className="mt-2 text-xs font-bold text-slate-400 uppercase tracking-widest">{lang === 'zh' ? '计时器' : 'STOPWATCH'}</div>
+          <div className="mt-2 text-xs font-bold text-slate-400 uppercase tracking-widest">{t('time.sTOPWATCH')}</div>
           <div className="mt-8 text-5xl font-mono font-bold text-slate-800 dark:text-white tracking-wide">{formatTimer(timerTime)}</div>
 
           {/* 控制按钮 */}
@@ -300,7 +302,7 @@ export const TimeUtility: React.FC<{ lang: Language }> = ({ lang }) => {
           <div className="w-full mt-8 flex-1 overflow-y-auto custom-scrollbar border-t border-slate-100 dark:border-slate-700/50 pt-2">
             {laps.length === 0 ? (
               <div className="h-full flex items-center justify-center text-slate-300 dark:text-slate-600 text-xs italic">
-                {lang === 'zh' ? '暂无记录' : 'No laps recorded'}
+                {t('time.noLapsRecorded')}
               </div>
             ) : (
               <div className="space-y-2">
@@ -323,13 +325,13 @@ export const TimeUtility: React.FC<{ lang: Language }> = ({ lang }) => {
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-8 flex flex-col h-full">
         <div className="flex items-center space-x-3 mb-8">
           <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg text-indigo-600 dark:text-indigo-400"><RefreshCcw size={20} /></div>
-          <h3 className="text-lg font-bold text-slate-800 dark:text-white">{lang === 'zh' ? '时间戳转换' : 'Timestamp Converter'}</h3>
+          <h3 className="text-lg font-bold text-slate-800 dark:text-white">{t('time.timestampConverter')}</h3>
         </div>
 
         <div className="flex-1 flex flex-col space-y-8">
           {/* 时间戳输入区 */}
           <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase mb-2 ml-1">{lang === 'zh' ? 'Unix 时间戳' : 'Unix Timestamp'}</label>
+            <label className="block text-xs font-bold text-slate-400 uppercase mb-2 ml-1">{t('time.unixTimestamp')}</label>
             <div className="flex items-center space-x-2">
               <div className="relative flex-1">
                 <input
@@ -345,22 +347,22 @@ export const TimeUtility: React.FC<{ lang: Language }> = ({ lang }) => {
                 </div>
               </div>
               <button onClick={() => { const n = Date.now(); setTsInput(tsUnit === 'ms' ? String(n) : String(Math.floor(n / 1000))); }} className="px-4 py-3 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/20 dark:hover:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-800/30 rounded-xl font-bold transition-colors whitespace-nowrap">
-                {lang === 'zh' ? '当前' : 'Now'}
+                {t('time.now')}
               </button>
             </div>
           </div>
 
           {/* 日期选择器 */}
           <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase mb-2 ml-1">{lang === 'zh' ? '日期与时间' : 'Date & Time'}</label>
-            <ModernDatePicker value={currentDateObj} onChange={(d) => { setCurrentDateObj(d); const ms = d.getTime(); setTsInput(tsUnit === 'ms' ? String(ms) : String(Math.floor(ms / 1000))); }} lang={lang} />
-            <p className="text-[10px] text-slate-400 mt-1 ml-1">{lang === 'zh' ? '直接输入或点击日历图标选择' : 'Type directly or click calendar icon'}</p>
+            <label className="block text-xs font-bold text-slate-400 uppercase mb-2 ml-1">{t('time.dateTime')}</label>
+            <ModernDatePicker value={currentDateObj} onChange={(d) => { setCurrentDateObj(d); const ms = d.getTime(); setTsInput(tsUnit === 'ms' ? String(ms) : String(Math.floor(ms / 1000))); }} />
+            <p className="text-[10px] text-slate-400 mt-1 ml-1">{t('time.typeDirectlyOrClickCalend')}</p>
           </div>
 
           {/* 输出与格式选择 */}
           <div className="mt-auto">
             <div className="flex justify-between items-center mb-2 ml-1">
-              <label className="block text-xs font-bold text-slate-400 uppercase">{lang === 'zh' ? '格式化结果' : 'Formatted Output'}</label>
+              <label className="block text-xs font-bold text-slate-400 uppercase">{t('time.formattedOutput')}</label>
             </div>
 
             <div className="bg-slate-100 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700 p-4 space-y-4">
@@ -388,7 +390,7 @@ export const TimeUtility: React.FC<{ lang: Language }> = ({ lang }) => {
                   <button
                     onClick={() => navigator.clipboard.writeText(outputStr)}
                     className="ml-2 p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                    title={lang === 'zh' ? '复制' : 'Copy'}
+                    title={t('common.copy')}
                   >
                     <Copy size={16} />
                   </button>

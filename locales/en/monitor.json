@@ -1,0 +1,19 @@
+{
+  "days": "d",
+  "hours": "h",
+  "mins": "m",
+  "secs": "s",
+  "lessThan1Min": "< 1m",
+  "disabledTitle": "System Monitor Disabled",
+  "disabledDesc": "Enable System Monitor in Settings to view CPU and memory usage.",
+  "sysInfo": "System Information",
+  "os": "OS",
+  "hostname": "Hostname",
+  "uptime": "Uptime",
+  "memory": "Memory",
+  "cpuUsage": "CPU Usage",
+  "memUsage": "Memory Usage",
+  "network": "Network",
+  "active": "Active",
+  "realtimePerf": "Real-time Performance"
+}

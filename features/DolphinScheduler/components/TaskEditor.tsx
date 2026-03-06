@@ -12,7 +12,7 @@ import { Tooltip } from '../../common/Tooltip';
 import { useToast } from '../../common/Toast';
 import { ConfirmModal } from '../../common/ConfirmModal';
 import { DEFAULT_CONFIG_KEY, defaultSettingsTemplate } from './GlobalSettingsModal';
-import { getTexts } from '../../../locales';
+import { useTranslation } from "react-i18next";
 
 // 节点类型定义
 const NODE_TYPES = [
@@ -103,21 +103,18 @@ interface TaskRelation {
 }
 
 interface TaskEditorProps {
-    lang: Language;
     process: ProcessDefinition;
     projectConfig: DolphinSchedulerConfig;
     onClose: () => void;
 }
 
 export const TaskEditor: React.FC<TaskEditorProps> = ({
-    lang,
     process,
     projectConfig,
     onClose
 }) => {
-    const texts = getTexts(lang);
-    const dsTexts = texts.dolphinScheduler;
-    const editorTexts = dsTexts.taskEditor;
+    const { t, i18n } = useTranslation();
+    const editorTexts = t('dolphinScheduler.taskEditor');
     const { toast } = useToast();
     const canvasRef = useRef<HTMLDivElement>(null);
     
@@ -367,14 +364,14 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                     setOriginalSnapshot(JSON.stringify({ nodes, relations }));
                 } else {
                     toast({
-                        title: lang === 'zh' ? '加载失败' : 'Load Failed',
+                        title: t('dolphinScheduler.loadFailed'),
                         description: result.msg || 'Unknown error',
                         variant: 'destructive'
                     });
                 }
             } catch (error: any) {
                 toast({
-                    title: lang === 'zh' ? '加载失败' : 'Load Failed',
+                    title: t('dolphinScheduler.loadFailed'),
                     description: error.message,
                     variant: 'destructive'
                 });
@@ -634,7 +631,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
             
             if (result.code === 0) {
                 toast({ 
-                    title: editorTexts.saveSuccess,
+                    title: t('dolphinScheduler.editor.saveSuccess'),
                     variant: 'success' 
                 });
                 // 更新原始快照
@@ -646,7 +643,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
             }
         } catch (error: any) {
             toast({ 
-                title: editorTexts.saveFailed, 
+                title: t('dolphinScheduler.editor.saveFailed'), 
                 description: error.message, 
                 variant: 'destructive' 
             });
@@ -1104,20 +1101,20 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
             
             if (result.code === 0) {
                 toast({
-                    title: editorTexts.runSuccess,
-                    description: editorTexts.taskStartedRunning
+                    title: t('dolphinScheduler.editor.runSuccess'),
+                    description: t('dolphinScheduler.editor.taskStartedRunning')
                 });
                 setShowRunModal(false);
             } else {
                 toast({
-                    title: editorTexts.runFailed,
+                    title: t('dolphinScheduler.editor.runFailed'),
                     description: result.msg || 'Unknown error',
                     variant: 'destructive'
                 });
             }
         } catch (error: any) {
             toast({
-                title: editorTexts.runFailed,
+                title: t('dolphinScheduler.editor.runFailed'),
                 description: error.message,
                 variant: 'destructive'
             });
@@ -1233,13 +1230,13 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                             {process.name}
                             {isReadOnly && (
                                 <span className="ml-2 px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 text-xs font-medium rounded-full">
-                                    {editorTexts.online}
+                                    {t('dolphinScheduler.editor.online')}
                                 </span>
                             )}
                         </h2>
                         <span className="text-xs text-slate-500">
-                            {editorTexts.workflowEditor}
-                            {isReadOnly && ` (${editorTexts.readOnly})`}
+                            {t('dolphinScheduler.editor.workflowEditor')}
+                            {isReadOnly && ` (${t('dolphinScheduler.editor.readOnly')})`}
                         </span>
                     </div>
                 </div>
@@ -1268,7 +1265,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                         className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm flex items-center space-x-1 transition-colors"
                     >
                         <Settings size={16} />
-                        <span>{editorTexts.params}</span>
+                        <span>{t('dolphinScheduler.editor.params')}</span>
                     </button>
                     {!isReadOnly && (
                         <button 
@@ -1277,7 +1274,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                             className="px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm flex items-center space-x-1 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                            <span>{editorTexts.save}</span>
+                            <span>{t('dolphinScheduler.editor.save')}</span>
                         </button>
                     )}
                     <button onClick={handleClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 transition-colors">
@@ -1291,7 +1288,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                 {/* 左侧节点类型列表 */}
                 <div className="w-56 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 p-4 shrink-0 flex flex-col">
                     <h3 className="text-sm font-bold text-slate-600 dark:text-slate-300 mb-3 uppercase tracking-wide">
-                        {editorTexts.nodeTypes}
+                        {t('dolphinScheduler.editor.nodeTypes')}
                     </h3>
                     <div className="space-y-1.5 flex-1 overflow-y-auto custom-scrollbar">
                         {NODE_TYPES.map(nodeType => (
@@ -1315,7 +1312,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                     {/* 工作流节点列表 */}
                     <div className="border-t border-slate-200 dark:border-slate-600 pt-4 mt-4">
                         <h3 className="text-sm font-bold text-slate-600 dark:text-slate-300 mb-3 uppercase tracking-wide">
-                            {editorTexts.currentNodes} ({taskNodes.length})
+                            {t('dolphinScheduler.editor.currentNodes')} ({taskNodes.length})
                         </h3>
                         <div className="space-y-1 max-h-[200px] overflow-y-auto custom-scrollbar">
                             {taskNodes.map(node => {
@@ -1337,7 +1334,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                             })}
                             {taskNodes.length === 0 && !loading && (
                                 <div className="text-xs text-slate-400 text-center py-4">
-                                    {editorTexts.dragNodesToCanvas}
+                                    {t('dolphinScheduler.editor.dragNodesToCanvas')}
                                 </div>
                             )}
                         </div>
@@ -1348,24 +1345,24 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                 <div className="flex-1 relative overflow-hidden bg-slate-50 dark:bg-slate-900/50">
                     {/* 缩放控制 */}
                     <div className="absolute top-4 right-4 z-10 flex items-center space-x-1 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 p-1">
-                        <button onClick={handleZoomOut} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300" title={editorTexts.zoomOut}>
+                        <button onClick={handleZoomOut} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300" title={t('dolphinScheduler.editor.zoomOut')}>
                             <ZoomOut size={18} />
                         </button>
                         <span className="px-2 text-sm font-medium text-slate-600 dark:text-slate-300 min-w-[50px] text-center">
                             {Math.round(scale * 100)}%
                         </span>
-                        <button onClick={handleZoomIn} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300" title={editorTexts.zoomIn}>
+                        <button onClick={handleZoomIn} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300" title={t('dolphinScheduler.editor.zoomIn')}>
                             <ZoomIn size={18} />
                         </button>
                         <div className="w-px h-5 bg-slate-200 dark:bg-slate-600" />
-                        <button onClick={handleZoomReset} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300" title={editorTexts.reset}>
+                        <button onClick={handleZoomReset} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300" title={t('dolphinScheduler.editor.reset')}>
                             <Maximize2 size={18} />
                         </button>
                         <div className="w-px h-5 bg-slate-200 dark:bg-slate-600" />
                         <button 
                             onClick={handleAutoLayout} 
                             className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300"
-                            title={editorTexts.autoLayout}
+                            title={t('dolphinScheduler.editor.autoLayout')}
                         >
                             <LayoutGrid size={18} />
                         </button>
@@ -1592,7 +1589,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                                     <button 
                                                         className="w-6 h-6 rounded-full bg-green-500 hover:bg-green-600 flex items-center justify-center text-white shadow-sm transition-colors"
                                                         onClick={(e) => { e.stopPropagation(); handleOpenRunModal(node); }}
-                                                        title={editorTexts.runThisNode}
+                                                        title={t('dolphinScheduler.editor.runThisNode')}
                                                     >
                                                         <Play size={12} fill="white" />
                                                     </button>
@@ -1642,10 +1639,10 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                 </div>
                                 <div>
                                     <h3 className="font-bold text-lg text-slate-800 dark:text-white">
-                                        {isReadOnly ? editorTexts.viewNode : editorTexts.editNode}
+                                        {isReadOnly ? t('dolphinScheduler.editor.viewNode') : t('dolphinScheduler.editor.editNode')}
                                     </h3>
                                     <div className="flex items-center gap-2 flex-wrap">
-                                        <span className="text-xs text-slate-500">{editingNode.taskType}{isReadOnly && editorTexts.readOnly}</span>
+                                        <span className="text-xs text-slate-500">{editingNode.taskType}{isReadOnly && t('dolphinScheduler.editor.readOnly')}</span>
                                         <span className="text-xs text-blue-500 font-medium bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded-full">{process.name}</span>
                                     </div>
                                 </div>
@@ -1659,7 +1656,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                         <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                                    {editorTexts.nodeName}
+                                    {t('dolphinScheduler.editor.nodeName')}
                                 </label>
                                 <input
                                     type="text"
@@ -1671,7 +1668,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                             
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                                    {editorTexts.nodeType}
+                                    {t('dolphinScheduler.editor.nodeType')}
                                 </label>
                                 <select
                                     value={editingNode.taskType.toLowerCase()}
@@ -1705,7 +1702,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                                        {editorTexts.environment}
+                                        {t('dolphinScheduler.editor.environment')}
                                     </label>
                                     <select
                                         value={editingNode.taskParams.environmentCode || ''}
@@ -1715,7 +1712,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                         })}
                                         className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
                                     >
-                                        <option value="">{editorTexts.none}</option>
+                                        <option value="">{t('dolphinScheduler.editor.none')}</option>
                                         {environments.map(e => (
                                             <option key={e.code} value={e.code}>{e.name}</option>
                                         ))}
@@ -1726,7 +1723,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                             <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-4">
                                 <h4 className="text-sm font-bold text-slate-600 dark:text-slate-300 mb-3 flex items-center">
                                     <Settings size={16} className="mr-2" />
-                                    {editorTexts.nodeConfiguration}
+                                    {t('dolphinScheduler.editor.nodeConfiguration')}
                                 </h4>
                                 
                                 {/* SQL 节点配置 */}
@@ -1735,7 +1732,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                         {/* 数据源选择 */}
                                         <div>
                                             <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                {editorTexts.datasource}
+                                                {t('dolphinScheduler.editor.datasource')}
                                             </label>
                                             <select
                                                 value={editingNode.taskParams.datasource || ''}
@@ -1754,7 +1751,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                                 }}
                                                 className="w-full px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
                                             >
-                                                <option value="">{editorTexts.selectDatasource}</option>
+                                                <option value="">{t('dolphinScheduler.editor.selectDatasource')}</option>
                                                 {datasources.map(ds => (
                                                     <option key={ds.id} value={ds.id}>{ds.name} ({ds.type})</option>
                                                 ))}
@@ -1770,7 +1767,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                         <div className="grid grid-cols-2 gap-3">
                                             <div>
                                                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                    {editorTexts.dbType}
+                                                    {t('dolphinScheduler.editor.dbType')}
                                                 </label>
                                                 <select
                                                     value={editingNode.taskParams.dbType || 'MYSQL'}
@@ -1793,7 +1790,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                             </div>
                                             <div>
                                                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                    SQL {editorTexts.sqlType}
+                                                    SQL {t('dolphinScheduler.editor.sqlType')}
                                                 </label>
                                                 <select
                                                     value={editingNode.taskParams.sqlType || '1'}
@@ -1803,8 +1800,8 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                                     })}
                                                     className="w-full px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
                                                 >
-                                                    <option value="0">{editorTexts.query}</option>
-                                                    <option value="1">{editorTexts.nonQuery}</option>
+                                                    <option value="0">{t('dolphinScheduler.editor.query')}</option>
+                                                    <option value="1">{t('dolphinScheduler.editor.nonQuery')}</option>
                                                 </select>
                                             </div>
                                         </div>
@@ -1812,7 +1809,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                         {/* SQL 语句 */}
                                         <div>
                                             <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                SQL {editorTexts.sqlStatement}
+                                                SQL {t('dolphinScheduler.editor.sqlStatement')}
                                             </label>
                                             <textarea
                                                 value={editingNode.taskParams.sql || ''}
@@ -1833,7 +1830,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                     <div className="space-y-3">
                                         <div>
                                             <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                {editorTexts.jarPath}
+                                                {t('dolphinScheduler.editor.jarPath')}
                                             </label>
                                             <input
                                                 type="text"
@@ -1848,7 +1845,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                         </div>
                                         <div>
                                             <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                {editorTexts.mainClass}
+                                                {t('dolphinScheduler.editor.mainClass')}
                                             </label>
                                             <input
                                                 type="text"
@@ -1863,7 +1860,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                         </div>
                                         <div>
                                             <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                {editorTexts.arguments}
+                                                {t('dolphinScheduler.editor.arguments')}
                                             </label>
                                             <input
                                                 type="text"
@@ -1878,7 +1875,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                         </div>
                                         <div>
                                             <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                JVM {editorTexts.jvmOptions}
+                                                JVM {t('dolphinScheduler.editor.jvmOptions')}
                                             </label>
                                             <input
                                                 type="text"
@@ -1900,7 +1897,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                         <div className="grid grid-cols-2 gap-3">
                                             <div>
                                                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                    {editorTexts.deployMode}
+                                                    {t('dolphinScheduler.editor.deployMode')}
                                                 </label>
                                                 <select
                                                     value={editingNode.taskParams.deployMode || 'local'}
@@ -1916,7 +1913,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                             </div>
                                             <div>
                                                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                    {editorTexts.customConfig}
+                                                    {t('dolphinScheduler.editor.customConfig')}
                                                 </label>
                                                 <select
                                                     value={editingNode.taskParams.useCustom ? 'true' : 'false'}
@@ -1926,15 +1923,15 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                                     })}
                                                     className="w-full px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
                                                 >
-                                                    <option value="false">{texts.common.no}</option>
-                                                    <option value="true">{texts.common.yes}</option>
+                                                    <option value="false">{t('common.no')}</option>
+                                                    <option value="true">{t('common.yes')}</option>
                                                 </select>
                                             </div>
                                         </div>
                                         <div className="grid grid-cols-2 gap-3">
                                             <div>
                                                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                    {editorTexts.startupScript}
+                                                    {t('dolphinScheduler.editor.startupScript')}
                                                 </label>
                                                 <input
                                                     type="text"
@@ -1949,7 +1946,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                             </div>
                                             <div>
                                                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                    {editorTexts.configFile}
+                                                    {t('dolphinScheduler.editor.configFile')}
                                                 </label>
                                                 <input
                                                     type="text"
@@ -1966,7 +1963,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                         {editingNode.taskParams.useCustom && (
                                             <div>
                                                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                    {editorTexts.nodeConfiguration}
+                                                    {t('dolphinScheduler.editor.nodeConfiguration')}
                                                 </label>
                                                 <textarea
                                                     value={editingNode.taskParams.rawScript || ''}
@@ -1988,7 +1985,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                     <div className="space-y-3">
                                         <div>
                                             <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                {editorTexts.scriptContent}
+                                                {t('dolphinScheduler.editor.scriptContent')}
                                             </label>
                                             <textarea
                                                 value={editingNode.taskParams.rawScript || ''}
@@ -2009,7 +2006,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                     <div className="space-y-3">
                                         <div>
                                             <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                {editorTexts.pythonPath}
+                                                {t('dolphinScheduler.editor.pythonPath')}
                                             </label>
                                             <input
                                                 type="text"
@@ -2024,7 +2021,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                         </div>
                                         <div>
                                             <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                {editorTexts.scriptContent}
+                                                {t('dolphinScheduler.editor.scriptContent')}
                                             </label>
                                             <textarea
                                                 value={editingNode.taskParams.rawScript || ''}
@@ -2044,7 +2041,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                 {editingNode.taskType.toLowerCase() === 'dependent' && (
                                     <div className="space-y-3">
                                         <div className="text-sm text-slate-500 bg-amber-50 dark:bg-amber-900/20 p-3 rounded border border-amber-200 dark:border-amber-800">
-                                            {editorTexts.dependentTip}
+                                            {t('dolphinScheduler.editor.dependentTip')}
                                         </div>
                                         
                                         {/* 依赖配置详情 */}
@@ -2053,7 +2050,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                                 <div className="grid grid-cols-2 gap-3">
                                                     <div>
                                                         <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                            {editorTexts.relation}
+                                                            {t('dolphinScheduler.editor.relation')}
                                                         </label>
                                                         <input
                                                             type="text"
@@ -2064,7 +2061,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                                     </div>
                                                     <div>
                                                         <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                            {editorTexts.checkInterval}
+                                                            {t('dolphinScheduler.editor.checkInterval')}
                                                         </label>
                                                         <input
                                                             type="number"
@@ -2079,7 +2076,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                                 {editingNode.taskParams.dependence.dependTaskList?.map((taskGroup: any, idx: number) => (
                                                     <div key={idx} className="bg-slate-50 dark:bg-slate-700/50 p-2 rounded text-xs">
                                                         <div className="font-medium text-slate-600 dark:text-slate-300 mb-1">
-                                                            {editorTexts.dependencyGroup} {idx + 1} ({taskGroup.relation})
+                                                            {t('dolphinScheduler.editor.dependencyGroup')} {idx + 1} ({taskGroup.relation})
                                                         </div>
                                                         {taskGroup.dependItemList?.map((item: any, itemIdx: number) => (
                                                             <div key={itemIdx} className="ml-2 text-slate-500 dark:text-slate-400">
@@ -2099,7 +2096,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                         <div className="grid grid-cols-2 gap-3">
                                             <div>
                                                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                    {editorTexts.namespace}
+                                                    {t('dolphinScheduler.editor.namespace')}
                                                 </label>
                                                 <input
                                                     type="text"
@@ -2114,7 +2111,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                             </div>
                                             <div>
                                                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                    {editorTexts.image}
+                                                    {t('dolphinScheduler.editor.image')}
                                                 </label>
                                                 <input
                                                     type="text"
@@ -2130,7 +2127,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                         </div>
                                         <div>
                                             <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                                {editorTexts.command}
+                                                {t('dolphinScheduler.editor.command')}
                                             </label>
                                             <input
                                                 type="text"
@@ -2150,12 +2147,12 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                             {/* 失败重试配置 */}
                             <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-4 mt-4">
                                 <h4 className="text-sm font-bold text-slate-600 dark:text-slate-300 mb-3">
-                                    {editorTexts.failureRetry}
+                                    {t('dolphinScheduler.editor.failureRetry')}
                                 </h4>
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
                                         <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                            {editorTexts.retryTimes}
+                                            {t('dolphinScheduler.editor.retryTimes')}
                                         </label>
                                         <input
                                             type="number"
@@ -2167,7 +2164,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                     </div>
                                     <div>
                                         <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                            {editorTexts.retryInterval}
+                                            {t('dolphinScheduler.editor.retryInterval')}
                                         </label>
                                         <input
                                             type="number"
@@ -2187,7 +2184,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                 onClick={() => setEditingNode(null)}
                                 className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
                             >
-                                {isReadOnly ? editorTexts.close : texts.common.cancel}
+                                {isReadOnly ? t('dolphinScheduler.editor.close') : t('common.cancel')}
                             </button>
                             {!isReadOnly && (
                                 <button
@@ -2197,7 +2194,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                     }}
                                     className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
                                 >
-                                    {texts.common.confirm}
+                                    {t('common.confirm')}
                                 </button>
                             )}
                         </div>
@@ -2219,7 +2216,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                 className="w-full px-4 py-2 text-left text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center space-x-2"
                             >
                                 <Play size={16} className="text-green-500" />
-                                <span>{editorTexts.runThisNode}</span>
+                                <span>{t('dolphinScheduler.editor.runThisNode')}</span>
                             </button>
                         )}
                         <button
@@ -2227,7 +2224,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                             className="w-full px-4 py-2 text-left text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center space-x-2"
                         >
                             <Edit size={16} className="text-blue-500" />
-                            <span>{isReadOnly ? editorTexts.viewNode : editorTexts.editNode}</span>
+                            <span>{isReadOnly ? t('dolphinScheduler.editor.viewNode') : t('dolphinScheduler.editor.editNode')}</span>
                         </button>
                         {!isReadOnly && (
                             <>
@@ -2236,7 +2233,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                     className="w-full px-4 py-2 text-left text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center space-x-2"
                                 >
                                     <Copy size={16} className="text-green-500" />
-                                    <span>{editorTexts.copyNode}</span>
+                                    <span>{t('dolphinScheduler.editor.copyNode')}</span>
                                 </button>
                                 <div className="h-px bg-slate-200 dark:bg-slate-600 my-1" />
                                 <button
@@ -2244,7 +2241,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                     className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 flex items-center space-x-2"
                                 >
                                     <Trash2 size={16} />
-                                    <span>{editorTexts.deleteNode}</span>
+                                    <span>{t('dolphinScheduler.editor.deleteNode')}</span>
                                 </button>
                             </>
                         )}
@@ -2259,7 +2256,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
                             <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center">
                                 <Play size={20} className="mr-2 text-green-500" />
-                                {editorTexts.runWorkflow}
+                                {t('dolphinScheduler.editor.runWorkflow')}
                             </h3>
                             <button 
                                 onClick={() => setShowRunModal(false)}
@@ -2277,45 +2274,45 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                             {/* 任务执行范围 */}
                             <div>
                                 <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                    {editorTexts.executionScope}
+                                    {t('dolphinScheduler.editor.executionScope')}
                                 </label>
                                 <select
                                     value={runConfig.taskDependType}
                                     onChange={(e) => setRunConfig({ ...runConfig, taskDependType: e.target.value })}
                                     className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
                                 >
-                                    <option value="TASK_ONLY">{editorTexts.currentNodeOnly}</option>
-                                    <option value="TASK_POST">{editorTexts.currentAndDownstream}</option>
+                                    <option value="TASK_ONLY">{t('dolphinScheduler.editor.currentNodeOnly')}</option>
+                                    <option value="TASK_POST">{t('dolphinScheduler.editor.currentAndDownstream')}</option>
                                 </select>
                             </div>
                             
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                        {editorTexts.failureStrategy}
+                                        {t('dolphinScheduler.editor.failureStrategy')}
                                     </label>
                                     <select
                                         value={runConfig.failureStrategy}
                                         onChange={(e) => setRunConfig({ ...runConfig, failureStrategy: e.target.value })}
                                         className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
                                     >
-                                        <option value="CONTINUE">{editorTexts.continue}</option>
-                                        <option value="END">{editorTexts.end}</option>
+                                        <option value="CONTINUE">{t('dolphinScheduler.editor.continue')}</option>
+                                        <option value="END">{t('dolphinScheduler.editor.end')}</option>
                                     </select>
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                        {editorTexts.warningType}
+                                        {t('dolphinScheduler.editor.warningType')}
                                     </label>
                                     <select
                                         value={runConfig.warningType}
                                         onChange={(e) => setRunConfig({ ...runConfig, warningType: e.target.value })}
                                         className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
                                     >
-                                        <option value="NONE">{editorTexts.none}</option>
-                                        <option value="SUCCESS">{dsTexts.states.success}</option>
-                                        <option value="FAILURE">{dsTexts.states.failure}</option>
-                                        <option value="ALL">{editorTexts.all}</option>
+                                        <option value="NONE">{t('dolphinScheduler.editor.none')}</option>
+                                        <option value="SUCCESS">{t('dolphinScheduler.states.success')}</option>
+                                        <option value="FAILURE">{t('dolphinScheduler.states.failure')}</option>
+                                        <option value="ALL">{t('dolphinScheduler.editor.all')}</option>
                                     </select>
                                 </div>
                             </div>
@@ -2323,18 +2320,18 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                        {editorTexts.priority}
+                                        {t('dolphinScheduler.editor.priority')}
                                     </label>
                                     <select
                                         value={runConfig.processInstancePriority}
                                         onChange={(e) => setRunConfig({ ...runConfig, processInstancePriority: e.target.value })}
                                         className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
                                     >
-                                        <option value="HIGHEST">{editorTexts.highest}</option>
-                                        <option value="HIGH">{editorTexts.high}</option>
-                                        <option value="MEDIUM">{editorTexts.medium}</option>
-                                        <option value="LOW">{editorTexts.low}</option>
-                                        <option value="LOWEST">{editorTexts.lowest}</option>
+                                        <option value="HIGHEST">{t('dolphinScheduler.editor.highest')}</option>
+                                        <option value="HIGH">{t('dolphinScheduler.editor.high')}</option>
+                                        <option value="MEDIUM">{t('dolphinScheduler.editor.medium')}</option>
+                                        <option value="LOW">{t('dolphinScheduler.editor.low')}</option>
+                                        <option value="LOWEST">{t('dolphinScheduler.editor.lowest')}</option>
                                     </select>
                                 </div>
                                 <div>
@@ -2359,7 +2356,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                         className="w-4 h-4"
                                     />
                                     <span className="text-sm text-slate-600 dark:text-slate-400">
-                                        {lang === 'zh' ? '空跑模式' : 'Dry Run'}
+                                        {t('dolphinScheduler.dryRun')}
                                     </span>
                                 </label>
                             </div>
@@ -2370,7 +2367,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                 onClick={() => setShowRunModal(false)}
                                 className="px-4 py-2 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
                             >
-                                {lang === 'zh' ? '取消' : 'Cancel'}
+                                {t('dolphinScheduler.cancel')}
                             </button>
                             <button
                                 onClick={handleRunProcess}
@@ -2379,7 +2376,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                             >
                                 {runningProcess && <Loader2 size={16} className="animate-spin" />}
                                 <Play size={16} />
-                                <span>{lang === 'zh' ? '运行' : 'Run'}</span>
+                                <span>{t('dolphinScheduler.run')}</span>
                             </button>
                         </div>
                     </div>
@@ -2389,10 +2386,10 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
             {/* 退出确认弹窗 */}
             <ConfirmModal
                 isOpen={showExitConfirm}
-                title={lang === 'zh' ? '退出确认' : 'Confirm Exit'}
-                message={lang === 'zh' ? '是否保存当前更改后退出？' : 'Save changes before exit?'}
-                confirmText={lang === 'zh' ? '保存并退出' : 'Save & Exit'}
-                cancelText={lang === 'zh' ? '不保存' : 'Discard'}
+                title={t('dolphinScheduler.confirmExit')}
+                message={t('dolphinScheduler.saveChangesBeforeExit')}
+                confirmText={t('dolphinScheduler.saveExit')}
+                cancelText={t('dolphinScheduler.discard')}
                 type="info"
                 onConfirm={async () => {
                     const saved = await handleSaveWorkflow();
@@ -2414,7 +2411,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80">
                             <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center">
                                 <Container size={20} className="mr-2 text-purple-500" />
-                                {lang === 'zh' ? (editingK8sNodeId ? '编辑 K8S 节点' : '新建 K8S 节点') : (editingK8sNodeId ? 'Edit K8S Node' : 'New K8S Node')}
+                                {editingK8sNodeId ? t('dolphinScheduler.editK8sNode') : t('dolphinScheduler.newK8sNode')}
                             </h3>
                             <span className="mt-1 inline-flex items-center text-xs text-purple-600 dark:text-purple-300 font-medium bg-purple-50 dark:bg-purple-900/30 px-2 py-0.5 rounded-full">
                                 {process.name}
@@ -2424,7 +2421,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                             {/* 配置文件路径 */}
                             <div>
                                 <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">
-                                    {lang === 'zh' ? '配置文件路径' : 'Config Path'} <span className="text-red-500">*</span>
+                                    {t('dolphinScheduler.configPath')} <span className="text-red-500">*</span>
                                 </label>
                                 <div className="flex space-x-2">
                                     <input
@@ -2451,11 +2448,11 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                         }}
                                         className="px-3 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 rounded-lg text-sm text-slate-600 dark:text-slate-300 transition-colors whitespace-nowrap"
                                     >
-                                        📂 {lang === 'zh' ? '浏览' : 'Browse'}
+                                        📂 {t('dolphinScheduler.browse')}
                                     </button>
                                 </div>
                                 <p className="mt-1 text-xs text-slate-400">
-                                    {lang === 'zh' ? '节点名称自动生成' : 'Node name auto-generated'}
+                                    {t('dolphinScheduler.nodeNameAutoGenerated')}
                                     {k8sNodeConfigPath && (
                                         <span className="ml-1 text-purple-500 font-mono">
                                             → {k8sNodeConfigPath.replace(/^.*\//, '').replace(/\.conf$/, '').replace(/_/g, '-') || '...'}
@@ -2512,7 +2509,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                                         finally { setK8sResourceLoading(false); }
                                                     }
                                                 }}
-                                                placeholder={lang === 'zh' ? '🔍 输入文件名，点击搜索...' : '🔍 Type filename, click to search...'}
+                                                placeholder={t('dolphinScheduler.TypeFilenameClickToSearch')}
                                                 className="flex-1 px-2 py-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs focus:ring-1 focus:ring-purple-500 outline-none"
                                             />
                                             <button
@@ -2529,7 +2526,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                                 }}
                                                 className="px-2 py-1 bg-purple-500 hover:bg-purple-600 text-white text-xs rounded"
                                             >
-                                                {lang === 'zh' ? '搜' : 'Go'}
+                                                {t('dolphinScheduler.go')}
                                             </button>
                                         </div>
                                         <div className="max-h-48 overflow-y-auto">
@@ -2545,8 +2542,8 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                                 return filtered.length === 0 ? (
                                                     <div className="text-center py-4 text-xs text-slate-400">
                                                         {k8sResourceSearch 
-                                                            ? (lang === 'zh' ? '当前目录无匹配，点击"搜"进行全局搜索' : 'No match, click "Go" for global search')
-                                                            : (lang === 'zh' ? '空目录' : 'Empty directory')
+                                                            ? (t('dolphinScheduler.noMatchClickGoForGlobalSe'))
+                                                            : (t('dolphinScheduler.emptyDirectory'))
                                                         }
                                                     </div>
                                                 ) : (
@@ -2589,7 +2586,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">
-                                        {lang === 'zh' ? '数据源实例' : 'Datasource'}
+                                        {t('dolphinScheduler.datasource')}
                                     </label>
                                     <select
                                         value={k8sNodeDatasource}
@@ -2602,7 +2599,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                 </div>
                                 <div>
                                     <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">
-                                        {lang === 'zh' ? '镜像' : 'Image'}
+                                        {t('dolphinScheduler.image')}
                                     </label>
                                     <select
                                         value={k8sNodeImage}
@@ -2620,7 +2617,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">
-                                        {lang === 'zh' ? '命名空间' : 'Namespace'}
+                                        {t('dolphinScheduler.namespace')}
                                     </label>
                                     <select
                                         value={k8sNodeNamespace}
@@ -2632,7 +2629,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                 </div>
                                 <div>
                                     <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">
-                                        {lang === 'zh' ? '环境名称' : 'Environment'}
+                                        {t('dolphinScheduler.environment')}
                                     </label>
                                     <select
                                         value={k8sNodeEnvCode}
@@ -2648,7 +2645,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                             <div>
                                 <div className="flex items-center mb-2">
                                     <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mr-3">
-                                        {lang === 'zh' ? '超时告警' : 'Timeout'}
+                                        {t('dolphinScheduler.timeout')}
                                     </label>
                                     <button
                                         type="button"
@@ -2661,18 +2658,18 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                 {k8sNodeTimeoutFlag && (
                                     <div className="space-y-2">
                                         <div className="flex items-center space-x-4">
-                                            <span className="text-xs text-slate-500">{lang === 'zh' ? '超时策略' : 'Strategy'}</span>
+                                            <span className="text-xs text-slate-500">{t('dolphinScheduler.strategy')}</span>
                                             <label className="flex items-center space-x-1.5 text-sm text-slate-600 dark:text-slate-300 cursor-pointer">
                                                 <input type="checkbox" checked={k8sNodeTimeoutWarn} onChange={e => setK8sNodeTimeoutWarn(e.target.checked)} className="rounded border-slate-300" />
-                                                <span className="text-xs">{lang === 'zh' ? '超时告警' : 'Warn'}</span>
+                                                <span className="text-xs">{t('dolphinScheduler.warn')}</span>
                                             </label>
                                             <label className="flex items-center space-x-1.5 text-sm text-slate-600 dark:text-slate-300 cursor-pointer">
                                                 <input type="checkbox" checked={k8sNodeTimeoutFail} onChange={e => setK8sNodeTimeoutFail(e.target.checked)} className="rounded border-slate-300" />
-                                                <span className="text-xs">{lang === 'zh' ? '超时失败' : 'Fail'}</span>
+                                                <span className="text-xs">{t('dolphinScheduler.fail')}</span>
                                             </label>
                                         </div>
                                         <div className="flex items-center space-x-3">
-                                            <span className="text-xs text-slate-500">{lang === 'zh' ? '超时时长' : 'Duration'}</span>
+                                            <span className="text-xs text-slate-500">{t('dolphinScheduler.duration')}</span>
                                             <input
                                                 type="number"
                                                 value={k8sNodeTimeout}
@@ -2680,7 +2677,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                                 min={1}
                                                 className="w-20 px-2 py-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded text-sm text-center focus:ring-2 focus:ring-purple-500 outline-none"
                                             />
-                                            <span className="text-xs text-slate-400">{lang === 'zh' ? '分钟' : 'min'}</span>
+                                            <span className="text-xs text-slate-400">{t('dolphinScheduler.min')}</span>
                                         </div>
                                     </div>
                                 )}
@@ -2690,7 +2687,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">
-                                        {lang === 'zh' ? '失败重试次数' : 'Retry Times'}
+                                        {t('dolphinScheduler.retryTimes')}
                                     </label>
                                     <input
                                         type="number"
@@ -2702,7 +2699,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                 </div>
                                 <div>
                                     <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">
-                                        {lang === 'zh' ? '失败重试间隔' : 'Retry Interval'}
+                                        {t('dolphinScheduler.retryInterval')}
                                     </label>
                                     <div className="flex items-center space-x-2">
                                         <input
@@ -2712,7 +2709,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                             min={1}
                                             className="flex-1 px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 outline-none"
                                         />
-                                        <span className="text-xs text-slate-400 whitespace-nowrap">{lang === 'zh' ? '分钟' : 'min'}</span>
+                                        <span className="text-xs text-slate-400 whitespace-nowrap">{t('dolphinScheduler.min')}</span>
                                     </div>
                                 </div>
                             </div>
@@ -2720,7 +2717,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                             {/* 完整容器命令预览 */}
                             <div className="bg-slate-100 dark:bg-slate-900/50 rounded-lg p-3">
                                 <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
-                                    {lang === 'zh' ? '容器执行命令' : 'Container Command'}
+                                    {t('dolphinScheduler.containerCommand')}
                                 </p>
                                 <p className="text-xs font-mono text-slate-600 dark:text-slate-300 break-all">
                                     {`["./bin/seatunnel.sh", "--config", "${k8sNodeConfigPath || '...'}", "--download_url", "http://10.0.1.10:82", "-m", "local"]`}
@@ -2732,14 +2729,14 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                 onClick={handleCancelK8sNode} 
                                 className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg"
                             >
-                                {lang === 'zh' ? '取消' : 'Cancel'}
+                                {t('dolphinScheduler.cancel')}
                             </button>
                             <button 
                                 onClick={handleConfirmK8sNode} 
                                 disabled={!k8sNodeConfigPath.trim()}
                                 className="px-6 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg font-medium disabled:opacity-50 flex items-center"
                             >
-                                {lang === 'zh' ? (editingK8sNodeId ? '保存' : '添加节点') : (editingK8sNodeId ? 'Save' : 'Add Node')}
+                                {editingK8sNodeId ? t('dolphinScheduler.save') : t('dolphinScheduler.addNode')}
                             </button>
                         </div>
                     </div>
@@ -2753,7 +2750,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                             <div>
                                 <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center">
                                     <Settings size={18} className="mr-2 text-blue-500" />
-                                    {lang === 'zh' ? '全局参数' : 'Global Parameters'}
+                                    {t('dolphinScheduler.globalParameters')}
                                 </h3>
                                 <span className="text-xs text-slate-500">{process.name}</span>
                             </div>
@@ -2764,7 +2761,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                         <div className="p-5 space-y-3 max-h-[60vh] overflow-y-auto">
                             {editingGlobalParams.length === 0 && (
                                 <div className="text-center py-6 text-slate-400 text-sm">
-                                    {lang === 'zh' ? '暂无全局参数，点击下方添加' : 'No global params. Click below to add.'}
+                                    {t('dolphinScheduler.noGlobalParamsClickBelowT')}
                                 </div>
                             )}
                             {editingGlobalParams.map((param, idx) => (
@@ -2777,7 +2774,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                             arr[idx] = { ...arr[idx], prop: e.target.value };
                                             setEditingGlobalParams(arr);
                                         }}
-                                        placeholder={lang === 'zh' ? '参数名' : 'Param name'}
+                                        placeholder={t('dolphinScheduler.paramName')}
                                         className="flex-1 min-w-0 px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
                                     />
                                     <select
@@ -2819,7 +2816,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                             arr[idx] = { ...arr[idx], value: e.target.value };
                                             setEditingGlobalParams(arr);
                                         }}
-                                        placeholder={lang === 'zh' ? '默认值' : 'Default value'}
+                                        placeholder={t('dolphinScheduler.defaultValue')}
                                         className="flex-1 min-w-0 px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
                                     />
                                     <button
@@ -2834,12 +2831,12 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                 onClick={() => setEditingGlobalParams([...editingGlobalParams, { prop: '', value: '', direct: 'IN', type: 'VARCHAR' }])}
                                 className="w-full py-2 border border-dashed border-blue-400 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg text-sm transition-colors"
                             >
-                                + {lang === 'zh' ? '添加参数' : 'Add Parameter'}
+                                + {t('dolphinScheduler.addParameter')}
                             </button>
                         </div>
                         <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-3">
                             <button onClick={() => setShowGlobalParamsModal(false)} className="px-4 py-2 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">
-                                {lang === 'zh' ? '取消' : 'Cancel'}
+                                {t('dolphinScheduler.cancel')}
                             </button>
                             <button
                                 onClick={async () => {
@@ -2874,7 +2871,7 @@ export const TaskEditor: React.FC<TaskEditorProps> = ({
                                 }}
                                 className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium"
                             >
-                                {lang === 'zh' ? '保存参数' : 'Save Params'}
+                                {t('dolphinScheduler.saveParams')}
                             </button>
                         </div>
                     </div>

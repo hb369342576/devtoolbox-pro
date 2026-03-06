@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { X, Download, Loader2, CheckCircle, AlertCircle, Folder } from 'lucide-react';
 import { Language } from '../../../types';
 import { open } from '@tauri-apps/plugin-dialog';
+import { useTranslation } from "react-i18next";
 
 interface ExportProgressModalProps {
     isOpen: boolean;
@@ -9,7 +10,6 @@ interface ExportProgressModalProps {
     onConfirm: (filePath: string, onProgress: (message: string) => void) => Promise<void>;
     title: string;
     defaultFileName: string;
-    lang: Language;
 }
 
 export const ExportProgressModal: React.FC<ExportProgressModalProps> = ({
@@ -17,9 +17,8 @@ export const ExportProgressModal: React.FC<ExportProgressModalProps> = ({
     onClose,
     onConfirm,
     title,
-    defaultFileName,
-    lang
-}) => {
+    defaultFileName}) => {
+    const { t, i18n } = useTranslation();
     const [filePath, setFilePath] = useState('');
     const [isExporting, setIsExporting] = useState(false);
     const [progress, setProgress] = useState<string[]>([]);
@@ -52,7 +51,7 @@ export const ExportProgressModal: React.FC<ExportProgressModalProps> = ({
             const selectedPath = await open({
                 directory: true,
                 multiple: false,
-                title: lang === 'zh' ? '选择导出文件夹' : 'Select Export Folder'
+                title: t('dbViewer.selectExportFolder')
             });
 
             if (selectedPath && typeof selectedPath === 'string') {
@@ -67,23 +66,23 @@ export const ExportProgressModal: React.FC<ExportProgressModalProps> = ({
 
     const handleStart = async () => {
         if (!filePath.trim()) {
-            addProgress(lang === 'zh' ? '❌ 请输入文件路径' : '❌ Please enter file path');
+            addProgress(t('dbViewer.PleaseEnterFilePath'));
             return;
         }
 
         setIsExporting(true);
         setStatus('running');
-        addProgress(lang === 'zh' ? '🚀 开始导出...' : '🚀 Starting export...');
+        addProgress(t('dbViewer.StartingExport'));
 
         try {
             await onConfirm(filePath, addProgress);
             setStatus('success');
-            addProgress(lang === 'zh' ? '✅ 导出完成！' : '✅ Export completed!');
+            addProgress(t('dbViewer.ExportCompleted'));
         } catch (error: any) {
             setStatus('error');
             const errorMsg = error?.message || error?.toString() || 'Unknown error';
             console.error('Export error:', error);
-            addProgress(lang === 'zh' ? `❌ 导出失败: ${errorMsg}` : `❌ Export failed: ${errorMsg}`);
+            addProgress(t('dbViewer.ExportFailedErrorMsg'));
         } finally {
             setIsExporting(false);
         }
@@ -120,7 +119,7 @@ export const ExportProgressModal: React.FC<ExportProgressModalProps> = ({
                     {/* File Path Input */}
                     <div>
                         <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2">
-                            {lang === 'zh' ? '导出路径' : 'Export Path'}
+                            {t('dbViewer.exportPath')}
                         </label>
                         <div className="flex space-x-2">
                             <input
@@ -128,27 +127,27 @@ export const ExportProgressModal: React.FC<ExportProgressModalProps> = ({
                                 value={filePath}
                                 onChange={(e) => setFilePath(e.target.value)}
                                 disabled={isExporting}
-                                placeholder={lang === 'zh' ? '输入完整文件路径...' : 'Enter full file path...'}
+                                placeholder={t('dbViewer.enterFullFilePath')}
                                 className="flex-1 px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                             />
                             <button
                                 onClick={handleSelectFolder}
                                 disabled={isExporting}
                                 className="px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-1"
-                                title={lang === 'zh' ? '选择文件夹' : 'Select Folder'}
+                                title={t('dbViewer.selectFolder')}
                             >
                                 <Folder size={16} />
                             </button>
                         </div>
                         <p className="mt-1 text-xs text-slate-500">
-                            {lang === 'zh' ? '例如: D:\\Downloads\\database_export.sql' : 'e.g., D:\\Downloads\\database_export.sql'}
+                            {t('dbViewer.eGDDownloadsDatabaseexpor')}
                         </p>
                     </div>
 
                     {/* Progress Log */}
                     <div>
                         <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2">
-                            {lang === 'zh' ? '进度说明' : 'Progress Log'}
+                            {t('dbViewer.progressLog')}
                         </label>
                         <div
                             ref={progressRef}
@@ -156,7 +155,7 @@ export const ExportProgressModal: React.FC<ExportProgressModalProps> = ({
                         >
                             {progress.length === 0 ? (
                                 <span className="text-slate-400 italic">
-                                    {lang === 'zh' ? '等待开始...' : 'Waiting to start...'}
+                                    {t('dbViewer.waitingToStart')}
                                 </span>
                             ) : (
                                 progress.map((msg, idx) => (
@@ -176,9 +175,9 @@ export const ExportProgressModal: React.FC<ExportProgressModalProps> = ({
                             {status === 'success' && <CheckCircle size={16} />}
                             {status === 'error' && <AlertCircle size={16} />}
                             <span className="text-sm font-medium">
-                                {status === 'running' && (lang === 'zh' ? '导出中...' : 'Exporting...')}
-                                {status === 'success' && (lang === 'zh' ? '导出成功' : 'Export Successful')}
-                                {status === 'error' && (lang === 'zh' ? '导出失败' : 'Export Failed')}
+                                {status === 'running' && (t('dbViewer.exporting'))}
+                                {status === 'success' && (t('dbViewer.exportSuccessful'))}
+                                {status === 'error' && (t('dbViewer.exportFailed'))}
                             </span>
                         </div>
                     )}
@@ -191,7 +190,7 @@ export const ExportProgressModal: React.FC<ExportProgressModalProps> = ({
                         disabled={isExporting}
                         className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        {lang === 'zh' ? '取消' : 'Cancel'}
+                        {t('dbViewer.cancel')}
                     </button>
                     <button
                         onClick={handleStart}
@@ -199,7 +198,7 @@ export const ExportProgressModal: React.FC<ExportProgressModalProps> = ({
                         className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
                     >
                         {isExporting && <Loader2 className="animate-spin" size={16} />}
-                        <span>{lang === 'zh' ? '开始' : 'Start'}</span>
+                        <span>{t('dbViewer.start')}</span>
                     </button>
                 </div>
             </div>

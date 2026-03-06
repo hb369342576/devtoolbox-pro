@@ -4,13 +4,12 @@ import { useToast } from '../../common/Toast';
 import { open } from '@tauri-apps/plugin-dialog';
 import { readDir } from '@tauri-apps/plugin-fs';
 import { readWorkflowFromDir, importWorkflowToDS } from '../utils';
-import { getTexts } from '../../../locales';
 import { Language, ProcessDefinition } from '../types';
 import { DolphinSchedulerApiVersion } from '../../../types';
+import { useTranslation } from "react-i18next";
 
 interface ImportModalProps {
     show: boolean;
-    lang: Language;
     projectCode: string;
     baseUrl: string;
     token: string;
@@ -20,9 +19,8 @@ interface ImportModalProps {
     onSuccess: () => void;
 }
 
-export const ImportModal: React.FC<ImportModalProps> = ({ show, lang, projectCode, baseUrl, token, processes, apiVersion, onClose, onSuccess }) => {
-    const texts = getTexts(lang);
-    const dsTexts = texts.dolphinScheduler;
+export const ImportModal: React.FC<ImportModalProps> = ({show, projectCode, baseUrl, token, processes, apiVersion, onClose, onSuccess }) => {
+    const { t, i18n } = useTranslation();
     const { toast } = useToast();
     const [importing, setImporting] = useState(false);
     const [workflows, setWorkflows] = useState<any[]>([]);
@@ -47,7 +45,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({ show, lang, projectCod
             const dirPath = await open({
                 directory: true,
                 multiple: false,
-                title: dsTexts.selectImportDir
+                title: t('dolphinScheduler.selectImportDir')
             });
             
             if (!dirPath) return;
@@ -83,16 +81,16 @@ export const ImportModal: React.FC<ImportModalProps> = ({ show, lang, projectCod
             }
             
             if (loadedWorkflows.length === 0) {
-                toast({ title: dsTexts.noWorkflowJsonFound, variant: 'destructive' });
+                toast({ title: t('dolphinScheduler.noWorkflowJsonFound'), variant: 'destructive' });
                 return;
             }
             
             setWorkflows(loadedWorkflows);
             setSelectedIndices(loadedWorkflows.map((_, i) => i));
-            toast({ title: dsTexts.foundWorkflows.replace('{total}', String(loadedWorkflows.length)), variant: 'success' });
+            toast({ title: t('dolphinScheduler.foundWorkflows').replace('{total}', String(loadedWorkflows.length)), variant: 'success' });
         } catch (err: any) {
             console.error('[Import] Select dir error:', err);
-            toast({ title: dsTexts.readDirFailed, description: err.message, variant: 'destructive' });
+            toast({ title: t('dolphinScheduler.readDirFailed'), description: err.message, variant: 'destructive' });
         }
     };
     
@@ -110,7 +108,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({ show, lang, projectCod
     
     const handleImport = async () => {
         if (workflows.length === 0 || selectedIndices.length === 0) {
-            toast({ title: dsTexts.pleaseSelectWorkflows, variant: 'destructive' });
+            toast({ title: t('dolphinScheduler.pleaseSelectWorkflows'), variant: 'destructive' });
             return;
         }
         
@@ -134,7 +132,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({ show, lang, projectCod
                 }
                 
                 toast({ 
-                    title: dsTexts.importingWorkflow.replace('{name}', workflow.name), 
+                    title: t('dolphinScheduler.importingWorkflow').replace('{name}', workflow.name), 
                     variant: 'default' 
                 });
                 
@@ -154,7 +152,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({ show, lang, projectCod
                         failCount++;
                         console.error(`[Import] Failed: ${workflow.name}:`, result.msg);
                         toast({
-                            title: dsTexts.importFailedWithName.replace('{name}', workflow.name),
+                            title: t('dolphinScheduler.importFailedWithName').replace('{name}', workflow.name),
                             description: result.msg,
                             variant: 'destructive'
                         });
@@ -163,14 +161,14 @@ export const ImportModal: React.FC<ImportModalProps> = ({ show, lang, projectCod
                     failCount++;
                     console.error(`[Import] Error for ${workflow.name}:`, err);
                     toast({
-                        title: dsTexts.importErrorWithName.replace('{name}', workflow.name),
+                        title: t('dolphinScheduler.importErrorWithName').replace('{name}', workflow.name),
                         description: err.message,
                         variant: 'destructive'
                     });
                 }
             }
             
-            const summary = dsTexts.importDone
+            const summary = t('dolphinScheduler.importDone')
                 .replace('{success}', String(successCount))
                 .replace('{skip}', String(skipCount))
                 .replace('{fail}', String(failCount));
@@ -186,7 +184,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({ show, lang, projectCod
             onClose();
         } catch (err: any) {
             console.error('[Import] Error:', err);
-            toast({ title: texts.common.failed, description: err.message, variant: 'destructive' });
+            toast({ title: t('common.failed'), description: err.message, variant: 'destructive' });
         } finally {
             setImporting(false);
         }
@@ -198,7 +196,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({ show, lang, projectCod
                 <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800/80">
                     <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center">
                         <Upload size={20} className="mr-2 text-purple-500" />
-                        {dsTexts.importWorkflow}
+                        {t('dolphinScheduler.importWorkflow')}
                     </h3>
                     <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1"><XCircle size={20} /></button>
                 </div>
@@ -207,10 +205,10 @@ export const ImportModal: React.FC<ImportModalProps> = ({ show, lang, projectCod
                     <div className="p-6">
                         <div className="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl p-8 text-center hover:border-purple-400 transition-colors">
                             <Folder size={40} className="mx-auto text-slate-400 mb-4" />
-                            <p className="text-slate-600 dark:text-slate-300 mb-2">{dsTexts.selectImportFolder}</p>
-                            <p className="text-xs text-slate-400 mb-4">{dsTexts.supportSingleOrBatch}</p>
+                            <p className="text-slate-600 dark:text-slate-300 mb-2">{t('dolphinScheduler.selectImportFolder')}</p>
+                            <p className="text-xs text-slate-400 mb-4">{t('dolphinScheduler.supportSingleOrBatch')}</p>
                             <button onClick={handleSelectDir} className="px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg">
-                                {dsTexts.selectFolder}
+                                {t('dolphinScheduler.selectFolder')}
                             </button>
                         </div>
                     </div>
@@ -219,22 +217,22 @@ export const ImportModal: React.FC<ImportModalProps> = ({ show, lang, projectCod
                         <div className="p-4 border-b border-slate-200 dark:border-slate-700 space-y-3">
                             <div className="flex items-center justify-between text-sm">
                                 <span className="text-slate-600 dark:text-slate-300 truncate" title={importDir}>{importDir.split('/').pop() || importDir}</span>
-                                <button onClick={() => { setWorkflows([]); setImportDir(''); }} className="text-xs text-red-500 hover:text-red-600">{dsTexts.reSelect}</button>
+                                <button onClick={() => { setWorkflows([]); setImportDir(''); }} className="text-xs text-red-500 hover:text-red-600">{t('dolphinScheduler.reSelect')}</button>
                             </div>
                             <div className="relative">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                                 <input 
                                     type="text" 
-                                    placeholder={dsTexts.searchWorkflows} 
+                                    placeholder={t('dolphinScheduler.searchWorkflows')} 
                                     value={searchTerm} 
                                     onChange={e => setSearchTerm(e.target.value)} 
                                     className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 outline-none" 
                                 />
                             </div>
                             <div className="flex items-center justify-between">
-                                <span className="text-xs text-slate-500">{dsTexts.foundWorkflows.replace('{total}', String(workflows.length))}</span>
+                                <span className="text-xs text-slate-500">{t('dolphinScheduler.foundWorkflows').replace('{total}', String(workflows.length))}</span>
                                 <button onClick={handleSelectAll} className="text-xs text-purple-500 hover:text-purple-600">
-                                    {selectedIndices.length === filteredWorkflows.length && filteredWorkflows.length > 0 ? dsTexts.deselectAll : dsTexts.selectAll}
+                                    {selectedIndices.length === filteredWorkflows.length && filteredWorkflows.length > 0 ? t('dolphinScheduler.deselectAll') : t('dolphinScheduler.selectAll')}
                                 </button>
                             </div>
                         </div>
@@ -246,19 +244,19 @@ export const ImportModal: React.FC<ImportModalProps> = ({ show, lang, projectCod
                                         <span className="text-slate-700 dark:text-slate-300 text-sm">{w.name || `Workflow ${w._index + 1}`}</span>
                                     </label>
                                 ))}
-                                {filteredWorkflows.length === 0 && <p className="text-slate-400 text-center py-4 text-sm">{dsTexts.noMatchingWorkflows}</p>}
+                                {filteredWorkflows.length === 0 && <p className="text-slate-400 text-center py-4 text-sm">{t('dolphinScheduler.noMatchingWorkflows')}</p>}
                             </div>
                         </div>
                     </>
                 )}
                 
                 <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 flex justify-between items-center">
-                    <span className="text-sm text-slate-500">{workflows.length > 0 ? dsTexts.selectedCount.replace('{count}', String(selectedIndices.length)) : ''}</span>
+                    <span className="text-sm text-slate-500">{workflows.length > 0 ? t('dolphinScheduler.selectedCount').replace('{count}', String(selectedIndices.length)) : ''}</span>
                     <div className="flex space-x-3">
-                        <button onClick={onClose} className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg">{texts.common.cancel}</button>
+                        <button onClick={onClose} className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg">{t('common.cancel')}</button>
                         <button onClick={handleImport} disabled={importing || workflows.length === 0 || selectedIndices.length === 0} className="px-6 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg font-medium disabled:opacity-50 flex items-center">
                             {importing && <Loader2 size={16} className="animate-spin mr-2" />}
-                            {texts.common.import}
+                            {t('common.import')}
                         </button>
                     </div>
                 </div>

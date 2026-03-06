@@ -1,0 +1,23 @@
+{
+  "settings": "系统设置",
+  "manageApplicationAppearan": "管理应用的外观和语言偏好",
+  "appearance": "外观主题",
+  "lightMode": "浅色模式",
+  "bestForBrightEnvironments": "适合明亮环境，清晰易读",
+  "darkMode": "深色模式",
+  "easyOnTheEyesBestForNight": "保护视力，适合夜间使用",
+  "language": "语言设置",
+  "chineseSimplified": "简体中文",
+  "chineseSimplifiedSub": "Chinese (Simplified)",
+  "english": "English",
+  "englishSub": "United States",
+  "systemMonitor": "系统监控",
+  "enableSystemMonitor": "启用系统监控",
+  "showCPUMemoryUsageDisable": "显示 CPU、内存使用情况。关闭可减少资源占用",
+  "aboutUpdate": "关于与更新",
+  "checkUpdates": "检查更新",
+  "youAreOnTheLatestVersion": "已是最新版本",
+  "failedToCheckForUpdatesPl": "检查更新失败，请稍后重试",
+  "newVersionAvailable": "发现新版本",
+  "updateNow": "立即更新"
+}

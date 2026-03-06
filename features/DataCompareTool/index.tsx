@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { GitCompare, Plus, Search } from 'lucide-react';
 import { Language, DbConnection, CompareKey } from '../../types';
-import { getTexts } from '../../locales';
+import { useTranslation } from "react-i18next";
 import { SideConfig } from './types';
 import { useConfigManager } from './hooks/useConfigManager';
 import { useTableSelection } from './hooks/useTableSelection';
@@ -9,14 +9,13 @@ import { useComparison } from './hooks/useComparisonLogic';
 import { ConfigList } from './components/ConfigList';
 import { ConfigEditor } from './components/ConfigEditor';
 import { ComparisonResult } from './components/ComparisonResult';
-import { ViewModeToggle } from '../common/ViewModeToggle';
 import { useViewMode } from '../../store/globalStore';
 import { ConfirmModal } from '../common/ConfirmModal';
 
 export const DataCompareTool: React.FC<{
-   lang: Language;
    connections?: DbConnection[];
-}> = ({ lang, connections = [] }) => {
+}> = ({ connections = [] }) => {
+   const { t } = useTranslation();
    // View state - DataCompareTool uses special 3-mode view (list|config|result)
    const [viewMode, setViewMode] = useState<'list' | 'config' | 'result'>('list');
 
@@ -92,7 +91,7 @@ export const DataCompareTool: React.FC<{
 
    const handleSaveConfig = () => {
       if (!configName.trim()) {
-         showAlert(lang === 'zh' ? '错误' : 'Error', lang === 'zh' ? '请输入配置名称' : 'Please enter config name');
+         showAlert(t('common.error'), t('common.pleaseEnterConfigName'));
          return;
       }
       saveConfig({
@@ -107,7 +106,7 @@ export const DataCompareTool: React.FC<{
 
    const handleCompare = async () => {
       if (!sourceConfig.table || !targetConfig.table || primaryKeys.length === 0 || !primaryKeys[0].field) {
-         showAlert(lang === 'zh' ? '配置不完整' : 'Incomplete Config', lang === 'zh' ? '请选择源端表、目标端表并设置主键' : 'Please select source table, target table and set primary keys');
+         showAlert(t('common.incompleteConfig'), t('common.pleaseSelectSourceTableTarg'));
          return;
       }
       await executeComparison(sourceConfig.table, targetConfig.table, primaryKeys);
@@ -122,14 +121,14 @@ export const DataCompareTool: React.FC<{
                isOpen={alertState.isOpen}
                title={alertState.title}
                message={alertState.message}
-               confirmText={lang === 'zh' ? '确定' : 'OK'}
+               confirmText={t('common.ok')}
                cancelText=""
                onConfirm={() => setAlertState({ isOpen: false, title: '', message: '' })}
                onCancel={() => setAlertState({ isOpen: false, title: '', message: '' })}
                type="danger"
             />
             <ConfigList
-               lang={lang}
+
                configs={savedConfigs}
                onNew={handleNewConfig}
                onEdit={handleEditConfig}
@@ -148,14 +147,14 @@ export const DataCompareTool: React.FC<{
                isOpen={alertState.isOpen}
                title={alertState.title}
                message={alertState.message}
-               confirmText={lang === 'zh' ? '确定' : 'OK'}
+               confirmText={t('common.ok')}
                cancelText=""
                onConfirm={() => setAlertState({ isOpen: false, title: '', message: '' })}
                onCancel={() => setAlertState({ isOpen: false, title: '', message: '' })}
                type="danger"
             />
             <ConfigEditor
-               lang={lang}
+
                connections={connections}
                configName={configName}
                setConfigName={setConfigName}
@@ -187,7 +186,7 @@ export const DataCompareTool: React.FC<{
 
    return (
       <ComparisonResult
-         lang={lang}
+
          results={results}
          stats={stats}
          primaryKeys={primaryKeys}

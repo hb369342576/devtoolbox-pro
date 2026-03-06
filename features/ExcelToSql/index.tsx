@@ -4,12 +4,13 @@ import {
   Play, Plus, Trash2, ChevronLeft, Save, Table
 } from 'lucide-react';
 import { Language, ExcelTemplate } from '../../types';
-import { ViewModeToggle } from '../common/ViewModeToggle';
 import { useViewMode } from '../../store/globalStore';
 import { ConfirmModal } from '../common/ConfirmModal';
 import { Tooltip } from '../common/Tooltip';
+import { ViewModeToggle } from '../common/ViewModeToggle';
 import * as XLSX from 'xlsx';
 import { useToast, ToastProvider } from '../common/Toast';
+import { useTranslation } from "react-i18next";
 
 const DEFAULT_TEMPLATES: ExcelTemplate[] = [
   {
@@ -33,15 +34,16 @@ const DEFAULT_TEMPLATES: ExcelTemplate[] = [
   }
 ];
 
-export const ExcelToSql: React.FC<{ lang: Language }> = ({ lang }) => {
+export const ExcelToSql: React.FC = () => {
   return (
     <ToastProvider>
-      <ExcelToSqlContent lang={lang} />
+      <ExcelToSqlContent />
     </ToastProvider>
   );
 };
 
-const ExcelToSqlContent: React.FC<{ lang: Language }> = ({ lang }) => {
+const ExcelToSqlContent: React.FC = () => {
+  const { t } = useTranslation();
   const { toast } = useToast();
 
   // State for View Switching - use global viewMode
@@ -215,7 +217,7 @@ const ExcelToSqlContent: React.FC<{ lang: Language }> = ({ lang }) => {
 
     const newTpl: ExcelTemplate = {
       id: Date.now().toString(),
-      name: lang === 'zh' ? '新解析模板' : 'New Template',
+      name: t('common.newSyncJob'),
       description: '',
       dataStartRow: 2,
       nameCol: 'A',
@@ -353,13 +355,13 @@ const ExcelToSqlContent: React.FC<{ lang: Language }> = ({ lang }) => {
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center">
             <FileSpreadsheet className="mr-3 text-green-600" />
-            {lang === 'zh' ? 'Excel 建表器 - 模板选择' : 'Excel Builder - Select Template'}
+            {t('common.excelToSqlTemplate')}
           </h2>
           <div className="flex items-center space-x-3">
             <ViewModeToggle />
             <button onClick={handleAddNew} className="min-w-[140px] px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium flex items-center justify-center shadow-lg transition-colors">
               <Plus size={18} className="mr-2" />
-              {lang === 'zh' ? '新建模板' : 'New Template'}
+              {t('common.newTemplate')}
             </button>
           </div>
         </div>
@@ -389,7 +391,7 @@ const ExcelToSqlContent: React.FC<{ lang: Language }> = ({ lang }) => {
                         </div>
                       </div>
                       <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-1 truncate group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors">{tpl.name}</h3>
-                      <p className="text-sm text-slate-500 dark:text-slate-400 mb-2 line-clamp-2 h-10">{tpl.description || (lang === 'zh' ? '无描述' : 'No description')}</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 mb-2 line-clamp-2 h-10">{tpl.description || t('common.noDescription')}</p>
 
                       <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-mono text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-700/50 p-1.5 rounded">
                         <span title="Start Row">Row:{tpl.dataStartRow}</span>
@@ -415,16 +417,16 @@ const ExcelToSqlContent: React.FC<{ lang: Language }> = ({ lang }) => {
                 <div className="p-4 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 group-hover:scale-110 transition-transform duration-300 mb-4">
                   <Plus size={32} />
                 </div>
-                <span className="font-bold text-lg text-slate-600 dark:text-slate-300 group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors">{lang === 'zh' ? '添加新解析规则' : 'Add New Rule'}</span>
+                <span className="font-bold text-lg text-slate-600 dark:text-slate-300 group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors">{t('common.addNewRule')}</span>
               </button>
             </div>
           ) : (
             <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
               <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                <div className="col-span-4">{lang === 'zh' ? '模板名称' : 'Template Name'}</div>
-                <div className="col-span-4">{lang === 'zh' ? '描述' : 'Description'}</div>
-                <div className="col-span-3">{lang === 'zh' ? '规则(行|列)' : 'Rules (Row | Cols)'}</div>
-                <div className="col-span-1 text-right">{lang === 'zh' ? '操作' : 'Actions'}</div>
+                <div className="col-span-4">{t('common.templateName')}</div>
+                <div className="col-span-4">{t('common.description')}</div>
+                <div className="col-span-3">{t('common.rulesRowCols')}</div>
+                <div className="col-span-1 text-right">{t('common.actions')}</div>
               </div>
               <div className="divide-y divide-slate-100 dark:divide-slate-700">
                 {templates.map(tpl => (
@@ -453,7 +455,7 @@ const ExcelToSqlContent: React.FC<{ lang: Language }> = ({ lang }) => {
                   </div>
                 ))}
                 {templates.length === 0 && (
-                  <div className="px-6 py-8 text-center text-slate-400 text-sm italic">{lang === 'zh' ? '暂无模板' : 'No templates found'}</div>
+                  <div className="px-6 py-8 text-center text-slate-400 text-sm italic">{t('common.noTemplatesFound')}</div>
                 )}
               </div>
             </div>
@@ -463,10 +465,10 @@ const ExcelToSqlContent: React.FC<{ lang: Language }> = ({ lang }) => {
         {/* Modal Removed - but we need ConfirmModal here now */}
         <ConfirmModal
           isOpen={!!deleteId}
-          title={lang === 'zh' ? '删除模板' : 'Delete Template'}
-          message={lang === 'zh' ? '您确定要删除此解析模板吗？此操作无法撤销。' : 'Are you sure you want to delete this parsing template? This action cannot be undone.'}
-          confirmText={lang === 'zh' ? '删除' : 'Delete'}
-          cancelText={lang === 'zh' ? '取消' : 'Cancel'}
+          title={t('common.deleteTemplate')}
+          message={t('common.areYouSureYouWantToDeleteTemplate')}
+          confirmText={t('common.delete')}
+          cancelText={t('common.cancel')}
           onConfirm={confirmDelete}
           onCancel={() => setDeleteId(null)}
           type="danger"
@@ -488,7 +490,7 @@ const ExcelToSqlContent: React.FC<{ lang: Language }> = ({ lang }) => {
           <div className="flex-1 flex flex-col md:flex-row gap-4 items-center">
             {/* Name Input */}
             <div className="flex-1 w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1 focus-within:ring-2 focus-within:ring-green-500/20 transition-all">
-              <label className="text-[10px] uppercase font-bold text-slate-400 block">{lang === 'zh' ? '模板名称' : 'Template Name'}</label>
+              <label className="text-[10px] uppercase font-bold text-slate-400 block">{t('common.templateName')}</label>
               <input
                 type="text"
                 value={activeTemplate.name}
@@ -500,7 +502,7 @@ const ExcelToSqlContent: React.FC<{ lang: Language }> = ({ lang }) => {
 
             {/* Description Input */}
             <div className="flex-[2] w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1 focus-within:ring-2 focus-within:ring-green-500/20 transition-all">
-              <label className="text-[10px] uppercase font-bold text-slate-400 block">{lang === 'zh' ? '描述' : 'Description'}</label>
+              <label className="text-[10px] uppercase font-bold text-slate-400 block">{t('common.description')}</label>
               <input
                 type="text"
                 value={activeTemplate.description || ''}
@@ -517,7 +519,7 @@ const ExcelToSqlContent: React.FC<{ lang: Language }> = ({ lang }) => {
         {/* Left: Excel File & Sheets */}
         <div className="w-80 flex flex-col bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden shrink-0">
           <div className="p-4 border-b border-slate-200 dark:border-slate-700 font-bold text-slate-700 dark:text-slate-200">
-            {lang === 'zh' ? 'Excel 文件' : 'Excel Source'}
+            {t('common.excelSource')}
           </div>
 
           <div className="p-4 flex-1 flex flex-col min-h-0 overflow-hidden">
@@ -576,14 +578,14 @@ const ExcelToSqlContent: React.FC<{ lang: Language }> = ({ lang }) => {
                     {file.name}
                   </p>
                   <span className="mt-2 text-[10px] font-bold text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/40 px-2 py-0.5 rounded-full uppercase tracking-wider">
-                    {lang === 'zh' ? '已选择' : 'Selected'}
+                    {t('common.selected')}
                   </span>
                 </div>
               ) : (
                 <div className="flex flex-col items-center pointer-events-none">
                   <Upload className={`w-8 h-8 mb-2 transition-colors ${isDragging ? 'text-green-500 scale-110' : 'text-slate-400 group-hover:text-slate-500'}`} />
                   <p className="text-xs text-slate-500 dark:text-slate-400 text-center break-all">
-                    {lang === 'zh' ? '点击或拖拽上传 Excel' : 'Click or Drag Excel here'}
+                    {t('common.clickOrDragExcelHere')}
                   </p>
                 </div>
               )}
@@ -592,17 +594,17 @@ const ExcelToSqlContent: React.FC<{ lang: Language }> = ({ lang }) => {
             <div className="flex-1 overflow-hidden flex flex-col border border-slate-200 dark:border-slate-700 rounded-lg">
               <div className="bg-slate-50 dark:bg-slate-800/80 px-3 py-2 border-b border-slate-200 dark:border-slate-700 flex items-center shrink-0">
                 <Layers size={14} className="mr-2 text-slate-500" />
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">{lang === 'zh' ? '工作表' : 'Worksheets'}</span>
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('common.worksheets')}</span>
               </div>
               <div className="flex-1 overflow-y-auto p-2 bg-white dark:bg-slate-900/50 space-y-1">
                 {isProcessing && sheets.length === 0 ? (
                   <div className="flex items-center justify-center py-8 text-slate-400">
                     <RefreshCw className="animate-spin mr-2" size={16} />
-                    <span className="text-sm">{lang === 'zh' ? '解析中...' : 'Parsing...'}</span>
+                    <span className="text-sm">{t('common.parsing')}</span>
                   </div>
                 ) : sheets.length === 0 ? (
                   <div className="py-8 text-center text-xs text-slate-400 italic">
-                    {lang === 'zh' ? '暂无工作表' : 'No sheets'}
+                    {t('common.noSheets')}
                   </div>
                 ) : (
                   sheets.map(sheet => (
@@ -632,12 +634,12 @@ const ExcelToSqlContent: React.FC<{ lang: Language }> = ({ lang }) => {
           {/* Right Top: Configuration */}
           <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 shrink-0">
             <div className="p-4 border-b border-slate-200 dark:border-slate-700 font-bold text-slate-700 dark:text-slate-200">
-              {lang === 'zh' ? '解析规则配置' : 'Parsing Configuration'}
+              {t('common.parsingConfiguration')}
             </div>
             <div className="p-6">
               <div className="grid grid-cols-5 gap-4 mb-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{lang === 'zh' ? '数据起始行' : 'Start Row'}</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t('common.startRow')}</label>
                   <input
                     type="number"
                     min="1"
@@ -647,7 +649,7 @@ const ExcelToSqlContent: React.FC<{ lang: Language }> = ({ lang }) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{lang === 'zh' ? '字段名列' : 'Name Col'}</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t('common.nameCol')}</label>
                   <input
                     type="text"
                     value={activeTemplate.nameCol}
@@ -656,7 +658,7 @@ const ExcelToSqlContent: React.FC<{ lang: Language }> = ({ lang }) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{lang === 'zh' ? '类型列' : 'Type Col'}</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t('common.typeCol')}</label>
                   <input
                     type="text"
                     value={activeTemplate.typeCol}
@@ -665,7 +667,7 @@ const ExcelToSqlContent: React.FC<{ lang: Language }> = ({ lang }) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{lang === 'zh' ? '注释列' : 'Comment Col'}</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t('common.commentCol')}</label>
                   <input
                     type="text"
                     value={activeTemplate.commentCol}
@@ -674,7 +676,7 @@ const ExcelToSqlContent: React.FC<{ lang: Language }> = ({ lang }) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{lang === 'zh' ? '主键标识列' : 'PK Col'}</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t('common.pkCol')}</label>
                   <input
                     type="text"
                     value={activeTemplate.pkCol || ''}
@@ -686,7 +688,7 @@ const ExcelToSqlContent: React.FC<{ lang: Language }> = ({ lang }) => {
               </div>
 
               <div className="mb-4">
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{lang === 'zh' ? '表名 (无需后缀)' : 'Table Name'}</label>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t('common.tableNameNoSuffix')}</label>
                 <input
                   type="text"
                   value={tableName}
@@ -698,7 +700,7 @@ const ExcelToSqlContent: React.FC<{ lang: Language }> = ({ lang }) => {
 
               <div className="flex items-end justify-between">
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-2">{lang === 'zh' ? '目标数据库' : 'Target Database'}</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-2">{t('common.targetDatabase')}</label>
                   <div className="flex space-x-2">
                     <button onClick={() => setDbType('mysql')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${dbType === 'mysql' ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>MySQL</button>
                     <button onClick={() => setDbType('doris')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${dbType === 'doris' ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>Doris</button>
@@ -711,7 +713,7 @@ const ExcelToSqlContent: React.FC<{ lang: Language }> = ({ lang }) => {
                   className={`px-6 py-2.5 rounded-lg font-bold text-white flex items-center shadow-lg transition-all ${!selectedSheet || isProcessing ? 'bg-slate-300 dark:bg-slate-700 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}
                 >
                   {isProcessing ? <RefreshCw className="animate-spin mr-2" size={16} /> : <Play className="mr-2" size={16} />}
-                  {lang === 'zh' ? '生成 SQL' : 'Generate SQL'}
+                  {t('common.generateSql')}
                 </button>
               </div>
             </div>
@@ -720,30 +722,30 @@ const ExcelToSqlContent: React.FC<{ lang: Language }> = ({ lang }) => {
           {/* Right Bottom: SQL Preview */}
           <div className="flex-1 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col min-h-0 overflow-hidden">
             <div className="p-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 flex justify-between items-center shrink-0">
-              <span className="font-semibold text-slate-700 dark:text-slate-200">{lang === 'zh' ? 'SQL 预览' : 'SQL Preview'}</span>
+              <span className="font-semibold text-slate-700 dark:text-slate-200">{t('common.sqlPreview')}</span>
               <button onClick={() => {
                 navigator.clipboard.writeText(generatedSql);
                 toast({
-                  title: lang === 'zh' ? '复制成功' : 'Copied',
-                  description: lang === 'zh' ? 'SQL 已复制到剪贴板' : 'SQL copied to clipboard',
+                  title: t('common.copySuccess'),
+                  description: t('common.configurationCopiedToClip'),
                   variant: 'success'
                 });
               }} disabled={!generatedSql} className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 font-medium disabled:opacity-50 flex items-center">
-                <Save size={14} className="mr-1" /> {lang === 'zh' ? '复制' : 'Copy'}
+                <Save size={14} className="mr-1" /> {t('common.copy')}
               </button>
             </div>
             <div className="flex-1 p-4 overflow-auto bg-[#1e1e1e]">
-              <pre className="font-mono text-sm text-green-400 whitespace-pre-wrap leading-relaxed">{generatedSql || (lang === 'zh' ? '-- 请选择工作表并点击生成...' : '// Select sheet and click Generate...')}</pre>
+              <pre className="font-mono text-sm text-green-400 whitespace-pre-wrap leading-relaxed">{generatedSql || t('common.selectSheetPlaceholder')}</pre>
             </div>
           </div>
         </div>
       </div>
       <ConfirmModal
         isOpen={!!deleteId}
-        title={lang === 'zh' ? '删除模板' : 'Delete Template'}
-        message={lang === 'zh' ? '您确定要删除此解析模板吗？此操作无法撤销。' : 'Are you sure you want to delete this parsing template? This action cannot be undone.'}
-        confirmText={lang === 'zh' ? '删除' : 'Delete'}
-        cancelText={lang === 'zh' ? '取消' : 'Cancel'}
+        title={t('common.deleteTemplate')}
+        message={t('common.areYouSureYouWantToDeleteTemplate')}
+        confirmText={t('common.delete')}
+        cancelText={t('common.cancel')}
         onConfirm={confirmDelete}
         onCancel={() => setDeleteId(null)}
         type="danger"

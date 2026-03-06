@@ -1,19 +1,19 @@
 import React, { useState } from 'react';
 import { User, Lock, ArrowRight } from 'lucide-react';
-import { Language } from '../../types';
 import { useLoginLogic } from './hooks/useLoginLogic';
 import { Register } from './Register';
+import { useTranslation } from 'react-i18next';
 
 interface LoginProps {
     onLogin: (username: string) => void;
-    lang: Language;
 }
 
 /**
  * Login 功能主组件
  * 支持登录和注册模式切换
  */
-export const Login: React.FC<LoginProps> = ({ onLogin, lang }) => {
+export const Login: React.FC<LoginProps> = ({ onLogin }) => {
+    const { t } = useTranslation();
     const { formData, state, handleSubmit, updateFormData } = useLoginLogic(onLogin);
     const [view, setView] = useState<'login' | 'register'>('login');
 
@@ -32,7 +32,6 @@ export const Login: React.FC<LoginProps> = ({ onLogin, lang }) => {
                         onLogin(username);
                     }}
                     onBack={() => setView('login')}
-                    lang={lang}
                 />
             </div>
         );
@@ -61,7 +60,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, lang }) => {
                             DevToolbox Pro
                         </h1>
                         <p className="text-slate-500 dark:text-slate-400 text-sm">
-                            {lang === 'zh' ? '开发者全能工具箱' : 'All-in-one Developer Utilities'}
+                            {t('common.allInOneDeveloperUtilitie')}
                         </p>
                     </div>
 
@@ -70,7 +69,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, lang }) => {
                         {/* Username */}
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block">
-                                {lang === 'zh' ? '用户名' : 'Username'}
+                                {t('common.username')}
                             </label>
                             <div className="relative">
                                 <User
@@ -90,7 +89,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, lang }) => {
                         {/* Password */}
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block">
-                                {lang === 'zh' ? '密码' : 'Password'}
+                                {t('common.password')}
                             </label>
                             <div className="relative">
                                 <Lock
@@ -110,9 +109,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, lang }) => {
                         {/* Error Message */}
                         {state.error && (
                             <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm rounded-lg text-center animate-in fade-in slide-in-from-top-2">
-                                {lang === 'zh' && state.error.includes('password')
-                                    ? '密码错误 (默认: 123456)'
-                                    : state.error}
+                                {state.error}
                             </div>
                         )}
 
@@ -126,7 +123,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, lang }) => {
                                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                             ) : (
                                 <>
-                                    <span>{lang === 'zh' ? '登录' : 'Sign In'}</span>
+                                    <span>{t('common.signIn')}</span>
                                     <ArrowRight size={18} />
                                 </>
                             )}
@@ -138,7 +135,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, lang }) => {
                             onClick={() => setView('register')}
                             className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 hover:underline"
                         >
-                            {lang === 'zh' ? '没有账号? 立即注册' : "Don't have an account? Sign Up"}
+                            {t('common.donTHaveAnAccountSignUp')}
                         </button>
                     </div>
                 </div>

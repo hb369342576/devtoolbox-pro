@@ -8,7 +8,6 @@ import { TaskManager } from './TaskManager';
 import { useGlobalStore } from '../../store/globalStore';
 
 interface DSManagerProps {
-    lang: Language;
     onNavigate: (id: string) => void;
 }
 
@@ -109,7 +108,6 @@ export const DSManager: React.FC<DSManagerProps> = ({
         case 'connections':
             return (
                 <ConnectionManager
-                    lang={lang}
                     connections={dsConnections}
                     onAdd={addDsConnection}
                     onUpdate={updateDsConnection}
@@ -121,7 +119,6 @@ export const DSManager: React.FC<DSManagerProps> = ({
         case 'projects':
             return (
                 <ProjectListView
-                    lang={lang}
                     connection={viewState.connection}
                     onBack={handleBackToConnections}
                     onSelectProject={handleSelectProject}
@@ -133,7 +130,6 @@ export const DSManager: React.FC<DSManagerProps> = ({
         case 'resources':
             return (
                 <ResourceCenter
-                    lang={lang}
                     connection={viewState.connection}
                     onBack={handleBackFromResources}
                 />
@@ -142,7 +138,6 @@ export const DSManager: React.FC<DSManagerProps> = ({
         case 'datasources':
             return (
                 <DataSourceCenter
-                    lang={lang}
                     connection={viewState.connection}
                     onBack={handleBackFromDataSources}
                 />
@@ -153,7 +148,6 @@ export const DSManager: React.FC<DSManagerProps> = ({
             return (
                 <div className="h-full flex flex-col">
                     <TaskManager
-                        lang={lang}
                         currentProject={projectConfig}
                         configs={[projectConfig]}
                         onSelectProject={() => {}}

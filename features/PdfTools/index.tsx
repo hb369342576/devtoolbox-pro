@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FileText, Scissors, Minimize2, Layers, Trash2, Download, Eye, X, Edit, Save, FolderOpen } from 'lucide-react';
-import { Language, PdfFile } from '../../types';
+import { useTranslation } from 'react-i18next';
+import { PdfFile } from '../../types';
 
 interface PdfFileWithBlob extends PdfFile {
   file: File;
@@ -17,7 +18,6 @@ import { PDFDocument } from 'pdf-lib';
 import JSZip from 'jszip';
 import { useToast } from '../common/Toast';
 import { Tooltip } from '../common/Tooltip';
-import { ViewModeToggle } from '../common/ViewModeToggle';
 
 // Safe invoke wrapper
 // Safe invoke wrapper
@@ -30,7 +30,8 @@ const invoke = (cmd: string, args: any) => {
   return Promise.reject("Tauri API not found");
 };
 
-export const PdfTools: React.FC<{ lang: Language }> = ({ lang }) => {
+export const PdfTools: React.FC = () => {
+    const { t } = useTranslation();
   const isTauri = !!(window as any).__TAURI_INTERNALS__ || !!(window as any).__TAURI__;
   const { toast } = useToast();
   const [activeMode, setActiveMode] = useState<'merge' | 'split' | 'compress' | 'view'>('merge');
@@ -153,7 +154,7 @@ export const PdfTools: React.FC<{ lang: Language }> = ({ lang }) => {
 
         await invoke('save_file', { path: fullPath, data });
         toast({
-          title: lang === 'zh' ? '已保存' : 'Saved',
+          title: t('pdf.saved'),
           description: fullPath,
           variant: 'success'
         });
@@ -216,8 +217,8 @@ export const PdfTools: React.FC<{ lang: Language }> = ({ lang }) => {
     if (files.length === 0) return;
     setIsSaving(true);
     toast({
-      title: lang === 'zh' ? '处理中...' : 'Processing...',
-      description: lang === 'zh' ? '正在处理您的 PDF 文件' : 'Processing your PDF files',
+      title: t('pdf.processing'),
+      description: t('pdf.processingDesc'),
       variant: 'default'
     });
 
@@ -236,7 +237,7 @@ export const PdfTools: React.FC<{ lang: Language }> = ({ lang }) => {
         }
         const pdfBytes = await mergedPdf.save();
         downloadBlob(new Blob([pdfBytes as any], { type: 'application/pdf' }), `${finalName.endsWith('.pdf') ? finalName : finalName + '.pdf'}`);
-        toast({ title: lang === 'zh' ? '合并成功' : 'Merge Success', variant: 'success' });
+        toast({ title: t('pdf.mergeSuccess'), variant: 'success' });
 
       } else if (activeMode === 'split') {
         const pdfFile = files[0];
@@ -303,7 +304,7 @@ export const PdfTools: React.FC<{ lang: Language }> = ({ lang }) => {
 
         const content = await zip.generateAsync({ type: "blob" });
         downloadBlob(content, `${finalName.replace('.zip', '')}.zip`);
-        toast({ title: lang === 'zh' ? '拆分成功' : 'Split Success', variant: 'success' });
+        toast({ title: t('pdf.splitSuccess'), variant: 'success' });
 
       } else if (activeMode === 'compress') {
         const pdfFile = files[0];
@@ -311,14 +312,14 @@ export const PdfTools: React.FC<{ lang: Language }> = ({ lang }) => {
         const pdfDoc = await PDFDocument.load(arrayBuffer);
         const pdfBytes = await pdfDoc.save();
         downloadBlob(new Blob([pdfBytes as any], { type: 'application/pdf' }), `compressed_${finalName.endsWith('.pdf') ? finalName : finalName + '.pdf'}`);
-        toast({ title: lang === 'zh' ? '压缩成功' : 'Compression Success', variant: 'success' });
+        toast({ title: t('pdf.compressSuccess'), variant: 'success' });
 
       }
 
     } catch (e) {
       console.error("PDF Processing Error", e);
       toast({
-        title: lang === 'zh' ? '处理失败' : 'Failed',
+        title: t('common.failed'),
         description: String(e),
         variant: 'destructive'
       });
@@ -329,10 +330,10 @@ export const PdfTools: React.FC<{ lang: Language }> = ({ lang }) => {
 
   // 工具模式配置
   const modes = [
-    { id: 'merge', icon: Layers, label: { en: 'Merge', zh: '合并' } },
-    { id: 'split', icon: Scissors, label: { en: 'Split', zh: '拆分' } },
-    { id: 'compress', icon: Minimize2, label: { en: 'Compress', zh: '压缩' } },
-    { id: 'view', icon: Eye, label: { en: 'View', zh: '浏览' } },
+    { id: 'merge', icon: Layers, label: t('pdf.merge') },
+    { id: 'split', icon: Scissors, label: t('pdf.split') },
+    { id: 'compress', icon: Minimize2, label: t('pdf.compress') },
+    { id: 'view', icon: Eye, label: t('pdf.view') },
   ];
 
   return (
@@ -351,7 +352,7 @@ export const PdfTools: React.FC<{ lang: Language }> = ({ lang }) => {
             `}
           >
             <mode.icon size={18} />
-            <span className="font-medium">{mode.label[lang]}</span>
+            <span className="font-medium">{mode.label}</span>
           </button>
         ))}
       </div>
@@ -367,7 +368,7 @@ export const PdfTools: React.FC<{ lang: Language }> = ({ lang }) => {
               </div>
               <button onClick={() => setFiles([])} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 flex items-center">
                 <X size={18} className="mr-1" />
-                {lang === 'zh' ? '关闭' : 'Close'}
+                {t('common.close')}
               </button>
             </div>
             <div className="flex-1 bg-slate-100 dark:bg-slate-900 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 relative">
@@ -382,7 +383,7 @@ export const PdfTools: React.FC<{ lang: Language }> = ({ lang }) => {
                 {activeMode === 'view' ? <Eye className="w-5 h-5 text-red-500" /> : <FileText className="w-5 h-5 text-red-500" />}
               </div>
               <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                {lang === 'zh' ? '点击选择或拖拽PDF文件' : 'Click to select or drag PDF files'}
+                {t('pdf.clickOrDrag')}
               </p>
               <input type="file" accept=".pdf" multiple={activeMode === 'merge'} onChange={handleFileUpload} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
             </div>
@@ -397,37 +398,37 @@ export const PdfTools: React.FC<{ lang: Language }> = ({ lang }) => {
                 <div className="flex space-x-4">
                   {/* Directory Selection */}
                   <div className="flex-1">
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{lang === 'zh' ? '输出目录' : 'Output Directory'}</label>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t('pdf.outputDir')}</label>
                     <div className="flex space-x-2">
                       <input
                         type="text"
-                        value={outputDir || (lang === 'zh' ? '默认 (系统下载目录)' : 'Default (Downloads)')}
+                        value={outputDir || t('pdf.defaultDir')}
                         readOnly
                         className={`flex-1 px-3 py-1.5 border rounded text-sm outline-none ${outputDir ? 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600' : 'bg-slate-100 dark:bg-slate-700/50 text-slate-500 border-transparent'}`}
                       />
                       <button onClick={handleSelectDir} className="px-3 py-1.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 rounded text-xs font-bold transition-colors whitespace-nowrap">
-                        {lang === 'zh' ? '选择..' : 'Select..'}
+                        {t('pdf.selectDir')}
                       </button>
                       <button
                         onClick={handleOpenDir}
                         className="px-3 py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 rounded text-xs font-bold flex items-center transition-colors whitespace-nowrap"
-                        title={lang === 'zh' ? '打开目录' : 'Open Directory'}
+                        title={t('pdf.openDir')}
                       >
                         <FolderOpen size={14} className="mr-1" />
-                        {lang === 'zh' ? '打开' : 'Open'}
+                        {t('pdf.open')}
                       </button>
                     </div>
                   </div>
 
                   {/* Filename */}
                   <div className="flex-1">
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{lang === 'zh' ? '输出文件名 (可选)' : 'Output Filename (Optional)'}</label>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t('pdf.outputFilename')}</label>
                     <input
                       type="text"
                       value={outputName}
                       onChange={(e) => setOutputName(e.target.value)}
                       className="w-full px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-sm outline-none focus:border-red-500"
-                      placeholder={lang === 'zh' ? '默认' : 'Default'}
+                      placeholder={t('pdf.default')}
                     />
                   </div>
                 </div>
@@ -436,7 +437,7 @@ export const PdfTools: React.FC<{ lang: Language }> = ({ lang }) => {
                 {activeMode === 'split' && (
                   <div className="flex space-x-4">
                     <div className="w-24">
-                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{lang === 'zh' ? '起始页' : 'Start Page'}</label>
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t('pdf.startPage')}</label>
                       <input
                         type="number" min="1"
                         value={splitRange.start}
@@ -446,7 +447,7 @@ export const PdfTools: React.FC<{ lang: Language }> = ({ lang }) => {
                       />
                     </div>
                     <div className="w-24">
-                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{lang === 'zh' ? '结束页' : 'End Page'}</label>
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t('pdf.endPage')}</label>
                       <input
                         type="number" min="1"
                         value={splitRange.end}
@@ -456,7 +457,7 @@ export const PdfTools: React.FC<{ lang: Language }> = ({ lang }) => {
                       />
                     </div>
                     <div className="flex-1">
-                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{lang === 'zh' ? '或指定页面 (如 1,3,5)' : 'Or Specific Pages (e.g., 1,3,5)'}</label>
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t('pdf.specificPages')}</label>
                       <input
                         type="text"
                         value={customPages}
@@ -471,7 +472,7 @@ export const PdfTools: React.FC<{ lang: Language }> = ({ lang }) => {
                 {/* Compress Params */}
                 {activeMode === 'compress' && (
                   <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{lang === 'zh' ? '压缩程度' : 'Compression Level'}</label>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{t('pdf.compressLevel')}</label>
                     <div className="flex space-x-2">
                       {(['low', 'medium', 'high'] as const).map(level => (
                         <button
@@ -486,7 +487,7 @@ export const PdfTools: React.FC<{ lang: Language }> = ({ lang }) => {
                       ))}
                     </div>
                     <p className="text-[10px] text-slate-400 mt-1">
-                      * {lang === 'zh' ? '注：浏览器端压缩能力有限，主要通过重组结构优化体积。' : 'Note: Browser-side compression is limited to structure optimization.'}
+                      * {t('pdf.compressTip')}
                     </p>
                   </div>
                 )}
@@ -507,7 +508,7 @@ export const PdfTools: React.FC<{ lang: Language }> = ({ lang }) => {
                   <button onClick={() => removeFile(file.id)} className="text-slate-400 hover:text-red-500 transition-colors"><Trash2 size={18} /></button>
                 </div>
               ))}
-              {files.length === 0 && <div className="h-full flex items-center justify-center text-slate-400 text-sm">{lang === 'zh' ? '暂无文件' : 'No files selected'}</div>}
+              {files.length === 0 && <div className="h-full flex items-center justify-center text-slate-400 text-sm">{t('pdf.noFiles')}</div>}
             </div>
 
             {/* 底部操作栏 */}
@@ -515,9 +516,9 @@ export const PdfTools: React.FC<{ lang: Language }> = ({ lang }) => {
               <div className="pt-6 border-t border-slate-200 dark:border-slate-700 flex justify-end shrink-0">
                 <button onClick={handleProcess} disabled={files.length === 0 || isSaving} className="px-8 py-3 bg-red-600 hover:bg-red-700 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white rounded-lg font-bold shadow-lg transition-all flex items-center">
                   <Download className="mr-2" size={20} />
-                  {activeMode === 'merge' ? (lang === 'zh' ? '合并' : 'Merge') :
-                    activeMode === 'split' ? (lang === 'zh' ? '拆分' : 'Split') :
-                      (lang === 'zh' ? '压缩' : 'Compress')}
+                  {activeMode === 'merge' ? t('pdf.merge') :
+                    activeMode === 'split' ? t('pdf.split') :
+                      t('pdf.compress')}
                 </button>
               </div>
             )}

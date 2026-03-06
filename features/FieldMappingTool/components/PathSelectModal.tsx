@@ -2,13 +2,13 @@ import React from 'react';
 import { X, GitBranch, ArrowRight } from 'lucide-react';
 import { CompletePath } from '../utils/configGenerator';
 import { Language } from '../../../types';
+import { useTranslation } from "react-i18next";
 
 interface PathSelectModalProps {
     isOpen: boolean;
     onClose: () => void;
     paths: { id: string; label: string }[];
     onSelect: (pathId: string) => void;
-    lang: Language;
 }
 
 export const PathSelectModal: React.FC<PathSelectModalProps> = ({
@@ -18,6 +18,7 @@ export const PathSelectModal: React.FC<PathSelectModalProps> = ({
     onSelect,
     lang
 }) => {
+    const { t, i18n } = useTranslation();
     if (!isOpen) return null;
 
     return (
@@ -28,7 +29,7 @@ export const PathSelectModal: React.FC<PathSelectModalProps> = ({
                     <div className="flex items-center space-x-3">
                         <GitBranch className="text-purple-600" size={20} />
                         <span className="font-bold text-lg dark:text-white">
-                            {lang === 'zh' ? '选择数据流路径' : 'Select Data Path'}
+                            {t('mapping.selectDataPath')}
                         </span>
                     </div>
                     <button onClick={onClose} className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded">
@@ -39,9 +40,7 @@ export const PathSelectModal: React.FC<PathSelectModalProps> = ({
                 {/* Content */}
                 <div className="p-6">
                     <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">
-                        {lang === 'zh' 
-                            ? '检测到画布中有多个完整的数据流路径，请选择要生成配置的路径：' 
-                            : 'Multiple complete data paths detected. Please select the path to generate config for:'}
+                        {t('mapping.multipleCompleteDataPaths')}
                     </p>
                     <div className="space-y-2">
                         {paths.map((path, index) => (
@@ -72,7 +71,7 @@ export const PathSelectModal: React.FC<PathSelectModalProps> = ({
                         onClick={onClose}
                         className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
                     >
-                        {lang === 'zh' ? '取消' : 'Cancel'}
+                        {t('mapping.cancel')}
                     </button>
                 </div>
             </div>

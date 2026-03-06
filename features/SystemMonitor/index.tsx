@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Cpu, HardDrive, Wifi, Activity, Laptop, Box, Terminal, Timer } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { Language } from '../../types';
-import { getTexts } from '../../locales';
 import { invoke } from '@tauri-apps/api/core';
+import { useTranslation } from "react-i18next";
+import { TFunction } from 'i18next';
 
 interface SystemInfo {
    os: string;
@@ -15,7 +15,7 @@ interface SystemInfo {
 }
 
 // 格式化Uptime显示：根据时长智能显示单位
-const formatUptime = (uptime: string, lang: Language): string => {
+const formatUptime = (uptime: string, t: TFunction): string => {
    // 优先检查是否为纯数字或"数字 s"格式
    const trimmed = uptime.trim();
 
@@ -33,25 +33,25 @@ const formatUptime = (uptime: string, lang: Language): string => {
 
       // 超过1天：显示天时分秒
       if (days > 0) {
-         parts.push(lang === 'zh' ? `${days}天` : `${days}d`);
-         parts.push(lang === 'zh' ? `${hours}小时` : `${hours}h`);
-         parts.push(lang === 'zh' ? `${minutes}分钟` : `${minutes}m`);
-         parts.push(lang === 'zh' ? `${secs}秒` : `${secs}s`);
+         parts.push(`${days}${t('monitor.days', 'd')}`);
+         parts.push(`${hours}${t('monitor.hours', 'h')}`);
+         parts.push(`${minutes}${t('monitor.mins', 'm')}`);
+         parts.push(`${secs}${t('monitor.secs', 's')}`);
       }
       // 超过1小时：显示时分秒
       else if (hours > 0) {
-         parts.push(lang === 'zh' ? `${hours}小时` : `${hours}h`);
-         parts.push(lang === 'zh' ? `${minutes}分钟` : `${minutes}m`);
-         parts.push(lang === 'zh' ? `${secs}秒` : `${secs}s`);
+         parts.push(`${hours}${t('monitor.hours', 'h')}`);
+         parts.push(`${minutes}${t('monitor.mins', 'm')}`);
+         parts.push(`${secs}${t('monitor.secs', 's')}`);
       }
       // 超过1分钟：显示分秒
       else if (minutes > 0) {
-         parts.push(lang === 'zh' ? `${minutes}分钟` : `${minutes}m`);
-         parts.push(lang === 'zh' ? `${secs}秒` : `${secs}s`);
+         parts.push(`${minutes}${t('monitor.mins', 'm')}`);
+         parts.push(`${secs}${t('monitor.secs', 's')}`);
       }
       // 不足1分钟：只显示秒
       else {
-         parts.push(lang === 'zh' ? `${secs}秒` : `${secs}s`);
+         parts.push(`${secs}${t('monitor.secs', 's')}`);
       }
 
       return parts.join(' ');
@@ -65,18 +65,18 @@ const formatUptime = (uptime: string, lang: Language): string => {
       const minutes = parseInt(match[3]) || 0;
 
       const parts: string[] = [];
-      if (days > 0) parts.push(lang === 'zh' ? `${days}天` : `${days}d`);
-      if (hours > 0) parts.push(lang === 'zh' ? `${hours}小时` : `${hours}h`);
-      if (minutes > 0) parts.push(lang === 'zh' ? `${minutes}分钟` : `${minutes}m`);
+      if (days > 0) parts.push(`${days}${t('monitor.days', 'd')}`);
+      if (hours > 0) parts.push(`${hours}${t('monitor.hours', 'h')}`);
+      if (minutes > 0) parts.push(`${minutes}${t('monitor.mins', 'm')}`);
 
-      return parts.length > 0 ? parts.join(' ') : (lang === 'zh' ? '少于1分钟' : '< 1m');
+      return parts.length > 0 ? parts.join(' ') : t('monitor.lessThan1Min', '< 1m');
    }
 
    return uptime; // 无法解析则返回原值
 };
 
-export const SystemMonitor: React.FC<{ lang: Language; enabled?: boolean }> = ({ lang, enabled = true }) => {
-   const t = getTexts(lang);
+export const SystemMonitor: React.FC<{enabled?: boolean }> = ({ enabled = true }) => {
+    const { t } = useTranslation();
    // Reliable check for Tauri v2
    const isTauri = !!(window as any).__TAURI_INTERNALS__ || !!(window as any).__TAURI__;
    const [data, setData] = useState<{ time: string, cpu: number, mem: number }[]>([]);
@@ -139,12 +139,10 @@ export const SystemMonitor: React.FC<{ lang: Language; enabled?: boolean }> = ({
             <div className="text-center p-8 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
                <Activity size={48} className="mx-auto mb-4 text-slate-300 dark:text-slate-600" />
                <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2">
-                  {lang === 'zh' ? '系统监控已关闭' : 'System Monitor Disabled'}
+                  {t('monitor.disabledTitle', 'System Monitor Disabled')}
                </h3>
                <p className="text-sm text-slate-500 max-w-xs">
-                  {lang === 'zh' 
-                     ? '您可以在「设置」中开启系统监控功能，查看 CPU 和内存使用情况。' 
-                     : 'Enable System Monitor in Settings to view CPU and memory usage.'}
+                  {t('monitor.disabledDesc', 'Enable System Monitor in Settings to view CPU and memory usage.')}
                </p>
             </div>
          </div>
@@ -158,14 +156,14 @@ export const SystemMonitor: React.FC<{ lang: Language; enabled?: boolean }> = ({
             <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 flex items-center justify-between">
                <div className="flex items-center">
                   <Laptop className="mr-2 text-blue-600 dark:text-blue-400" size={20} />
-                  <h3 className="font-bold text-slate-800 dark:text-white">{lang === 'zh' ? '系统信息' : 'System Information'}</h3>
+                  <h3 className="font-bold text-slate-800 dark:text-white">{t('monitor.sysInfo', 'System Information')}</h3>
                </div>
             </div>
             <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 min-h-[220px]">
                <div className="flex items-start space-x-3">
                   <Box size={18} className="mt-1 text-slate-400" />
                   <div>
-                     <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">{lang === 'zh' ? '操作系统' : 'OS'}</p>
+                     <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('monitor.os', 'OS')}</p>
                      <p className="text-sm font-medium text-slate-800 dark:text-slate-200">{sysInfo.os}</p>
                      <p className="text-xs text-slate-400">{sysInfo.kernel}</p>
                   </div>
@@ -173,15 +171,15 @@ export const SystemMonitor: React.FC<{ lang: Language; enabled?: boolean }> = ({
                <div className="flex items-start space-x-3">
                   <Terminal size={18} className="mt-1 text-slate-400" />
                   <div>
-                     <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">{lang === 'zh' ? '主机名' : 'Hostname'}</p>
+                     <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('monitor.hostname', 'Hostname')}</p>
                      <p className="text-sm font-medium text-slate-800 dark:text-slate-200">{sysInfo.hostname}</p>
                   </div>
                </div>
                <div className="flex items-start space-x-3">
                   <Timer size={18} className="mt-1 text-slate-400" />
                   <div>
-                     <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">{lang === 'zh' ? '运行时间' : 'Uptime'}</p>
-                     <p className="text-sm font-medium text-slate-800 dark:text-slate-200">{formatUptime(sysInfo.uptime, lang)}</p>
+                     <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('monitor.uptime', 'Uptime')}</p>
+                     <p className="text-sm font-medium text-slate-800 dark:text-slate-200">{formatUptime(sysInfo.uptime, t)}</p>
                   </div>
                </div>
                <div className="flex items-start space-x-3">
@@ -194,7 +192,7 @@ export const SystemMonitor: React.FC<{ lang: Language; enabled?: boolean }> = ({
                <div className="flex items-start space-x-3">
                   <HardDrive size={18} className="mt-1 text-slate-400" />
                   <div>
-                     <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">{lang === 'zh' ? '内存' : 'Memory'}</p>
+                     <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('monitor.memory', 'Memory')}</p>
                      <p className="text-sm font-medium text-slate-800 dark:text-slate-200">{sysInfo.memory}</p>
                   </div>
                </div>
@@ -205,21 +203,21 @@ export const SystemMonitor: React.FC<{ lang: Language; enabled?: boolean }> = ({
          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex items-center space-x-4">
                <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg text-blue-600 dark:text-blue-400"><Cpu size={24} /></div>
-               <div><p className="text-sm text-slate-500">{lang === 'zh' ? 'CPU 使用率' : 'CPU Usage'}</p><p className="text-2xl font-bold text-slate-800 dark:text-white">{(data[data.length - 1]?.cpu || 0).toFixed(1)}%</p></div>
+               <div><p className="text-sm text-slate-500">{t('monitor.cpuUsage', 'CPU Usage')}</p><p className="text-2xl font-bold text-slate-800 dark:text-white">{(data[data.length - 1]?.cpu || 0).toFixed(1)}%</p></div>
             </div>
             <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex items-center space-x-4">
                <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg text-purple-600 dark:text-purple-400"><HardDrive size={24} /></div>
-               <div><p className="text-sm text-slate-500">{lang === 'zh' ? '内存使用率' : 'Memory Usage'}</p><p className="text-2xl font-bold text-slate-800 dark:text-white">{(data[data.length - 1]?.mem || 0).toFixed(1)}%</p></div>
+               <div><p className="text-sm text-slate-500">{t('monitor.memUsage', 'Memory Usage')}</p><p className="text-2xl font-bold text-slate-800 dark:text-white">{(data[data.length - 1]?.mem || 0).toFixed(1)}%</p></div>
             </div>
             <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex items-center space-x-4">
                <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg text-green-600 dark:text-green-400"><Wifi size={24} /></div>
-               <div><p className="text-sm text-slate-500">{lang === 'zh' ? '网络' : 'Network'}</p><p className="text-2xl font-bold text-slate-800 dark:text-white">{lang === 'zh' ? '活动' : 'Active'}</p></div>
+               <div><p className="text-sm text-slate-500">{t('monitor.network', 'Network')}</p><p className="text-2xl font-bold text-slate-800 dark:text-white">{t('monitor.active', 'Active')}</p></div>
             </div>
          </div>
 
          {/* 图表区域 */}
          <div className="flex-1 bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-            <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-6 flex items-center"><Activity className="mr-2 text-red-500" />{lang === 'zh' ? '实时性能' : 'Real-time Performance'}</h3>
+            <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-6 flex items-center"><Activity className="mr-2 text-red-500" />{t('monitor.realtimePerf', 'Real-time Performance')}</h3>
             <div className="h-64 w-full">
                <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
                   <AreaChart data={data}>

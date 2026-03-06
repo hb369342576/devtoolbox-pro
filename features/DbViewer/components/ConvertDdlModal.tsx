@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { FolderOpen, Loader2, RefreshCw, X, FileText } from 'lucide-react';
 import { open } from '@tauri-apps/plugin-dialog';
-import { getTexts } from '../../../locales';
 import { Language } from '../../../types';
+import { useTranslation } from "react-i18next";
 
 interface ConvertDdlModalProps {
     isOpen: boolean;
@@ -10,7 +10,6 @@ interface ConvertDdlModalProps {
     onConfirm: (filePath: string) => void;
     sourceType: 'mysql' | 'doris' | null;
     defaultFileName: string;
-    lang: Language;
     isConverting: boolean;
     progress: string;
 }
@@ -21,11 +20,10 @@ export const ConvertDdlModal: React.FC<ConvertDdlModalProps> = ({
     onConfirm,
     sourceType,
     defaultFileName,
-    lang,
     isConverting,
     progress
 }) => {
-    const t = getTexts(lang);
+    const { t, i18n } = useTranslation();
     const [filePath, setFilePath] = useState(defaultFileName);
 
     useEffect(() => {
@@ -39,7 +37,7 @@ export const ConvertDdlModal: React.FC<ConvertDdlModalProps> = ({
             const selected = await open({
                 directory: true,
                 multiple: false,
-                title: lang === 'zh' ? '选择保存文件夹' : 'Select Folder'
+                title: t('dbViewer.selectFolder')
             });
 
             if (selected && typeof selected === 'string') {
@@ -54,8 +52,8 @@ export const ConvertDdlModal: React.FC<ConvertDdlModalProps> = ({
     if (!isOpen) return null;
 
     const title = sourceType === 'mysql'
-        ? (lang === 'zh' ? '批量转换 MySQL 到 Doris' : 'Batch Convert MySQL to Doris')
-        : (lang === 'zh' ? '批量转换 Doris 到 MySQL' : 'Batch Convert Doris to MySQL');
+        ? (t('dbViewer.batchConvertMySQLToDoris'))
+        : (t('dbViewer.batchConvertDorisToMySQL'));
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
@@ -81,7 +79,7 @@ export const ConvertDdlModal: React.FC<ConvertDdlModalProps> = ({
                     {/* File Path Input */}
                     <div className="space-y-2">
                         <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block">
-                            {lang === 'zh' ? '保存路径' : 'Save Path'}
+                            {t('dbViewer.savePath')}
                         </label>
                         <div className="flex space-x-2">
                             <div className="relative flex-1">
@@ -91,7 +89,7 @@ export const ConvertDdlModal: React.FC<ConvertDdlModalProps> = ({
                                     value={filePath}
                                     onChange={(e) => setFilePath(e.target.value)}
                                     className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white"
-                                    placeholder={lang === 'zh' ? '请输入或选择保存路径...' : 'Enter or select save path...'}
+                                    placeholder={t('dbViewer.enterOrSelectSavePath')}
                                     disabled={isConverting}
                                 />
                             </div>
@@ -99,15 +97,13 @@ export const ConvertDdlModal: React.FC<ConvertDdlModalProps> = ({
                                 onClick={handleBrowseFolder}
                                 disabled={isConverting}
                                 className="px-3 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 rounded border border-slate-300 dark:border-slate-600 transition-colors"
-                                title={lang === 'zh' ? '选择文件夹' : 'Select Folder'}
+                                title={t('dbViewer.selectFolder')}
                             >
                                 <FolderOpen size={18} />
                             </button>
                         </div>
                         <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                            {lang === 'zh'
-                                ? '将转换所有表的 DDL 并保存到单个 SQL 文件中'
-                                : 'All table DDLs will be converted and saved to a single SQL file'}
+                            {t('dbViewer.allTableDDLsWillBeConvert')}
                         </p>
                     </div>
 
@@ -116,7 +112,7 @@ export const ConvertDdlModal: React.FC<ConvertDdlModalProps> = ({
                         <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded border border-slate-200 dark:border-slate-700">
                             <div className="flex items-center text-sm text-blue-600 dark:text-blue-400 mb-1">
                                 {isConverting && <Loader2 className="animate-spin mr-2" size={14} />}
-                                <span className="font-medium">{lang === 'zh' ? '处理中...' : 'Processing...'}</span>
+                                <span className="font-medium">{t('dbViewer.processing')}</span>
                             </div>
                             <p className="text-xs text-slate-500 dark:text-slate-400 font-mono break-all whitespace-pre-wrap">
                                 {progress}
@@ -132,7 +128,7 @@ export const ConvertDdlModal: React.FC<ConvertDdlModalProps> = ({
                         disabled={isConverting}
                         className="px-4 py-2 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors"
                     >
-                        {t.common.cancel}
+                        {t('common.cancel')}
                     </button>
                     <button
                         onClick={() => onConfirm(filePath)}
@@ -142,12 +138,12 @@ export const ConvertDdlModal: React.FC<ConvertDdlModalProps> = ({
                         {isConverting ? (
                             <>
                                 <Loader2 className="animate-spin mr-2" size={16} />
-                                {lang === 'zh' ? '正在转换...' : 'Converting...'}
+                                {t('dbViewer.converting')}
                             </>
                         ) : (
                             <>
                                 <RefreshCw className="mr-2" size={16} />
-                                {lang === 'zh' ? '开始转换' : 'Start Conversion'}
+                                {t('dbViewer.startConversion')}
                             </>
                         )}
                     </button>

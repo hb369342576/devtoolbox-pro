@@ -3,7 +3,7 @@ import {
     Plus, Edit, Trash2, X, Server, CheckCircle,
     AlertCircle, RefreshCw, Power, Settings2, Zap, Flame, Sparkles, Wrench
 } from 'lucide-react';
-import { Language } from '../../types';
+import { useTranslation } from 'react-i18next';
 import { SeaTunnelEngineConfig, SeaTunnelEngineType, ZetaApiVersion } from './types';
 import { seaTunnelApi } from './api';
 import { ConfirmModal } from '../common/ConfirmModal';
@@ -13,7 +13,6 @@ import { ViewModeToggle } from '../common/ViewModeToggle';
 import { useViewMode } from '../../store/globalStore';
 
 interface EngineManagerProps {
-    lang: Language;
     configs: SeaTunnelEngineConfig[];
     onAdd: (config: Omit<SeaTunnelEngineConfig, 'id'>) => void;
     onUpdate: (config: SeaTunnelEngineConfig) => void;
@@ -27,14 +26,13 @@ const ENGINE_TYPES: { value: SeaTunnelEngineType; label: string; defaultPort: nu
     { value: 'spark', label: 'Apache Spark', defaultPort: 4040 },
 ];
 
-export const EngineManager: React.FC<EngineManagerProps> = ({
-    lang,
-    configs,
+export const EngineManager: React.FC<EngineManagerProps> = ({ configs,
     onAdd,
     onUpdate,
     onDelete,
     onSelect
 }) => {
+    const { t } = useTranslation();
     const viewMode = useViewMode();
     const [showModal, setShowModal] = useState(false);
     const [editingConfig, setEditingConfig] = useState<Partial<SeaTunnelEngineConfig>>({});
@@ -118,14 +116,14 @@ export const EngineManager: React.FC<EngineManagerProps> = ({
                 setTestErrorMsg('');
             } else {
                 setTestStatus('failed');
-                setTestErrorMsg(result.error || (lang === 'zh' ? '连接失败' : 'Connection failed'));
+                setTestErrorMsg(result.error || t('engine.connFailed'));
             }
         } catch (err: any) {
             setTestStatus('failed');
             if (err.message?.includes('Failed to fetch') || err.message?.includes('NetworkError')) {
-                setTestErrorMsg(lang === 'zh' ? '无法连接服务器' : 'Cannot connect to server');
+                setTestErrorMsg(t('engine.cannotConnect'));
             } else {
-                setTestErrorMsg(err.message || (lang === 'zh' ? '连接失败' : 'Failed'));
+                setTestErrorMsg(err.message || t('engine.connFailed'));
             }
         }
         
@@ -159,10 +157,10 @@ export const EngineManager: React.FC<EngineManagerProps> = ({
         <div className="h-full flex flex-col">
             <ConfirmModal
                 isOpen={confirmDelete.isOpen}
-                title={lang === 'zh' ? '确认删除' : 'Confirm Delete'}
-                message={lang === 'zh' ? '确定要删除这个引擎配置吗？' : 'Are you sure you want to delete this engine configuration?'}
-                confirmText={lang === 'zh' ? '删除' : 'Delete'}
-                cancelText={lang === 'zh' ? '取消' : 'Cancel'}
+                title={t('common.confirmDelete')}
+                message={t('engine.deleteConfirm')}
+                confirmText={t('common.delete')}
+                cancelText={t('common.cancel')}
                 onConfirm={handleConfirmDelete}
                 onCancel={() => setConfirmDelete({ isOpen: false, id: '' })}
                 type="danger"
@@ -171,7 +169,7 @@ export const EngineManager: React.FC<EngineManagerProps> = ({
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center">
                     <Server className="mr-3 text-cyan-600" />
-                    {lang === 'zh' ? '引擎管理' : 'Engine Manager'}
+                    {t('engine.title')}
                 </h2>
                 <div className="flex items-center space-x-3">
                     <ViewModeToggle />
@@ -180,7 +178,7 @@ export const EngineManager: React.FC<EngineManagerProps> = ({
                         className="min-w-[140px] px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg font-medium flex items-center justify-center shadow-lg transition-colors"
                     >
                         <Plus size={18} className="mr-2" />
-                        {lang === 'zh' ? '新建引擎' : 'New Engine'}
+                        {t('engine.newEngine')}
                     </button>
                 </div>
             </div>
@@ -194,8 +192,8 @@ export const EngineManager: React.FC<EngineManagerProps> = ({
                                     className="group relative bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border-2 border-slate-200 dark:border-slate-700 hover:border-cyan-400 dark:hover:border-cyan-500 hover:shadow-2xl hover:shadow-cyan-500/20 hover:-translate-y-2 transition-all duration-300 cursor-pointer overflow-hidden w-[288px] h-[200px] flex-shrink-0 flex flex-col"
                                     onClick={() => handleCardClick(config)}
                                 >
-                                    <div className="flex items-start justify-between mb-4">
-                                        <div className={`p-[10px] rounded-lg border-2 bg-transparent transition-colors duration-300 ${getEngineColor(config.engineType)}`}>
+                                    <div className="flex items-start justify-between mb-2">
+                                        <div className={`p-2 rounded-lg border-2 bg-transparent transition-colors duration-300 ${getEngineColor(config.engineType)}`}>
                                             {getEngineIcon(config.engineType)}
                                         </div>
                                         <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -233,17 +231,17 @@ export const EngineManager: React.FC<EngineManagerProps> = ({
                             <div className="p-4 rounded-full bg-cyan-100 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400 group-hover:scale-110 transition-transform duration-300 mb-4">
                                 <Plus size={32} />
                             </div>
-                            <span className="font-bold text-lg text-slate-600 dark:text-slate-300 group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors">{lang === 'zh' ? '新建引擎' : 'New Engine'}</span>
+                            <span className="font-bold text-lg text-slate-600 dark:text-slate-300 group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors">{t('engine.newEngine')}</span>
                         </button>
                     </div>
                 ) : (
                     <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
                         <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-500 uppercase tracking-wider sticky top-0 z-10">
-                            <div className="col-span-3">{lang === 'zh' ? '名称' : 'Name'}</div>
-                            <div className="col-span-2">{lang === 'zh' ? '引擎类型' : 'Engine Type'}</div>
+                            <div className="col-span-3">{t('common.name')}</div>
+                            <div className="col-span-2">{t('engine.type')}</div>
                             <div className="col-span-4">Base URL</div>
                             <div className="col-span-1">API</div>
-                            <div className="col-span-2 text-right">{lang === 'zh' ? '操作' : 'Actions'}</div>
+                            <div className="col-span-2 text-right">{t('common.actions')}</div>
                         </div>
                         <div className="divide-y divide-slate-100 dark:divide-slate-700">
                             {configs.map(config => (
@@ -277,7 +275,7 @@ export const EngineManager: React.FC<EngineManagerProps> = ({
                                     </div>
                                 </div>
                             ))}
-                            {configs.length === 0 && <div className="px-6 py-8 text-center text-slate-400 text-sm italic">{lang === 'zh' ? '暂无数据' : 'No data'}</div>}
+                            {configs.length === 0 && <div className="px-6 py-8 text-center text-slate-400 text-sm italic">{t('common.noData')}</div>}
                         </div>
                     </div>
                 )}
@@ -288,7 +286,7 @@ export const EngineManager: React.FC<EngineManagerProps> = ({
                     <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200 dark:border-slate-700">
                         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800/80">
                             <h3 className="font-bold text-lg text-slate-800 dark:text-white">
-                                {editingConfig.id ? (lang === 'zh' ? '编辑引擎配置' : 'Edit Engine Config') : (lang === 'zh' ? '新建引擎配置' : 'New Engine Config')}
+                                {editingConfig.id ? t('engine.editEngine') : t('engine.newEngineConfig')}
                             </h3>
                             <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><X size={20} /></button>
                         </div>
@@ -297,21 +295,21 @@ export const EngineManager: React.FC<EngineManagerProps> = ({
                             {/* Name */}
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                                    {lang === 'zh' ? '配置名称' : 'Config Name'} <span className="text-red-500">*</span>
+                                    {t('engine.configName')} <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     type="text"
                                     value={editingConfig.name || ''}
                                     onChange={e => setEditingConfig({ ...editingConfig, name: e.target.value })}
                                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-cyan-500 outline-none text-slate-900 dark:text-white"
-                                    placeholder={lang === 'zh' ? '例如：生产环境 Zeta' : 'e.g. Production Zeta'}
+                                    placeholder={t('engine.placeholderName')}
                                 />
                             </div>
 
                             {/* Engine Type */}
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                                    {lang === 'zh' ? '引擎类型' : 'Engine Type'} <span className="text-red-500">*</span>
+                                    {t('engine.type')} <span className="text-red-500">*</span>
                                 </label>
                                 <div className="grid grid-cols-3 gap-2">
                                     {ENGINE_TYPES.map(engine => (
@@ -354,7 +352,7 @@ export const EngineManager: React.FC<EngineManagerProps> = ({
                             {editingConfig.engineType === 'zeta' && (
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                                        API {lang === 'zh' ? '版本' : 'Version'}
+                                        API {t('engine.version')}
                                     </label>
                                     <div className="grid grid-cols-2 gap-2">
                                         {(['v1', 'v2'] as ZetaApiVersion[]).map(version => (
@@ -373,8 +371,8 @@ export const EngineManager: React.FC<EngineManagerProps> = ({
                                     </div>
                                     <p className="mt-1 text-xs text-slate-500">
                                         {editingConfig.apiVersion === 'v2' 
-                                            ? (lang === 'zh' ? 'V2 使用 Jetty REST，需在 seatunnel.yaml 开启' : 'V2 uses Jetty REST, requires seatunnel.yaml config')
-                                            : (lang === 'zh' ? 'V1 使用 Hazelcast REST（默认）' : 'V1 uses Hazelcast REST (default)')}
+                                            ? t('engine.v2Tip')
+                                            : t('engine.v1Tip')}
                                     </p>
                                 </div>
                             )}
@@ -387,23 +385,23 @@ export const EngineManager: React.FC<EngineManagerProps> = ({
                                 className={`flex items-center space-x-2 text-sm font-medium ${testStatus === 'success' ? 'text-green-600' : testStatus === 'failed' ? 'text-red-500' : 'text-slate-600 dark:text-slate-400'}`}
                             >
                                 {testStatus === 'testing' ? <RefreshCw className="animate-spin" size={16} /> : <Power size={16} />}
-                                <span>
-                                    {testStatus === 'testing' ? (lang === 'zh' ? '测试中...' : 'Testing...') :
-                                        testStatus === 'success' ? (lang === 'zh' ? '连接成功' : 'Success') :
-                                            testStatus === 'failed' ? (testErrorMsg || (lang === 'zh' ? '连接失败' : 'Failed')) :
-                                                (lang === 'zh' ? '测试连接' : 'Test Connection')}
+                                <span className="ml-2">
+                                    {testStatus === 'testing' ? t('engine.testing') :
+                                        testStatus === 'success' ? t('engine.connSuccess') :
+                                            testStatus === 'failed' ? (testErrorMsg || t('engine.connFailed')) :
+                                                t('engine.testConn')}
                                 </span>
                             </button>
                             <div className="flex space-x-3">
                                 <button onClick={() => setShowModal(false)} className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors">
-                                    {lang === 'zh' ? '取消' : 'Cancel'}
+                                    {t('common.cancel')}
                                 </button>
                                 <button
                                     onClick={handleSave}
                                     disabled={!isFormValid}
                                     className={`px-6 py-2 rounded-lg font-medium transition-colors ${isFormValid ? 'bg-cyan-600 hover:bg-cyan-700 text-white shadow-lg shadow-cyan-600/20' : 'bg-slate-300 dark:bg-slate-700 text-slate-500 cursor-not-allowed'}`}
                                 >
-                                    {lang === 'zh' ? '保存' : 'Save'}
+                                    {t('common.save')}
                                 </button>
                             </div>
                         </div>

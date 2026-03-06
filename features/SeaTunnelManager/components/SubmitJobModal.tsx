@@ -5,10 +5,10 @@ import { SeaTunnelEngineConfig, SubmitJobRequest } from '../types';
 import { seaTunnelApi } from '../api';
 import { useToast } from '../../common/Toast';
 import { isHoconFormat, convertToJson } from '../../../utils/hoconParser';
+import { useTranslation } from "react-i18next";
 
 interface SubmitJobModalProps {
     show: boolean;
-    lang: Language;
     engine: SeaTunnelEngineConfig;
     onClose: () => void;
     onSuccess: () => void;
@@ -16,11 +16,11 @@ interface SubmitJobModalProps {
 
 export const SubmitJobModal: React.FC<SubmitJobModalProps> = ({
     show,
-    lang,
     engine,
     onClose,
     onSuccess
 }) => {
+    const { t, i18n } = useTranslation();
     const { toast } = useToast();
     const [jobName, setJobName] = useState('');
     const [config, setConfig] = useState('');
@@ -40,12 +40,12 @@ export const SubmitJobModal: React.FC<SubmitJobModalProps> = ({
             setConfig(result.json);
             setIsHocon(false);
             toast({ 
-                title: lang === 'zh' ? 'CONF 已转换为 JSON' : 'CONF converted to JSON', 
+                title: t('seatunnel.cONFConvertedToJSON'), 
                 variant: 'success' 
             });
         } else {
             toast({ 
-                title: lang === 'zh' ? '转换失败' : 'Conversion failed', 
+                title: t('seatunnel.conversionFailed'), 
                 description: result.error,
                 variant: 'destructive' 
             });
@@ -54,7 +54,7 @@ export const SubmitJobModal: React.FC<SubmitJobModalProps> = ({
 
     const handleSubmit = async () => {
         if (!config.trim()) {
-            toast({ title: lang === 'zh' ? '请输入配置内容' : 'Please enter config', variant: 'destructive' });
+            toast({ title: t('seatunnel.pleaseEnterConfig'), variant: 'destructive' });
             return;
         }
 
@@ -66,7 +66,7 @@ export const SubmitJobModal: React.FC<SubmitJobModalProps> = ({
                 finalConfig = result.json;
             } else {
                 toast({ 
-                    title: lang === 'zh' ? 'CONF 转换失败' : 'CONF conversion failed', 
+                    title: t('seatunnel.cONFConversionFailed'), 
                     description: result.error,
                     variant: 'destructive' 
                 });
@@ -83,7 +83,7 @@ export const SubmitJobModal: React.FC<SubmitJobModalProps> = ({
             const result = await seaTunnelApi.submitJob(engine, request);
             
             if (result.success) {
-                toast({ title: lang === 'zh' ? '作业提交成功' : 'Job submitted', variant: 'success' });
+                toast({ title: t('seatunnel.jobSubmitted'), variant: 'success' });
                 onSuccess();
                 onClose();
                 setJobName('');
@@ -92,7 +92,7 @@ export const SubmitJobModal: React.FC<SubmitJobModalProps> = ({
                 throw new Error(result.error);
             }
         } catch (err: any) {
-            toast({ title: lang === 'zh' ? '提交失败' : 'Submit failed', description: err.message, variant: 'destructive' });
+            toast({ title: t('seatunnel.submitFailed'), description: err.message, variant: 'destructive' });
         } finally {
             setSubmitting(false);
         }
@@ -120,7 +120,7 @@ export const SubmitJobModal: React.FC<SubmitJobModalProps> = ({
             }
         } catch (err: any) {
             console.error('File select error:', err);
-            toast({ title: lang === 'zh' ? '读取文件失败' : 'Failed to read file', description: err.message, variant: 'destructive' });
+            toast({ title: t('seatunnel.failedToReadFile'), description: err.message, variant: 'destructive' });
         }
     };
 
@@ -132,7 +132,7 @@ export const SubmitJobModal: React.FC<SubmitJobModalProps> = ({
                 <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800/80">
                     <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center">
                         <Upload className="mr-2 text-cyan-600" size={20} />
-                        {lang === 'zh' ? '提交作业' : 'Submit Job'}
+                        {t('seatunnel.submitJob')}
                     </h3>
                     <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
                         <X size={20} />
@@ -146,20 +146,16 @@ export const SubmitJobModal: React.FC<SubmitJobModalProps> = ({
                             <AlertCircle size={16} className="text-cyan-600 mr-2 mt-0.5 flex-shrink-0" />
                             <div>
                                 <div className="text-cyan-700 dark:text-cyan-300">
-                                    <strong>{lang === 'zh' ? '集群模式' : 'Cluster Mode'}</strong> - {lang === 'zh' ? '提交到' : 'Submit to'}: {engine.name}
+                                    <strong>{t('seatunnel.clusterMode')}</strong> - {t('seatunnel.submitTo')}: {engine.name}
                                 </div>
                                 <div className="text-xs text-cyan-600 dark:text-cyan-400 mt-1">
-                                    {lang === 'zh' 
-                                        ? `作业将在 SeaTunnel Zeta 集群上运行 (${engine.baseUrl})`
-                                        : `Job will run on SeaTunnel Zeta cluster (${engine.baseUrl})`
+                                    {t('seatunnel.jobWillRunOnSeaTunnelZeta')
                                     }
                                 </div>
                             </div>
                         </div>
                         <div className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-xs text-slate-500 dark:text-slate-400">
-                            💡 {lang === 'zh' 
-                                ? '本地模式请使用命令行: ./bin/seatunnel.sh -c config.conf'
-                                : 'For local mode, use CLI: ./bin/seatunnel.sh -c config.conf'
+                            💡 {t('seatunnel.forLocalModeUseCLIBinSeat')
                             }
                         </div>
                     </div>
@@ -167,15 +163,15 @@ export const SubmitJobModal: React.FC<SubmitJobModalProps> = ({
                     {/* 作业名称 */}
                     <div>
                         <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                            {lang === 'zh' ? '作业名称' : 'Job Name'}
-                            <span className="text-slate-400 ml-1">({lang === 'zh' ? '可选' : 'optional'})</span>
+                            {t('seatunnel.jobName')}
+                            <span className="text-slate-400 ml-1">({t('seatunnel.optional')})</span>
                         </label>
                         <input
                             type="text"
                             value={jobName}
                             onChange={e => setJobName(e.target.value)}
                             className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-cyan-500 outline-none text-slate-900 dark:text-white"
-                            placeholder={lang === 'zh' ? '例如: mysql_to_doris_sync' : 'e.g. mysql_to_doris_sync'}
+                            placeholder={t('seatunnel.eGMysqltodorissync')}
                         />
                     </div>
 
@@ -184,7 +180,7 @@ export const SubmitJobModal: React.FC<SubmitJobModalProps> = ({
                         <div className="flex justify-between items-center mb-1">
                             <div className="flex items-center">
                                 <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                                    {lang === 'zh' ? '配置内容' : 'Config Content'}
+                                    {t('seatunnel.configContent')}
                                     <span className="text-red-500 ml-1">*</span>
                                 </label>
                                 {isHocon && (
@@ -200,7 +196,7 @@ export const SubmitJobModal: React.FC<SubmitJobModalProps> = ({
                                         className="text-sm text-amber-600 hover:text-amber-700 flex items-center"
                                     >
                                         <RefreshCw size={14} className="mr-1" />
-                                        {lang === 'zh' ? '转换为 JSON' : 'Convert to JSON'}
+                                        {t('seatunnel.convertToJSON')}
                                     </button>
                                 )}
                                 <button
@@ -208,7 +204,7 @@ export const SubmitJobModal: React.FC<SubmitJobModalProps> = ({
                                     className="text-sm text-cyan-600 hover:text-cyan-700 flex items-center"
                                 >
                                     <FileText size={14} className="mr-1" />
-                                    {lang === 'zh' ? '从文件加载' : 'Load from file'}
+                                    {t('seatunnel.loadFromFile')}
                                 </button>
                             </div>
                         </div>
@@ -239,9 +235,7 @@ export const SubmitJobModal: React.FC<SubmitJobModalProps> = ({
 }`}
                         />
                         <p className="mt-1 text-xs text-slate-500">
-                            {lang === 'zh' 
-                                ? '默认支持 JSON 格式，也支持 CONF/HOCON 格式（会自动转换）' 
-                                : 'JSON format by default. CONF/HOCON format is also supported (auto-converted)'}
+                            {t('seatunnel.jSONFormatByDefaultCONFHO')}
                         </p>
                     </div>
                 </div>
@@ -252,7 +246,7 @@ export const SubmitJobModal: React.FC<SubmitJobModalProps> = ({
                         disabled={submitting}
                         className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors"
                     >
-                        {lang === 'zh' ? '取消' : 'Cancel'}
+                        {t('seatunnel.cancel')}
                     </button>
                     <button
                         onClick={handleSubmit}
@@ -266,12 +260,12 @@ export const SubmitJobModal: React.FC<SubmitJobModalProps> = ({
                         {submitting ? (
                             <>
                                 <Loader2 size={16} className="animate-spin mr-2" />
-                                {lang === 'zh' ? '提交中...' : 'Submitting...'}
+                                {t('seatunnel.submitting')}
                             </>
                         ) : (
                             <>
                                 <Upload size={16} className="mr-2" />
-                                {lang === 'zh' ? '提交作业' : 'Submit Job'}
+                                {t('seatunnel.submitJob')}
                             </>
                         )}
                     </button>

@@ -5,12 +5,11 @@ import { Language, ProcessDefinition } from '../types';
 
 interface DetailModalProps {
     process: ProcessDefinition | null;
-    lang: Language;
     onClose: () => void;
 }
 
-export const DetailModal: React.FC<DetailModalProps> = ({ process, lang, onClose }) => {
-    const { t } = useTranslation();
+export const DetailModal: React.FC<DetailModalProps> = ({process, onClose }) => {
+  const { t, i18n } = useTranslation();
     if (!process) return null;
     
     return (

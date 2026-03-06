@@ -6,7 +6,6 @@ import { JobManager } from './JobManager';
 import { SubmitJobModal } from './components';
 
 interface SeaTunnelManagerProps {
-    lang: Language;
     activeSubPage: 'engine' | 'job';
     onNavigate: (id: string) => void;
 }
@@ -84,7 +83,6 @@ export const SeaTunnelManager: React.FC<SeaTunnelManagerProps> = ({
     if (activeSubPage === 'engine') {
         return (
             <EngineManager
-                lang={lang}
                 configs={configs}
                 onAdd={handleAddConfig}
                 onUpdate={handleUpdateConfig}
@@ -100,7 +98,6 @@ export const SeaTunnelManager: React.FC<SeaTunnelManagerProps> = ({
     return (
         <>
             <JobManager
-                lang={lang}
                 currentEngine={currentEngine}
                 configs={configs}
                 onSelectEngine={handleSelectEngine}
@@ -110,7 +107,6 @@ export const SeaTunnelManager: React.FC<SeaTunnelManagerProps> = ({
             {currentEngine && (
                 <SubmitJobModal
                     show={showSubmitModal}
-                    lang={lang}
                     engine={currentEngine}
                     onClose={() => setShowSubmitModal(false)}
                     onSuccess={handleRefreshJobs}

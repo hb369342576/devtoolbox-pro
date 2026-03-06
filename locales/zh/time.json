@@ -1,0 +1,16 @@
+{
+  "locale": "zh-CN",
+  "timestampConverter": "时间戳转换",
+  "unixTimestamp": "Unix 时间戳",
+  "now": "现在",
+  "dateTime": "日期时间",
+  "typeDirectlyOrClickCalend": "可直接输入或点击日历图标选择",
+  "formattedOutput": "格式化输出",
+  "local": "本地时间 (Local)",
+  "dateOnly": "仅日期 (Date)",
+  "invalidDate": "无效日期",
+  "sTOPWATCH": "秒表 / 计时器",
+  "noLapsRecorded": "暂无计次记录",
+  "today": "回到今天",
+  "time": "时间选择"
+}

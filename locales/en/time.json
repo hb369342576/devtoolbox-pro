@@ -1,0 +1,16 @@
+{
+  "locale": "en-US",
+  "timestampConverter": "Timestamp Converter",
+  "unixTimestamp": "Unix Timestamp",
+  "now": "Now",
+  "dateTime": "Date & Time",
+  "typeDirectlyOrClickCalend": "Type directly or click calendar icon",
+  "formattedOutput": "Formatted Output",
+  "local": "Local Time",
+  "dateOnly": "Date Only",
+  "invalidDate": "Invalid Date",
+  "sTOPWATCH": "Stopwatch",
+  "noLapsRecorded": "No laps recorded",
+  "today": "Today",
+  "time": "Select Time"
+}

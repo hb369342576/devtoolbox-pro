@@ -3,15 +3,16 @@ import { X, ZoomIn, ZoomOut, Move, Link as LinkIcon, Lock, Trash2 } from 'lucide
 import { useFieldMappingStore } from '../store';
 import { invoke } from '@tauri-apps/api/core';
 import { CanvasNode, CanvasLink, Language, DbConnection, TableInfo, TableDetail } from '../../../types';
-import { getTexts } from '../../../locales';
+import { useTranslation } from "react-i18next";
+
 
 interface CanvasProps {
-    lang: Language;
     connections: DbConnection[];
     onNodeClick?: (node: CanvasNode) => void;
 }
 
 export const Canvas: React.FC<CanvasProps> = ({ lang, connections, onNodeClick }) => {
+    const { t, i18n } = useTranslation();
     const {
         nodes,
         links,
@@ -431,7 +432,7 @@ export const Canvas: React.FC<CanvasProps> = ({ lang, connections, onNodeClick }
                                         </pre>
                                     ) : (
                                         <div className="text-center text-slate-400 py-2">
-                                            {lang === 'zh' ? '双击编写 SQL' : 'Double-click to write SQL'}
+                                            {t('mapping.doubleClickToWriteSQL')}
                                         </div>
                                     )
                                 ) : (
@@ -450,7 +451,7 @@ export const Canvas: React.FC<CanvasProps> = ({ lang, connections, onNodeClick }
                                         </>
                                     ) : (
                                         <div className="text-center text-slate-400 py-2">
-                                            {lang === 'zh' ? '双击配置数据源' : 'Double-click to configure'}
+                                            {t('mapping.doubleClickToConfigure')}
                                         </div>
                                     )
                                 )}
@@ -496,7 +497,7 @@ export const Canvas: React.FC<CanvasProps> = ({ lang, connections, onNodeClick }
                             className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center space-x-2"
                         >
                             <Trash2 size={14} />
-                            <span>{lang === 'zh' ? '删除' : 'Delete'}</span>
+                            <span>{t('mapping.delete')}</span>
                         </button>
                     </div>
                 </>

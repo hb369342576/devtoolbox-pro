@@ -1,6 +1,7 @@
 /** 通用 ConfirmModal 确认对话框组件 */
 import React from 'react';
 import { AlertCircle, XCircle, Loader2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface ConfirmModalProps {
     show: boolean;
@@ -15,9 +16,11 @@ interface ConfirmModalProps {
 }
 
 export const ConfirmModal: React.FC<ConfirmModalProps> = ({
-    show, title, message, confirmText = '确定', cancelText = '取消',
+    show, title, message, confirmText, cancelText,
     type = 'danger', loading = false, onConfirm, onClose
 }) => {
+    const { t } = useTranslation();
+    
     if (!show) return null;
 
     const colors = {
@@ -49,7 +52,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
                         disabled={loading}
                         className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors disabled:opacity-50"
                     >
-                        {cancelText}
+                        {cancelText || t('common.cancel')}
                     </button>
                     <button
                         onClick={onConfirm}
@@ -57,7 +60,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
                         className={`px-6 py-2 text-sm font-medium text-white rounded-lg transition-all shadow-lg active:scale-95 flex items-center ${colors[type]} disabled:opacity-50`}
                     >
                         {loading && <Loader2 size={16} className="animate-spin mr-2" />}
-                        {confirmText}
+                        {confirmText || t('common.confirm')}
                     </button>
                 </div>
             </div>

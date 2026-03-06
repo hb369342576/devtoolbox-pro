@@ -4,12 +4,12 @@ import React, { useState, useEffect } from 'react';
 import { Database, RefreshCw } from 'lucide-react';
 import { DbConnection, Language } from '../../types';
 import { useDatabase } from '../../hooks/useDatabase';
+import { useTranslation } from 'react-i18next';
 
 interface DatabaseSelectorProps {
     connection: DbConnection | null;
     value: string;
     onChange: (database: string) => void;
-    lang: Language;
     disabled?: boolean;
     className?: string;
 }
@@ -22,16 +22,16 @@ export const DatabaseSelector: React.FC<DatabaseSelectorProps> = ({
     connection,
     value,
     onChange,
-    lang,
     disabled = false,
     className = ''
 }) => {
     const { databases, loading, error, refetch } = useDatabase(connection);
+    const { t } = useTranslation();
 
     return (
         <div className={className}>
             <label className="block text-xs font-bold text-slate-400 uppercase mb-1">
-                {lang === 'zh' ? '选择数据库' : 'Select Database'}
+                {t('common.selectDb', 'Select Database')}
             </label>
             <div className="relative">
                 <select
@@ -40,7 +40,7 @@ export const DatabaseSelector: React.FC<DatabaseSelectorProps> = ({
                     disabled={disabled || !connection || loading}
                     className="w-full p-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg text-sm outline-none dark:text-white disabled:opacity-50 truncate pr-10"
                 >
-                    <option value="">-- {lang === 'zh' ? '选择数据库' : 'Select DB'} --</option>
+                    <option value="">-- {t('common.selectDb', 'Select Database')} --</option>
                     {databases.map((db) => (
                         <option key={db} value={db}>
                             {db}
@@ -76,7 +76,7 @@ export const DatabaseSelector: React.FC<DatabaseSelectorProps> = ({
                     onClick={refetch}
                     className="mt-1 text-xs text-blue-500 hover:underline"
                 >
-                    {lang === 'zh' ? '重试' : 'Retry'}
+                    {t('common.retry', 'Retry')}
                 </button>
             )}
         </div>

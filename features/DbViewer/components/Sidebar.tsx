@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { Database, LogOut, Loader2, Search, Table, ChevronDown, FileCode, Check, Download, Copy, Trash2 } from 'lucide-react';
 import { Language } from '../../../types';
 import { useDbViewerStore } from '../store';
-import { getTexts } from '../../../locales';
 import { useDatabase } from '../../../hooks/useDatabase';
 import { useTables } from '../../../hooks/useTables';
 import { ContextMenu } from '../../common/ContextMenu';
@@ -17,9 +16,10 @@ import { ConvertDdlModal } from './ConvertDdlModal';
 import { TruncateModal } from './TruncateModal';
 import { detectDbTypeFromDdl, convertMysqlToDoris, convertDorisToMysql } from '../utils/ddlConverter';
 import { RefreshCw } from 'lucide-react';
+import { useTranslation } from "react-i18next";
 
-export const Sidebar: React.FC<{ lang: Language }> = ({ lang }) => {
-    const t = getTexts(lang);
+export const Sidebar: React.FC<{}> = ({}) => {
+    const { t, i18n } = useTranslation();
 
     const selectedConnection = useDbViewerStore((state) => state.selectedConnection);
     const databases = useDbViewerStore((state) => state.databases);
@@ -68,7 +68,7 @@ export const Sidebar: React.FC<{ lang: Language }> = ({ lang }) => {
     const { toast } = useToast();
     const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
         toast({
-            title: type === 'error' ? (lang === 'zh' ? '错误' : 'Error') : (lang === 'zh' ? '提示' : 'Info'),
+            title: type === 'error' ? (t('dbViewer.error')) : (t('dbViewer.info')),
             description: message,
             variant: type === 'error' ? 'destructive' : type === 'success' ? 'success' : 'default'
         });
@@ -120,10 +120,10 @@ export const Sidebar: React.FC<{ lang: Language }> = ({ lang }) => {
             }
 
             await navigator.clipboard.writeText(sql);
-            showToast(t.common?.copied || (lang === 'zh' ? '复制成功' : 'Copied successfully'), 'success');
+            showToast(t('common.copied') || (t('dbViewer.copiedSuccessfully')), 'success');
         } catch (e) {
             console.error('Failed to generate SQL', e);
-            showToast(lang === 'zh' ? '生成失败' : 'Failed to generate', 'error');
+            showToast(t('dbViewer.failedToGenerate'), 'error');
         } finally {
             setGeneratingSql(false);
         }
@@ -142,14 +142,14 @@ export const Sidebar: React.FC<{ lang: Language }> = ({ lang }) => {
 
         if (type === 'db-structure') {
             // 导出数据库结构
-            onProgress(lang === 'zh' ? `📊 数据库: ${selectedDatabase}` : `📊 Database: ${selectedDatabase}`);
-            onProgress(lang === 'zh' ? `📋 共 ${tables.length} 个表` : `📋 Total ${tables.length} tables`);
+            onProgress(t('dbViewer.DatabaseSelectedDatabase'));
+            onProgress(t('dbViewer.TotalTablesLengthTables'));
 
             let allDdl = `-- Database: ${selectedDatabase}\n-- Export Time: ${new Date().toLocaleString()}\n\n`;
 
             for (let i = 0; i < tables.length; i++) {
                 const table = tables[i];
-                onProgress(lang === 'zh' ? `⏳ [${i + 1}/${tables.length}] 导出表结构: ${table.name}` : `⏳ [${i + 1}/${tables.length}] Exporting table: ${table.name}`);
+                onProgress(t('dbViewer.I1TablesLengthExportingTa'));
                 const detail = await DatabaseService.getTableSchema(selectedConnection, selectedDatabase, table.name);
                 allDdl += `-- Table: ${table.name}\n`;
                 allDdl += detail.ddl + '\n\n';
@@ -159,15 +159,15 @@ export const Sidebar: React.FC<{ lang: Language }> = ({ lang }) => {
         }
         else if (type === 'db-data') {
             // 导出数据库数据
-            onProgress(lang === 'zh' ? `📊 数据库: ${selectedDatabase}` : `📊 Database: ${selectedDatabase}`);
-            onProgress(lang === 'zh' ? `📋 共 ${tables.length} 个表` : `📋 Total ${tables.length} tables`);
+            onProgress(t('dbViewer.DatabaseSelectedDatabase'));
+            onProgress(t('dbViewer.TotalTablesLengthTables'));
 
             const connStr = `mysql://${selectedConnection.user}:${selectedConnection.password || ''}@${selectedConnection.host}:${selectedConnection.port}`;
             let allData = `-- Database: ${selectedDatabase}\n-- Data Export Time: ${new Date().toLocaleString()}\n\n`;
 
             for (let i = 0; i < tables.length; i++) {
                 const table = tables[i];
-                onProgress(lang === 'zh' ? `⏳ [${i + 1}/${tables.length}] 导出表数据: ${table.name}` : `⏳ [${i + 1}/${tables.length}] Exporting data: ${table.name}`);
+                onProgress(t('dbViewer.I1TablesLengthExportingDa'));
 
                 const rows: any[] = await invoke('db_query', {
                     id: connStr,
@@ -176,7 +176,7 @@ export const Sidebar: React.FC<{ lang: Language }> = ({ lang }) => {
 
                 if (rows.length > 0) {
                     allData += `-- Table: ${table.name} (${rows.length} rows)\n`;
-                    onProgress(lang === 'zh' ? `  💾 ${table.name}: ${rows.length} 行数据` : `  💾 ${table.name}: ${rows.length} rows`);
+                    onProgress(t('dbViewer.TableNameRowsLengthRows'));
                     for (const row of rows) {
                         const cols = Object.keys(row).map(k => `\`${k}\``).join(', ');
                         const vals = Object.values(row).map(v => v === null ? 'NULL' : `'${String(v).replace(/'/g, "''")}'`).join(', ');
@@ -184,7 +184,7 @@ export const Sidebar: React.FC<{ lang: Language }> = ({ lang }) => {
                     }
                     allData += '\n';
                 } else {
-                    onProgress(lang === 'zh' ? `  ⚠️ ${table.name}: 无数据` : `  ⚠️ ${table.name}: No data`);
+                    onProgress(t('dbViewer.TableNameNoData'));
                 }
             }
 
@@ -192,8 +192,8 @@ export const Sidebar: React.FC<{ lang: Language }> = ({ lang }) => {
         }
         else if (type === 'table-structure' && tableName) {
             // 导出表结构
-            onProgress(lang === 'zh' ? `📋 表: ${tableName}` : `📋 Table: ${tableName}`);
-            onProgress(lang === 'zh' ? `⏳ 正在获取表结构...` : `⏳ Fetching table structure...`);
+            onProgress(t('dbViewer.TableTableName'));
+            onProgress(t('dbViewer.FetchingTableStructure'));
 
             const detail = await DatabaseService.getTableSchema(selectedConnection, selectedDatabase, tableName);
             const content = `-- Table: ${tableName}\n-- Export Time: ${new Date().toLocaleString()}\n\n${detail.ddl}`;
@@ -202,8 +202,8 @@ export const Sidebar: React.FC<{ lang: Language }> = ({ lang }) => {
         }
         else if (type === 'table-data' && tableName) {
             // 导出表数据
-            onProgress(lang === 'zh' ? `📋 表: ${tableName}` : `📋 Table: ${tableName}`);
-            onProgress(lang === 'zh' ? `⏳ 正在查询数据...` : `⏳ Querying data...`);
+            onProgress(t('dbViewer.TableTableName'));
+            onProgress(t('dbViewer.QueryingData'));
 
             const connStr = `mysql://${selectedConnection.user}:${selectedConnection.password || ''}@${selectedConnection.host}:${selectedConnection.port}`;
             const rows: any[] = await invoke('db_query', {
@@ -211,7 +211,7 @@ export const Sidebar: React.FC<{ lang: Language }> = ({ lang }) => {
                 sql: `SELECT * FROM \`${selectedDatabase}\`.\`${tableName}\` LIMIT 10000`
             });
 
-            onProgress(lang === 'zh' ? `💾 共 ${rows.length} 行数据` : `💾 Total ${rows.length} rows`);
+            onProgress(t('dbViewer.TotalRowsLengthRows'));
 
             let content = `-- Table: ${tableName}\n-- Data Export Time: ${new Date().toLocaleString()}\n-- Rows: ${rows.length}\n\n`;
 
@@ -242,7 +242,7 @@ export const Sidebar: React.FC<{ lang: Language }> = ({ lang }) => {
     const executeBatchConvert = async (filePath: string) => {
         if (!selectedConnection || !selectedDatabase) return;
 
-        setConvertModal(prev => ({ ...prev, isConverting: true, progress: lang === 'zh' ? '正在初始化...' : 'Initializing...' }));
+        setConvertModal(prev => ({ ...prev, isConverting: true, progress: t('dbViewer.initializing') }));
 
         try {
             // 1. 获取所有表
@@ -253,7 +253,7 @@ export const Sidebar: React.FC<{ lang: Language }> = ({ lang }) => {
             if (targetTables.length === 0) {
                 // 尝试 fetch，或者直接报错
                 // 这里简单处理：如果当前视图没有表，抛出错误
-                throw new Error(lang === 'zh' ? '当前数据库没有表' : 'No tables found in current database');
+                throw new Error(t('dbViewer.noTablesFoundInCurrentDat'));
             }
 
             const tableNames = targetTables.map(t => t.name);
@@ -261,16 +261,14 @@ export const Sidebar: React.FC<{ lang: Language }> = ({ lang }) => {
             let convertedContent = `-- Batch DDL Conversion\n-- Database: ${selectedDatabase}\n-- Time: ${new Date().toLocaleString()}\n\n`;
             let sourceType: 'mysql' | 'doris' = 'mysql';
 
-            setConvertModal(prev => ({ ...prev, progress: lang === 'zh' ? `找到 ${tableNames.length} 个表` : `Found ${tableNames.length} tables` }));
+            setConvertModal(prev => ({ ...prev, progress: t('dbViewer.foundTableNamesLengthTabl') }));
 
             // 2. 遍历表
             for (let i = 0; i < tableNames.length; i++) {
                 const tableName = tableNames[i];
 
                 // Update progress
-                const progressMsg = lang === 'zh'
-                    ? `正在处理 [${i + 1}/${tableNames.length}]: ${tableName}`
-                    : `Processing [${i + 1}/${tableNames.length}]: ${tableName}`;
+                const progressMsg = t('dbViewer.processingI1TableNamesLen');
 
                 setConvertModal(prev => ({ ...prev, progress: progressMsg }));
 
@@ -317,16 +315,16 @@ export const Sidebar: React.FC<{ lang: Language }> = ({ lang }) => {
             }
 
             // 3. 保存文件
-            setConvertModal(prev => ({ ...prev, progress: lang === 'zh' ? '正在保存文件...' : 'Saving file...' }));
+            setConvertModal(prev => ({ ...prev, progress: t('dbViewer.savingFile') }));
             await writeTextFile(filePath, convertedContent);
 
             setConvertModal(prev => ({
                 ...prev,
                 isConverting: false,
-                progress: lang === 'zh' ? '转换完成！文件已保存。' : 'Conversion completed! File saved.'
+                progress: t('dbViewer.conversionCompletedFileSa')
             }));
 
-            showToast(lang === 'zh' ? '转换成功' : 'Conversion successful', 'success');
+            showToast(t('dbViewer.conversionSuccessful'), 'success');
 
             // 延迟关闭，让用户看到完成状态
             setTimeout(() => {
@@ -338,7 +336,7 @@ export const Sidebar: React.FC<{ lang: Language }> = ({ lang }) => {
             setConvertModal(prev => ({
                 ...prev,
                 isConverting: false,
-                progress: lang === 'zh' ? `错误: ${err.message || err}` : `Error: ${err.message || err}`
+                progress: t('dbViewer.errorErrMessageErr')
             }));
             showToast(err.toString(), 'error');
             // Do NOT close modal on error, let user see the error
@@ -356,33 +354,33 @@ export const Sidebar: React.FC<{ lang: Language }> = ({ lang }) => {
             y: e.clientY,
             items: [
                 {
-                    label: lang === 'zh' ? '复制库名' : 'Copy Database Name',
+                    label: t('dbViewer.copyDatabaseName'),
                     icon: <Copy size={14} />,
                     onClick: async () => {
                         await navigator.clipboard.writeText(selectedDatabase);
-                        showToast(lang === 'zh' ? '复制成功' : 'Copied successfully', 'success');
+                        showToast(t('dbViewer.copiedSuccessfully'), 'success');
                         setContextMenu(null);
                     }
                 },
                 { divider: true },
                 {
-                    label: lang === 'zh' ? '导出库结构' : 'Export Database Structure',
+                    label: t('dbViewer.exportDatabaseStructure'),
                     icon: <Download size={14} />,
                     onClick: () => openExportModal('db-structure')
                 },
                 {
-                    label: lang === 'zh' ? '导出库数据' : 'Export Database Data',
+                    label: t('dbViewer.exportDatabaseData'),
                     icon: <Download size={14} />,
                     onClick: () => openExportModal('db-data')
                 },
                 {
-                    label: lang === 'zh' ? '一键 DDL 转换' : 'Batch DDL Conversion',
+                    label: t('dbViewer.batchDDLConversion'),
                     icon: <RefreshCw size={14} />,
                     onClick: () => openConvertModal()
                 },
                 { divider: true },
                 {
-                    label: lang === 'zh' ? '清理数据库' : 'Truncate Database',
+                    label: t('dbViewer.truncateDatabase'),
                     icon: <Trash2 size={14} />,
                     onClick: () => {
                         setTruncateModal(true);
@@ -402,53 +400,53 @@ export const Sidebar: React.FC<{ lang: Language }> = ({ lang }) => {
             y: e.clientY,
             items: [
                 {
-                    label: lang === 'zh' ? '生成 SELECT 语句' : 'Generate SELECT',
+                    label: t('dbViewer.generateSELECT'),
                     icon: <FileCode size={14} />,
                     onClick: () => handleGenerateSql(tableName, 'SELECT')
                 },
                 {
-                    label: lang === 'zh' ? '生成 INSERT 语句' : 'Generate INSERT',
+                    label: t('dbViewer.generateINSERT'),
                     icon: <FileCode size={14} />,
                     onClick: () => handleGenerateSql(tableName, 'INSERT')
                 },
                 {
-                    label: lang === 'zh' ? '生成 UPDATE 语句' : 'Generate UPDATE',
+                    label: t('dbViewer.generateUPDATE'),
                     icon: <FileCode size={14} />,
                     onClick: () => handleGenerateSql(tableName, 'UPDATE')
                 },
                 {
-                    label: lang === 'zh' ? '生成 DELETE 语句' : 'Generate DELETE',
+                    label: t('dbViewer.generateDELETE'),
                     icon: <FileCode size={14} />,
                     onClick: () => handleGenerateSql(tableName, 'DELETE')
                 },
                 { divider: true },
                 {
-                    label: lang === 'zh' ? '复制表名' : 'Copy Table Name',
+                    label: t('dbViewer.copyTableName'),
                     icon: <Copy size={14} />,
                     onClick: async () => {
                         await navigator.clipboard.writeText(tableName);
-                        showToast(lang === 'zh' ? '复制成功' : 'Copied successfully', 'success');
+                        showToast(t('dbViewer.copiedSuccessfully'), 'success');
                         setContextMenu(null);
                     }
                 },
                 {
-                    label: lang === 'zh' ? '复制 TRUNCATE 语句' : 'Copy TRUNCATE Statement',
+                    label: t('dbViewer.copyTRUNCATEStatement'),
                     icon: <Trash2 size={14} />,
                     onClick: async () => {
                         const sql = `TRUNCATE TABLE \`${selectedDatabase}\`.\`${tableName}\`;`;
                         await navigator.clipboard.writeText(sql);
-                        showToast(lang === 'zh' ? '复制成功' : 'Copied successfully', 'success');
+                        showToast(t('dbViewer.copiedSuccessfully'), 'success');
                         setContextMenu(null);
                     }
                 },
                 { divider: true },
                 {
-                    label: lang === 'zh' ? '导出表结构' : 'Export Table Structure',
+                    label: t('dbViewer.exportTableStructure'),
                     icon: <Download size={14} />,
                     onClick: () => openExportModal('table-structure', tableName)
                 },
                 {
-                    label: lang === 'zh' ? '导出表数据' : 'Export Table Data',
+                    label: t('dbViewer.exportTableData'),
                     icon: <Download size={14} />,
                     onClick: () => openExportModal('table-data', tableName)
                 }
@@ -468,7 +466,7 @@ export const Sidebar: React.FC<{ lang: Language }> = ({ lang }) => {
                     <button
                         onClick={() => setSelectedConnection(null)}
                         className="text-slate-400 hover:text-red-500 transition-colors"
-                        title={lang === 'zh' ? '断开连接' : 'Disconnect'}
+                        title={t('dbViewer.disconnect')}
                     >
                         <LogOut size={16} />
                     </button>
@@ -477,7 +475,7 @@ export const Sidebar: React.FC<{ lang: Language }> = ({ lang }) => {
                 {/* 数据库下拉选择框 */}
                 <div className="mb-4" onContextMenu={handleDatabaseContextMenu}>
                     <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2">
-                        {lang === 'zh' ? '选择数据库' : 'Select Database'}
+                        {t('dbViewer.selectDatabase')}
                     </label>
                     <div className="relative">
                         <select
@@ -488,8 +486,8 @@ export const Sidebar: React.FC<{ lang: Language }> = ({ lang }) => {
                         >
                             <option value="">
                                 {dbLoading
-                                    ? (lang === 'zh' ? '加载中...' : 'Loading...')
-                                    : (lang === 'zh' ? '请选择数据库' : 'Select a database')}
+                                    ? (t('dbViewer.loading'))
+                                    : (t('dbViewer.selectADatabase'))}
                             </option>
                             {databases.map(db => (
                                 <option key={db} value={db}>
@@ -516,15 +514,15 @@ export const Sidebar: React.FC<{ lang: Language }> = ({ lang }) => {
                                 type="text"
                                 value={tableSearch}
                                 onChange={(e) => setTableSearch(e.target.value)}
-                                placeholder={lang === 'zh' ? '搜索表名...' : 'Search tables...'}
+                                placeholder={t('dbViewer.searchTables')}
                                 className="w-full pl-9 pr-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-sm text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                         </div>
                         {filteredTables.length > 0 && (
                             <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
                                 {filteredTables.length !== tables.length
-                                    ? `${filteredTables.length} / ${tables.length} ${lang === 'zh' ? '个表' : 'tables'}`
-                                    : `${tables.length} ${lang === 'zh' ? '个表' : 'tables'}`}
+                                    ? `${filteredTables.length} / ${tables.length} ${t('dbViewer.tables')}`
+                                    : `${tables.length} ${t('dbViewer.tables')}`}
                             </p>
                         )}
 
@@ -535,7 +533,7 @@ export const Sidebar: React.FC<{ lang: Language }> = ({ lang }) => {
                         {tableLoading && (
                             <div className="flex items-center justify-center py-8 text-slate-500">
                                 <Loader2 size={18} className="animate-spin mr-2" />
-                                <span className="text-sm">{lang === 'zh' ? '加载表列表...' : 'Loading tables...'}</span>
+                                <span className="text-sm">{t('dbViewer.loadingTables')}</span>
                             </div>
                         )}
                         {tableError && (
@@ -546,8 +544,8 @@ export const Sidebar: React.FC<{ lang: Language }> = ({ lang }) => {
                         {!tableLoading && !tableError && filteredTables.length === 0 && (
                             <div className="px-4 py-3 text-sm text-slate-400 text-center">
                                 {tableSearch
-                                    ? (lang === 'zh' ? '未找到匹配的表' : 'No matching tables')
-                                    : (lang === 'zh' ? '该数据库暂无表' : 'No tables in this database')}
+                                    ? (t('dbViewer.noMatchingTables'))
+                                    : (t('dbViewer.noTablesInThisDatabase'))}
                             </div>
                         )}
                         {!tableLoading && filteredTables.map(table => (
@@ -580,7 +578,7 @@ export const Sidebar: React.FC<{ lang: Language }> = ({ lang }) => {
                                             )}
                                             <div className="flex items-center space-x-3 mt-1">
                                                 <span className="text-xs text-slate-400">
-                                                    {table.rows.toLocaleString()} {lang === 'zh' ? '行' : 'rows'}
+                                                    {table.rows.toLocaleString()} {t('dbViewer.rows')}
                                                 </span>
                                                 <span className="text-xs text-slate-400">
                                                     {table.size}
@@ -610,10 +608,10 @@ export const Sidebar: React.FC<{ lang: Language }> = ({ lang }) => {
                 onClose={() => setExportModal({ isOpen: false, type: null })}
                 onConfirm={handleExport}
                 title={
-                    exportModal.type === 'db-structure' ? (lang === 'zh' ? '导出数据库结构' : 'Export Database Structure') :
-                        exportModal.type === 'db-data' ? (lang === 'zh' ? '导出数据库数据' : 'Export Database Data') :
-                            exportModal.type === 'table-structure' ? (lang === 'zh' ? '导出表结构' : 'Export Table Structure') :
-                                exportModal.type === 'table-data' ? (lang === 'zh' ? '导出表数据' : 'Export Table Data') :
+                    exportModal.type === 'db-structure' ? (t('dbViewer.exportDatabaseStructure')) :
+                        exportModal.type === 'db-data' ? (t('dbViewer.exportDatabaseData')) :
+                            exportModal.type === 'table-structure' ? (t('dbViewer.exportTableStructure')) :
+                                exportModal.type === 'table-data' ? (t('dbViewer.exportTableData')) :
                                     ''
                 }
                 defaultFileName={
@@ -640,7 +638,6 @@ export const Sidebar: React.FC<{ lang: Language }> = ({ lang }) => {
                         return 'export.sql';
                     })()
                 }
-                lang={lang}
             />
 
             {/* 批量转换模态框 */}
@@ -660,7 +657,6 @@ export const Sidebar: React.FC<{ lang: Language }> = ({ lang }) => {
                     const second = String(now.getSeconds()).padStart(2, '0');
                     return `${year}-${month}-${day}_${hour}-${minute}-${second}`;
                 })()}.sql`}
-                lang={lang}
                 isConverting={convertModal.isConverting}
                 progress={convertModal.progress}
             />
@@ -671,7 +667,6 @@ export const Sidebar: React.FC<{ lang: Language }> = ({ lang }) => {
                 onClose={() => setTruncateModal(false)}
                 tables={tables.map(t => t.name)}
                 databaseName={selectedDatabase || ''}
-                lang={lang}
             />
         </div>
     );

@@ -7,14 +7,15 @@ import {
 import { invoke } from '@tauri-apps/api/core';
 import { TableInfo, ColumnInfo, TableDetail } from '../../types';
 import { ConfirmModal } from '../common/ConfirmModal';
-import { ViewModeToggle } from '../common/ViewModeToggle';
 import { useViewMode, useGlobalStore } from '../../store/globalStore';
 import { generateConfig } from './utils/configGenerator';
 import { useToast } from '../common/Toast';
 import { Tooltip } from '../common/Tooltip';
+import { ViewModeToggle } from '../common/ViewModeToggle';
 import { SeaTunnelEngineConfig } from '../SeaTunnelManager/types';
 import { seaTunnelApi } from '../SeaTunnelManager/api';
 import { convertToJson } from '../../utils/hoconParser';
+import { useTranslation } from "react-i18next";
 
 // 数据源选择弹窗
 const DataSourceSelectorModal: React.FC<{
@@ -23,14 +24,14 @@ const DataSourceSelectorModal: React.FC<{
   connections: DbConnection[];
   onSelect: (conn: DbConnection) => void;
   onNavigate: (id: string) => void;
-  lang: Language;
-}> = ({ isOpen, onClose, connections, onSelect, onNavigate, lang }) => {
+}> = ({ isOpen, onClose, connections, onSelect, onNavigate}) => {
+  const { t } = useTranslation();
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in">
       <div className="bg-white dark:bg-slate-800 rounded-xl w-full max-w-md shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
         <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
-          <h3 className="font-bold text-slate-800 dark:text-white">{lang === 'zh' ? '选择数据源' : 'Select Data Source'}</h3>
+          <h3 className="font-bold text-slate-800 dark:text-white">{t('common.selectDataSource')}</h3>
           <button onClick={onClose}><X size={20} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200" /></button>
         </div>
         <div className="p-4 space-y-2 max-h-96 overflow-y-auto custom-scrollbar">
@@ -39,12 +40,12 @@ const DataSourceSelectorModal: React.FC<{
               <div className="bg-slate-100 dark:bg-slate-700 rounded-full p-4 w-16 h-16 mx-auto flex items-center justify-center mb-3">
                 <Database className="h-8 w-8 text-slate-400" />
               </div>
-              <p className="text-slate-500 text-sm mb-4">{lang === 'zh' ? '暂无可用数据源' : 'No data sources found'}</p>
+              <p className="text-slate-500 text-sm mb-4">{t('common.noDataSourcesFound')}</p>
               <button
                 onClick={() => { onClose(); onNavigate('data-source-manager'); }}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors font-medium"
               >
-                {lang === 'zh' ? '去添加数据源' : 'Add Data Source'}
+                {t('common.addDataSource')}
               </button>
             </div>
           ) : (
@@ -76,10 +77,10 @@ const DataSourceSelectorModal: React.FC<{
 };
 
 export const SeatunnelGen: React.FC<{
-  lang: Language;
   connections: DbConnection[];
   onNavigate: (id: string) => void;
-}> = ({ lang, connections, onNavigate }) => {
+}> = ({ connections, onNavigate }) => {
+  const { t, i18n } = useTranslation();
   const viewMode = useViewMode();
 
   // 模拟持久化存储 Jobs
@@ -223,7 +224,7 @@ export const SeatunnelGen: React.FC<{
   const handleCreateJob = () => {
     const newJob: ScriptJob = {
       id: Date.now().toString(),
-      name: lang === 'zh' ? '新同步任务' : 'New Sync Job',
+      name: t('common.newSyncJob'),
       scriptType: 'seatunnel',
       source: {} as JobConfig,
       sink: {} as JobConfig,
@@ -350,8 +351,8 @@ export const SeatunnelGen: React.FC<{
     if (!activeJob.source.host || !activeJob.source.database || !activeJob.source.table ||
       !activeJob.sink.host || !activeJob.sink.database || !activeJob.sink.table) {
       toast({
-        title: lang === 'zh' ? '配置不完整' : 'Incomplete Configuration',
-        description: lang === 'zh' ? '请先完整配置源端和目标端信息（包括数据库）' : 'Please fully configure source and sink (including database)',
+        title: t('common.incompleteConfiguration'),
+        description: t('common.pleaseFullyConfigureSourc'),
         variant: 'destructive'
       });
       return;
@@ -377,7 +378,7 @@ export const SeatunnelGen: React.FC<{
           sourceColumns = sourceTableDetail.columns;
         } catch (e) {
           console.error('Source Schema Error:', e);
-          throw new Error(lang === 'zh' ? `无法获取源表结构: ${activeJob.source.table}` : `Failed to fetch source schema: ${activeJob.source.table}`);
+          throw new Error(t('common.failedToFetchSourceSchema', { table: activeJob.source.table }));
         }
 
         // Fetch Sink Schema
@@ -393,7 +394,7 @@ export const SeatunnelGen: React.FC<{
           // For JDBC Sink, we really need columns. For Doris, maybe optional?
           // But we'll throw for consistency as we want to validate connectivity
           console.error('Sink Schema Error:', e);
-          throw new Error(lang === 'zh' ? `无法获取目标表结构: ${activeJob.sink.table}` : `Failed to fetch sink schema: ${activeJob.sink.table}`);
+          throw new Error(t('common.failedToFetchSinkSchemaAc', { table: activeJob.sink.table }));
         }
       } else {
         // Mock columns for browser testing
@@ -412,7 +413,7 @@ export const SeatunnelGen: React.FC<{
 
     } catch (error: any) {
       toast({
-        title: lang === 'zh' ? '生成失败' : 'Generation Failed',
+        title: t('common.generationFailed'),
         description: error.message,
         variant: 'destructive',
         duration: 5000
@@ -430,10 +431,10 @@ export const SeatunnelGen: React.FC<{
       <div className="h-full flex flex-col">
         <ConfirmModal
           isOpen={confirmDelete.isOpen}
-          title={lang === 'zh' ? '确认删除' : 'Confirm Delete'}
-          message={lang === 'zh' ? '确定要删除这个同步任务吗？' : 'Are you sure you want to delete this sync job?'}
-          confirmText={lang === 'zh' ? '删除' : 'Delete'}
-          cancelText={lang === 'zh' ? '取消' : 'Cancel'}
+          title={t('common.confirmDelete')}
+          message={t('common.areYouSureYouWantToDelete')}
+          confirmText={t('common.delete')}
+          cancelText={t('common.cancel')}
           onConfirm={confirmDeleteJob}
           onCancel={() => setConfirmDelete({ isOpen: false, jobId: '' })}
           type="danger"
@@ -441,13 +442,13 @@ export const SeatunnelGen: React.FC<{
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center">
             <Workflow className="mr-3 text-purple-600" />
-            {lang === 'zh' ? '任务脚本生成器' : 'Script Generator'}
+            {t('common.scriptGenerator')}
           </h2>
           <div className="flex items-center space-x-3">
             <ViewModeToggle />
             <button onClick={handleCreateJob} className="min-w-[140px] px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium flex items-center justify-center shadow-lg transition-colors">
               <Plus size={18} className="mr-2" />
-              {lang === 'zh' ? '新建任务' : 'New Job'}
+              {t('common.newJob')}
             </button>
           </div>
         </div>
@@ -480,7 +481,7 @@ export const SeatunnelGen: React.FC<{
                         <span className="font-bold uppercase truncate max-w-[45%]">{job.sink.type || '?'}</span>
                       </div>
                       <div className="mt-3 text-[10px] text-slate-400 text-right">
-                        {new Date(job.createdAt).toLocaleDateString()}
+                        {new Date(job.createdAt).toLocaleDateString(i18n.language.startsWith('zh') ? 'zh-CN' : 'en-US')}
                       </div>
                     </div>
                   </div>
@@ -491,16 +492,16 @@ export const SeatunnelGen: React.FC<{
                 <div className="p-4 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform duration-300 mb-4">
                   <Plus size={32} />
                 </div>
-                <span className="font-bold text-lg text-slate-600 dark:text-slate-300 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">{lang === 'zh' ? '创建新脚本任务' : 'Create New Job'}</span>
+                <span className="font-bold text-lg text-slate-600 dark:text-slate-300 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">{t('common.createNewJob')}</span>
               </button>
             </div>
           ) : (
             <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
               <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-500 uppercase tracking-wider sticky top-0 z-10">
-                <div className="col-span-4">{lang === 'zh' ? '任务名称' : 'Job Name'}</div>
-                <div className="col-span-4">{lang === 'zh' ? '数据流向' : 'Source → Sink'}</div>
-                <div className="col-span-2">{lang === 'zh' ? '创建时间' : 'Created'}</div>
-                <div className="col-span-2 text-right">{lang === 'zh' ? '操作' : 'Actions'}</div>
+                <div className="col-span-4">{t('common.jobName')}</div>
+                <div className="col-span-4">{t('common.sourceSink')}</div>
+                <div className="col-span-2">{t('common.created')}</div>
+                <div className="col-span-2 text-right">{t('common.actions')}</div>
               </div>
               <div className="divide-y divide-slate-100 dark:divide-slate-700">
                 {jobs.map(job => (
@@ -521,7 +522,7 @@ export const SeatunnelGen: React.FC<{
                       <span className="bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-600">{job.sink.type || 'Sink'}</span>
                     </div>
                     <div className="col-span-2 text-xs text-slate-500 dark:text-slate-400">
-                      {new Date(job.createdAt).toLocaleDateString()}
+                      {new Date(job.createdAt).toLocaleDateString(i18n.language.startsWith('zh') ? 'zh-CN' : 'en-US')}
                     </div>
                     <div className="col-span-2 flex justify-end">
                       <button onClick={(e) => handleDeleteJob(job.id, e)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors relative z-10">
@@ -530,7 +531,7 @@ export const SeatunnelGen: React.FC<{
                     </div>
                   </div>
                 ))}
-                {jobs.length === 0 && <div className="px-6 py-8 text-center text-slate-400 text-sm italic">{lang === 'zh' ? '暂无任务' : 'No jobs found'}</div>}
+                {jobs.length === 0 && <div className="px-6 py-8 text-center text-slate-400 text-sm italic">{t('common.noJobsFound')}</div>}
               </div>
             </div>
           )}
@@ -548,18 +549,16 @@ export const SeatunnelGen: React.FC<{
         connections={connections}
         onSelect={handleSelectDataSource}
         onNavigate={onNavigate}
-        lang={lang}
+
       />
 
       {/* 退出确认弹窗 */}
       <ConfirmModal
         isOpen={exitConfirmModal}
-        title={lang === 'zh' ? '退出确认' : 'Confirm Exit'}
-        message={lang === 'zh' 
-          ? '是否保存当前配置后退出？' 
-          : 'Save current configuration before exit?'}
-        confirmText={lang === 'zh' ? '保存并退出' : 'Save & Exit'}
-        cancelText={lang === 'zh' ? '不保存' : 'Discard'}
+        title={t('common.confirmExit')}
+        message={t('common.saveCurrentConfigurationB')}
+        confirmText={t('common.saveExit')}
+        cancelText={t('common.discard')}
         type="info"
         onConfirm={() => {
           // 保存配置到 job
@@ -597,7 +596,7 @@ export const SeatunnelGen: React.FC<{
             onChange={(e) => setSelectedEngineId(e.target.value)}
             className="px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm outline-none focus:ring-2 focus:ring-purple-500"
           >
-            <option value="">{lang === 'zh' ? '-- 选择项目 --' : '-- Select Project --'}</option>
+            <option value="">{t('common.SelectProject')}</option>
             {engines.filter(e => e.engineType === 'zeta').map(engine => (
               <option key={engine.id} value={engine.id}>{engine.name}</option>
             ))}
@@ -608,7 +607,7 @@ export const SeatunnelGen: React.FC<{
             className="px-4 py-2 bg-purple-600 text-white rounded-lg font-medium flex items-center shadow-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Play size={16} className="mr-2" />
-            {isGenerating ? (lang === 'zh' ? '生成中...' : 'Generating...') : (lang === 'zh' ? '生成预览' : 'Generate')}
+            {isGenerating ? t('common.generating') : t('common.preview')}
           </button>
           <button
             onClick={async () => {
@@ -629,20 +628,20 @@ export const SeatunnelGen: React.FC<{
                 });
                 if (result.success) {
                   toast({
-                    title: lang === 'zh' ? '提交成功' : 'Submit Success',
+                    title: t('common.submitSuccess'),
                     description: `Job ID: ${result.data}`,
                     variant: 'success'
                   });
                 } else {
                   toast({
-                    title: lang === 'zh' ? '提交失败' : 'Submit Failed',
+                    title: t('common.submitFailed'),
                     description: result.error,
                     variant: 'destructive'
                   });
                 }
               } catch (err: any) {
                 toast({
-                  title: lang === 'zh' ? '提交失败' : 'Submit Failed',
+                  title: t('common.submitFailed'),
                   description: err.message,
                   variant: 'destructive'
                 });
@@ -654,7 +653,7 @@ export const SeatunnelGen: React.FC<{
             className="px-4 py-2 bg-cyan-600 text-white rounded-lg font-medium flex items-center shadow-lg hover:bg-cyan-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Upload size={16} className="mr-2" />
-            {isSubmitting ? (lang === 'zh' ? '提交中...' : 'Submitting...') : (lang === 'zh' ? '提交作业' : 'Submit')}
+            {isSubmitting ? t('common.submitting') : t('common.submit')}
           </button>
         </div>
       </div>
@@ -755,7 +754,7 @@ export const SeatunnelGen: React.FC<{
                                 {activeJob.source.table === t.name && <Check size={14} className="text-white" />}
                               </button>
                             ))}
-                          {sourceTables.length === 0 && <div className="p-4 text-center text-xs text-slate-400">无数据表</div>}
+                          {sourceTables.length === 0 && <div className="p-4 text-center text-xs text-slate-400">{t('common.noData')}</div>}
                         </div>
                       )}
                     </div>
@@ -862,7 +861,7 @@ export const SeatunnelGen: React.FC<{
                                 {activeJob.sink.table === t.name && <Check size={14} className="text-white" />}
                               </button>
                             ))}
-                          {sinkTables.length === 0 && <div className="p-4 text-center text-xs text-slate-400">无数据表</div>}
+                          {sinkTables.length === 0 && <div className="p-4 text-center text-xs text-slate-400">{t('common.noData')}</div>}
                         </div>
                       )}
                     </div>
@@ -904,8 +903,8 @@ export const SeatunnelGen: React.FC<{
         <div className="bg-[#1e1e1e] rounded-xl border border-slate-800 overflow-hidden mt-2" style={{ height: configPanelHeight }}>
           <div className="h-9 bg-[#252526] border-b border-slate-700 flex items-center justify-between px-4">
             <span className="text-xs text-slate-400 font-mono">
-              {lang === 'zh' ? '配置文件' : 'Configuration'}
-              {isConfigEditing && <span className="ml-2 text-amber-400">(编辑中)</span>}
+              {t('common.configuration')}
+              {isConfigEditing && <span className="ml-2 text-amber-400">({t('common.editing')})</span>}
             </span>
             <div className="flex items-center space-x-3">
               {isConfigEditing ? (
@@ -917,7 +916,7 @@ export const SeatunnelGen: React.FC<{
                     }}
                     className="text-xs text-green-400 hover:text-green-300 flex items-center"
                   >
-                    <Save size={14} className="mr-1" /> {lang === 'zh' ? '保存' : 'Save'}
+                    <Save size={14} className="mr-1" /> {t('common.save')}
                   </button>
                   <button
                     onClick={() => {
@@ -926,7 +925,7 @@ export const SeatunnelGen: React.FC<{
                     }}
                     className="text-xs text-slate-400 hover:text-white"
                   >
-                    {lang === 'zh' ? '取消' : 'Cancel'}
+                    {t('common.cancel')}
                   </button>
                 </>
               ) : (
@@ -939,7 +938,7 @@ export const SeatunnelGen: React.FC<{
                     disabled={!generatedConfig}
                     className="text-xs text-blue-400 hover:text-blue-300 flex items-center disabled:opacity-30 disabled:cursor-not-allowed"
                   >
-                    {lang === 'zh' ? '编辑' : 'Edit'}
+                    {t('common.edit')}
                   </button>
                   <button
                     onClick={() => {
@@ -951,13 +950,13 @@ export const SeatunnelGen: React.FC<{
                           }
                           setGeneratedConfig(convertResult.json);
                           toast({
-                            title: lang === 'zh' ? '转换成功' : 'Converted',
-                            description: lang === 'zh' ? '已转换为 JSON 格式' : 'Converted to JSON format',
+                            title: t('common.converted'),
+                            description: t('common.convertedToJSONFormat'),
                             variant: 'success'
                           });
                         } catch (err: any) {
                           toast({
-                            title: lang === 'zh' ? '转换失败' : 'Convert Failed',
+                            title: t('common.convertFailed'),
                             description: err.message,
                             variant: 'destructive'
                           });
@@ -974,8 +973,8 @@ export const SeatunnelGen: React.FC<{
                       if (generatedConfig) {
                         navigator.clipboard.writeText(generatedConfig);
                         toast({
-                          title: lang === 'zh' ? '已复制' : 'Copied',
-                          description: lang === 'zh' ? '配置已复制到剪贴板' : 'Configuration copied to clipboard',
+                          title: t('common.copied'),
+                          description: t('common.configurationCopiedToClip'),
                           variant: 'success'
                         });
                       }
@@ -1000,7 +999,7 @@ export const SeatunnelGen: React.FC<{
             ) : generatedConfig ? (
               <pre className="p-4 whitespace-pre-wrap text-green-300">{generatedConfig}</pre>
             ) : (
-              <span className="p-4 text-slate-500 block"># {lang === 'zh' ? '点击生成按钮预览配置...' : 'Click Generate to preview configuration...'}</span>
+              <span className="p-4 text-slate-500 block"># {t('common.clickGenerateToPreviewCon')}</span>
             )}
           </div>
         </div>

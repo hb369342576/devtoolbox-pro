@@ -14,12 +14,13 @@ import {
 } from 'lucide-react';
 import { Language } from '../../types';
 import { useToast } from './Toast';
+import { useTranslation } from "react-i18next";
 
 interface UpdateCheckerProps {
-  lang: Language;
 }
 
-export const UpdateChecker: React.FC<UpdateCheckerProps> = ({ lang }) => {
+export const UpdateChecker: React.FC<UpdateCheckerProps> = ({}) => {
+    const { t, i18n } = useTranslation();
   const [checking, setChecking] = useState(false);
   const [updateInfo, setUpdateInfo] = useState<any>(null);
   const [downloading, setDownloading] = useState(false);
@@ -37,8 +38,8 @@ export const UpdateChecker: React.FC<UpdateCheckerProps> = ({ lang }) => {
       } else if (!silent) {
         toast({
           type: 'info',
-          message: lang === 'zh' ? '当前已是最新版本' : 'Already up to date',
-          description: lang === 'zh' ? '无需更新' : 'No updates available'
+          message: t('common.upToDate', 'Already up to date'),
+          description: t('common.noUpdates', 'No updates available')
         });
       }
     } catch (error) {
@@ -46,7 +47,7 @@ export const UpdateChecker: React.FC<UpdateCheckerProps> = ({ lang }) => {
       if (!silent) {
         toast({
           type: 'error',
-          message: lang === 'zh' ? '检查更新失败' : 'Update Check Failed',
+          message: t('common.updateCheckFailed', 'Update Check Failed'),
           description: String(error)
         });
       }
@@ -83,8 +84,8 @@ export const UpdateChecker: React.FC<UpdateCheckerProps> = ({ lang }) => {
 
       toast({
         type: 'success',
-        message: lang === 'zh' ? '更新下载完成' : 'Update Downloaded',
-        description: lang === 'zh' ? '正在重启以应用更新...' : 'Relaunching to apply updates...'
+        message: t('common.updateDownloaded', 'Update Downloaded'),
+        description: t('common.relaunching', 'Relaunching to apply updates...')
       });
 
       // Restart after 2 seconds
@@ -96,7 +97,7 @@ export const UpdateChecker: React.FC<UpdateCheckerProps> = ({ lang }) => {
       console.error('Failed to install update:', error);
       toast({
         type: 'error',
-        message: lang === 'zh' ? '安装更新失败' : 'Update Failed',
+        message: t('common.updateFailed', 'Update Failed'),
         description: String(error)
       });
       setDownloading(false);
@@ -132,7 +133,7 @@ export const UpdateChecker: React.FC<UpdateCheckerProps> = ({ lang }) => {
               <Download className="text-white animate-bounce" size={32} />
            </div>
            <h2 className="relative z-10 text-white font-bold text-2xl tracking-tight">
-              {lang === 'zh' ? '发现新版本' : 'New Version Found'}
+              {t('common.newVersion', 'New Version Found')}
            </h2>
            <div className="relative z-10 px-3 py-1 bg-white/20 backdrop-blur-md rounded-full mt-2 border border-white/20 shadow-sm">
               <span className="text-white text-xs font-bold uppercase tracking-widest flex items-center">
@@ -151,10 +152,10 @@ export const UpdateChecker: React.FC<UpdateCheckerProps> = ({ lang }) => {
                  </div>
                  <div className="ml-4 flex-1">
                     <h4 className="text-sm font-bold text-slate-800 dark:text-white">
-                       {lang === 'zh' ? '更新日志' : 'Release Notes'}
+                       {t('common.releaseNotes', 'Release Notes')}
                     </h4>
                     <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 leading-relaxed max-h-32 overflow-y-auto pr-2 no-scrollbar italic whitespace-pre-wrap">
-                       {updateInfo?.body || (lang === 'zh' ? '暂无详细说明' : 'No description available')}
+                       {updateInfo?.body || t('common.noDescription', 'No description available')}
                     </p>
                  </div>
               </div>
@@ -165,7 +166,7 @@ export const UpdateChecker: React.FC<UpdateCheckerProps> = ({ lang }) => {
               <div className="mb-8 animate-in fade-in duration-300">
                  <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-bold text-blue-500 uppercase tracking-widest">
-                       {lang === 'zh' ? '正在下载更新...' : 'Downloading update...'}
+                       {t('common.downloadingUpdate')}
                     </span>
                     <span className="text-xs font-bold text-blue-500 font-mono">{downloadProgress}%</span>
                  </div>
@@ -185,7 +186,7 @@ export const UpdateChecker: React.FC<UpdateCheckerProps> = ({ lang }) => {
                  onClick={() => setShowModal(false)}
                  className="px-6 py-3 rounded-2xl text-sm font-bold text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800 transition-all disabled:opacity-30"
               >
-                 {lang === 'zh' ? '稍后提醒' : 'Later'}
+                 {t('common.later')}
               </button>
               <button
                  disabled={downloading}
@@ -195,11 +196,11 @@ export const UpdateChecker: React.FC<UpdateCheckerProps> = ({ lang }) => {
                  {downloading ? (
                     <>
                        <Loader2 className="animate-spin mr-2" size={18} />
-                       {lang === 'zh' ? '处理中' : 'Processing'}
+                       {t('common.processing')}
                     </>
                  ) : (
                     <>
-                       {lang === 'zh' ? '立即更新并重启' : 'Update & Restart'}
+                       {t('common.updateRestart')}
                        <ChevronRight className="ml-2 group-hover:translate-x-1 transition-transform" size={18} />
                     </>
                  )}

@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
     ListTodo, ArrowLeft, Search, Folder, Calendar, AlertCircle,
@@ -21,7 +22,6 @@ import {
 } from './components';
 
 interface TaskManagerProps {
-    lang: Language;
     currentProject: DolphinSchedulerConfig | null;
     configs: DolphinSchedulerConfig[];
     onSelectProject: (config: DolphinSchedulerConfig) => void;
@@ -30,14 +30,13 @@ interface TaskManagerProps {
 }
 
 export const TaskManager: React.FC<TaskManagerProps> = ({
-    lang,
     currentProject,
     configs,
     onSelectProject,
     onNavigate,
     onBack
 }) => {
-    const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
     const { toast } = useToast();
     const [searchTerm, setSearchTerm] = useState('');
     const [processes, setProcesses] = useState<ProcessDefinition[]>([]);
@@ -287,7 +286,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
         } finally {
             setLoading(false);
         }
-    }, [baseUrl, token, pageNo, pageSize, searchTerm, lang, toast]);
+    }, [baseUrl, token, pageNo, pageSize, searchTerm, toast, t]);
 
     // 解析 projectCode 并获取数据
     const resolveProjectCodeAndFetch = useCallback(async () => {
@@ -353,7 +352,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
         } finally {
             setInstanceLoading(false);
         }
-    }, [baseUrl, token, projectCode, currentProject, instancePageNo, instancePageSize, instanceSearchTerm, instanceStateFilter, lang, toast]);
+    }, [baseUrl, token, projectCode, currentProject, instancePageNo, instancePageSize, instanceSearchTerm, instanceStateFilter, toast, t]);
 
     // 获取工作流定时列表
     const fetchSchedules = useCallback(async (code?: string) => {
@@ -379,7 +378,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
         } finally {
             setScheduleLoading(false);
         }
-    }, [baseUrl, token, projectCode, schedulePageNo, schedulePageSize, scheduleSearchTerm, lang, toast]);
+    }, [baseUrl, token, projectCode, schedulePageNo, schedulePageSize, scheduleSearchTerm, toast, t]);
 
     // 获取任务实例列表
     const fetchTaskInstances = useCallback(async (code?: string) => {
@@ -406,7 +405,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
         } finally {
             setTaskInstanceLoading(false);
         }
-    }, [baseUrl, token, projectCode, taskInstancePageNo, taskInstancePageSize, taskInstanceSearchTerm, taskInstanceStateFilter, lang, toast]);
+    }, [baseUrl, token, projectCode, taskInstancePageNo, taskInstancePageSize, taskInstanceSearchTerm, taskInstanceStateFilter, toast, t]);
 
     // --- 数据获取函数结束 ---
 
@@ -826,7 +825,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
         const url = `${baseUrl}/projects/${projectCode}/${instancePath}/batch-delete`;
 
         // 立即反馈并清除选中
-        toast({ title: lang === 'zh' ? `已提交删除 ${ids.length} 个实例` : `Submitted deletion of ${ids.length} instances`, variant: 'success' });
+        toast({ title: i18next.language === 'zh' ? `已提交删除 ${ids.length} 个实例` : `Submitted deletion of ${ids.length} instances`, variant: 'success' });
         setSelectedInstances(new Set());
 
         // 后台异步发送请求，不阻塞 UI
@@ -838,11 +837,11 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const result = await response.json();
             if (result.code !== 0) {
-                toast({ title: lang === 'zh' ? '批量删除部分失败' : 'Batch Delete Partially Failed', description: result.msg, variant: 'destructive' });
+                toast({ title: i18next.language === 'zh' ? '批量删除部分失败' : 'Batch Delete Partially Failed', description: result.msg, variant: 'destructive' });
             }
             fetchProcessInstances();
         }).catch((err: any) => {
-            toast({ title: lang === 'zh' ? '批量删除失败' : 'Batch Delete Failed', description: err.message, variant: 'destructive' });
+            toast({ title: i18next.language === 'zh' ? '批量删除失败' : 'Batch Delete Failed', description: err.message, variant: 'destructive' });
             fetchProcessInstances();
         });
     };
@@ -862,7 +861,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                 <div className="flex justify-between items-center mb-6 pt-1.5">
                     <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center">
                         <ListTodo className="mr-3 text-blue-600" size={24} />
-                        {lang === 'zh' ? '项目管理' : 'Project Manager'}
+                        {i18next.language === 'zh' ? '项目管理' : 'Project Manager'}
                     </h2>
                 </div>
                 
@@ -902,7 +901,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                 {configs.length === 0 && (
                     <div className="flex-1 flex flex-col items-center justify-center text-slate-400 mt-8">
                         <ListTodo size={48} className="mb-4 opacity-20" />
-                        <p className="text-sm">{lang === 'zh' ? '暂无已配置的项目，请先添加项目' : 'No projects configured. Please add a project first.'}</p>
+                        <p className="text-sm">{i18next.language === 'zh' ? '暂无已配置的项目，请先添加项目' : 'No projects configured. Please add a project first.'}</p>
                     </div>
                 )}
             </div>
@@ -918,13 +917,13 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                         <button
                             onClick={() => onBack ? onBack() : onSelectProject(null as any)}
                             className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors text-slate-500"
-                            title={lang === 'zh' ? '返回项目列表' : 'Back to Projects'}
+                            title={i18next.language === 'zh' ? '返回项目列表' : 'Back to Projects'}
                         >
                             <ArrowLeft size={20} />
                         </button>
                         <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center whitespace-nowrap">
                             <ListTodo className="mr-3 text-blue-600" />
-                            {lang === 'zh' ? '项目管理' : 'Project Manager'}
+                            {i18next.language === 'zh' ? '项目管理' : 'Project Manager'}
                             <span className="mx-2 text-slate-300 dark:text-slate-600">/</span>
                             <span className="text-base font-normal text-slate-600 dark:text-slate-300">
                                 {currentProject.name}
@@ -936,10 +935,10 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                 {/* Tab 导航区域 */}
                 <div className="flex items-center space-x-1 px-1 -mb-px">
                     {[
-                        { id: 'workflow-definition', name: lang === 'zh' ? '工作流定义' : 'Workflow Definitions', icon: <Folder size={16} /> },
-                        { id: 'workflow-instance', name: lang === 'zh' ? '工作流实例' : 'Workflow Instances', icon: <ListTodo size={16} /> },
-                        { id: 'workflow-schedule', name: lang === 'zh' ? '工作流定时' : 'Workflow Schedules', icon: <Calendar size={16} /> },
-                        { id: 'task-instance', name: lang === 'zh' ? '任务实例' : 'Task Instances', icon: <CheckCircle2 size={16} /> }
+                        { id: 'workflow-definition', name: i18next.language === 'zh' ? '工作流定义' : 'Workflow Definitions', icon: <Folder size={16} /> },
+                        { id: 'workflow-instance', name: i18next.language === 'zh' ? '工作流实例' : 'Workflow Instances', icon: <ListTodo size={16} /> },
+                        { id: 'workflow-schedule', name: i18next.language === 'zh' ? '工作流定时' : 'Workflow Schedules', icon: <Calendar size={16} /> },
+                        { id: 'task-instance', name: i18next.language === 'zh' ? '任务实例' : 'Task Instances', icon: <CheckCircle2 size={16} /> }
                     ].map(tab => (
                         <button
                             key={tab.id}
@@ -964,7 +963,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                     {activeTab === 'workflow-definition' && (
                         <>
                             <div className="relative">
-                                <Tooltip content={lang === 'zh' ? '快速创建' : 'Quick Create'} position="bottom">
+                                <Tooltip content={i18next.language === 'zh' ? '快速创建' : 'Quick Create'} position="bottom">
                                     <button onClick={() => setShowCreateMenu(!showCreateMenu)} className="p-2 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 rounded-lg text-emerald-600">
                                         <Plus size={18} />
                                     </button>
@@ -988,14 +987,14 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                                 <input
                                     type="text"
-                                    placeholder={lang === 'zh' ? '搜索工作流...' : 'Search...'}
+                                    placeholder={i18next.language === 'zh' ? '搜索工作流...' : 'Search...'}
                                     value={searchTerm}
                                     onChange={e => setSearchTerm(e.target.value)}
                                     className="w-48 pl-9 pr-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
                                 />
                             </div>
                             <span className="text-sm text-slate-500 whitespace-nowrap">
-                                {lang === 'zh' ? `${total} 个` : `${total} total`}
+                                {i18next.language === 'zh' ? `${total} 个` : `${total} total`}
                             </span>
                         </>
                     )}
@@ -1006,7 +1005,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                                 <input
                                     type="text"
-                                    placeholder={lang === 'zh' ? '搜索实例...' : 'Search Instances...'}
+                                    placeholder={i18next.language === 'zh' ? '搜索实例...' : 'Search Instances...'}
                                     value={instanceSearchTerm}
                                     onChange={e => setInstanceSearchTerm(e.target.value)}
                                     className="w-48 pl-9 pr-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
@@ -1017,7 +1016,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                                 onChange={e => setInstanceStateFilter(e.target.value)}
                                 className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm outline-none"
                             >
-                                <option value="">{lang === 'zh' ? '全部状态' : 'All States'}</option>
+                                <option value="">{i18next.language === 'zh' ? '全部状态' : 'All States'}</option>
                                 <option value="SUCCESS">成功</option>
                                 <option value="RUNNING_EXECUTION">运行中</option>
                                 <option value="FAILURE">失败</option>
@@ -1032,7 +1031,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                             <input
                                 type="text"
-                                placeholder={lang === 'zh' ? '搜索定时...' : 'Search Schedules...'}
+                                placeholder={i18next.language === 'zh' ? '搜索定时...' : 'Search Schedules...'}
                                 value={scheduleSearchTerm}
                                 onChange={e => setScheduleSearchTerm(e.target.value)}
                                 className="w-48 pl-9 pr-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
@@ -1046,7 +1045,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                                 <input
                                     type="text"
-                                    placeholder={lang === 'zh' ? '搜索任务实例...' : 'Search Task Instances...'}
+                                    placeholder={i18next.language === 'zh' ? '搜索任务实例...' : 'Search Task Instances...'}
                                     value={taskInstanceSearchTerm}
                                     onChange={e => setTaskInstanceSearchTerm(e.target.value)}
                                     className="w-48 pl-9 pr-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
@@ -1057,7 +1056,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                                 onChange={e => setTaskInstanceStateFilter(e.target.value)}
                                 className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm outline-none"
                             >
-                                <option value="">{lang === 'zh' ? '全部状态' : 'All States'}</option>
+                                <option value="">{i18next.language === 'zh' ? '全部状态' : 'All States'}</option>
                                 <option value="SUCCESS">成功</option>
                                 <option value="RUNNING_EXECUTION">运行中</option>
                                 <option value="FAILURE">失败</option>
@@ -1067,13 +1066,13 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                 </div>
                 
                 <div className="flex items-center space-x-2">
-                    <Tooltip content={lang === 'zh' ? '刷新' : 'Refresh'} position="bottom">
+                    <Tooltip content={i18next.language === 'zh' ? '刷新' : 'Refresh'} position="bottom">
                         <button onClick={handleRefresh} disabled={loading || instanceLoading || scheduleLoading || taskInstanceLoading} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-300 disabled:opacity-50">
                             <RefreshCw size={18} className={(loading || instanceLoading || scheduleLoading || taskInstanceLoading) ? 'animate-spin' : ''} />
                         </button>
                     </Tooltip>
                     
-                    <Tooltip content={lang === 'zh' ? '参数设置' : 'Settings'} position="bottom">
+                    <Tooltip content={i18next.language === 'zh' ? '参数设置' : 'Settings'} position="bottom">
                         <button onClick={() => setShowConfigModal(true)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-300">
                             <Settings size={18} />
                         </button>
@@ -1081,22 +1080,22 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
 
                         {activeTab === 'workflow-definition' && (
                         <>
-                            <Tooltip content={lang === 'zh' ? '批量运行' : 'Batch Run'} position="bottom">
+                            <Tooltip content={i18next.language === 'zh' ? '批量运行' : 'Batch Run'} position="bottom">
                                 <button onClick={() => setShowBatchRun(true)} className="p-2 hover:bg-orange-100 dark:hover:bg-orange-900/30 rounded-lg text-orange-600">
                                     <PlayCircle size={18} />
                                 </button>
                             </Tooltip>
-                            <Tooltip content={lang === 'zh' ? '批量上下线' : 'Batch Publish'} position="bottom">
+                            <Tooltip content={i18next.language === 'zh' ? '批量上下线' : 'Batch Publish'} position="bottom">
                                 <button onClick={() => setShowBatchPublish(true)} className="p-2 hover:bg-green-100 dark:hover:bg-green-900/30 rounded-lg text-green-600">
                                     <Power size={18} />
                                 </button>
                             </Tooltip>
-                            <Tooltip content={lang === 'zh' ? '导出' : 'Export'} position="bottom">
+                            <Tooltip content={i18next.language === 'zh' ? '导出' : 'Export'} position="bottom">
                                 <button onClick={() => setShowExport(true)} className="p-2 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded-lg text-purple-600">
                                     <Download size={18} />
                                 </button>
                             </Tooltip>
-                            <Tooltip content={lang === 'zh' ? '导入' : 'Import'} position="bottom">
+                            <Tooltip content={i18next.language === 'zh' ? '导入' : 'Import'} position="bottom">
                                 <button onClick={() => setShowImport(true)} className="p-2 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded-lg text-purple-600">
                                     <Upload size={18} />
                                 </button>
@@ -1105,14 +1104,14 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                     )}
 
                     {activeTab === 'workflow-instance' && selectedInstances.size > 0 && (
-                        <Tooltip content={lang === 'zh' ? `批量删除 (${selectedInstances.size})` : `Batch Delete (${selectedInstances.size})`} position="bottom">
+                        <Tooltip content={i18next.language === 'zh' ? `批量删除 (${selectedInstances.size})` : `Batch Delete (${selectedInstances.size})`} position="bottom">
                             <button onClick={handleBatchDeleteInstances} className="p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg text-red-600">
                                 <Trash2 size={18} />
                             </button>
                         </Tooltip>
                     )}                    
                     <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-1" />
-                    <Tooltip content={lang === 'zh' ? '运行日志' : 'Run Logs'} position="bottom">
+                    <Tooltip content={i18next.language === 'zh' ? '运行日志' : 'Run Logs'} position="bottom">
                         <button onClick={() => setShowLog(true)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-300">
                             <Eye size={18} />
                         </button>
@@ -1280,7 +1279,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                         {/* 底部分页 - 始终显示 */}
                         <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex justify-between items-center text-sm shrink-0">
                             <div className="flex items-center space-x-2 text-slate-500">
-                                <span dangerouslySetInnerHTML={{ __html: t('dolphinScheduler.totalCount').replace('{total}', String(total)) }}></span>
+                                <p className="text-slate-500 text-sm">{t('dolphinScheduler.totalCount', { count: total })}</p>
                                 {[20, 50, 100].map(size => (
                                     <button key={size} onClick={() => { setPageSize(size); setPageNo(1); }}
                                         className={`px-2 py-0.5 rounded text-xs border ${pageSize === size ? 'bg-blue-500 text-white border-blue-500' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-blue-400'}`}
@@ -1350,7 +1349,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                                                 </td>
                                                 <td className="px-3 py-2.5 font-medium text-slate-800 dark:text-slate-200 truncate max-w-[400px]" title={inst.name}>{inst.name}</td>
                                                 <td className="px-3 py-2.5 text-center">{renderInstanceStateTag(inst.state)}</td>
-                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500 whitespace-nowrap">{inst.commandType === 'SCHEDULER' ? (lang === 'zh' ? '调度执行' : 'Scheduler') : inst.commandType === 'START_PROCESS' ? (lang === 'zh' ? '手动执行' : 'Manual') : inst.commandType || '-'}</td>
+                                                <td className="px-3 py-2.5 text-center text-xs text-slate-500 whitespace-nowrap">{inst.commandType === 'SCHEDULER' ? (i18next.language === 'zh' ? '调度执行' : 'Scheduler') : inst.commandType === 'START_PROCESS' ? (i18next.language === 'zh' ? '手动执行' : 'Manual') : inst.commandType || '-'}</td>
                                                 <td className="px-3 py-2.5 text-center text-xs text-slate-500 font-mono whitespace-nowrap">{inst.scheduleTime || '-'}</td>
                                                 <td className="px-3 py-2.5 text-center text-xs text-slate-500 font-mono whitespace-nowrap">{inst.startTime || '-'}</td>
                                                 <td className="px-3 py-2.5 text-center text-xs text-slate-500 font-mono whitespace-nowrap">{inst.endTime || '-'}</td>
@@ -1380,7 +1379,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                         {/* 底部分页 - 始终显示 */}
                         <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex justify-between items-center text-sm shrink-0">
                             <div className="flex items-center space-x-2 text-slate-500">
-                                <span dangerouslySetInnerHTML={{ __html: t('dolphinScheduler.totalCount').replace('{total}', String(instanceTotal)) }}></span>
+                                <span>{t('dolphinScheduler.totalCount', { count: instanceTotal })}</span>
                                 {[20, 50, 100].map(size => (
                                     <button key={size} onClick={() => { setInstancePageSize(size); setInstancePageNo(1); }}
                                         className={`px-2 py-0.5 rounded text-xs border ${instancePageSize === size ? 'bg-blue-500 text-white border-blue-500' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-blue-400'}`}
@@ -1466,7 +1465,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                         {/* 底部分页 - 始终显示 */}
                         <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex justify-between items-center text-sm shrink-0">
                             <div className="flex items-center space-x-2 text-slate-500">
-                                <span>{t('dolphinScheduler.totalCount').replace('{total}', String(scheduleTotal))}</span>
+                                <span>{t('dolphinScheduler.totalCount', { count: scheduleTotal })}</span>
                                 {[20, 50, 100].map(size => (
                                     <button key={size} onClick={() => { setSchedulePageSize(size); setSchedulePageNo(1); }}
                                         className={`px-2 py-0.5 rounded text-xs border ${schedulePageSize === size ? 'bg-blue-500 text-white border-blue-500' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-blue-400'}`}
@@ -1543,7 +1542,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                         {/* 底部分页 - 始终显示 */}
                         <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex justify-between items-center text-sm shrink-0">
                             <div className="flex items-center space-x-2 text-slate-500">
-                                <span>{t('dolphinScheduler.totalCount').replace('{total}', String(taskInstanceTotal))}</span>
+                                <span>{t('dolphinScheduler.totalCount', { count: instanceTotal })}</span>
                                 {[20, 50, 100].map(size => (
                                     <button key={size} onClick={() => { setTaskInstancePageSize(size); setTaskInstancePageNo(1); }}
                                         className={`px-2 py-0.5 rounded text-xs border ${taskInstancePageSize === size ? 'bg-blue-500 text-white border-blue-500' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-blue-400'}`}
@@ -1565,7 +1564,6 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
             {detailProcess && (
                 <DetailModal
                     process={detailProcess}
-                    lang={lang}
                     onClose={() => setDetailProcess(null)}
                 />
             )}
@@ -1573,7 +1571,6 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
             {runProcess && (
                 <RunModal
                     process={runProcess}
-                    lang={lang}
                     projectCode={projectCode}
                     baseUrl={baseUrl}
                     token={token}
@@ -1585,7 +1582,6 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
             {scheduleProcess && (
                 <ScheduleModal
                     process={scheduleProcess}
-                    lang={lang}
                     projectCode={projectCode}
                     baseUrl={baseUrl}
                     token={token}
@@ -1596,7 +1592,6 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
             
             <BatchRunModal
                 show={showBatchRun}
-                lang={lang}
                 processes={processes}
                 projectCode={projectCode}
                 baseUrl={baseUrl}
@@ -1607,7 +1602,6 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
             
             <BatchPublishModal
                 show={showBatchPublish}
-                lang={lang}
                 processes={processes}
                 projectCode={projectCode}
                 baseUrl={baseUrl}
@@ -1619,7 +1613,6 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
             
             <ExportModal
                 show={showExport}
-                lang={lang}
                 processes={processes}
                 projectCode={projectCode}
                 projectName={currentProject?.projectName || currentProject?.name || ''}
@@ -1631,7 +1624,6 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
             
             <ImportModal
                 show={showImport}
-                lang={lang}
                 projectCode={projectCode}
                 baseUrl={baseUrl}
                 token={token}
@@ -1643,7 +1635,6 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
             
             <LogModal
                 show={showLog}
-                lang={lang}
                 projectCode={projectCode}
                 baseUrl={baseUrl}
                 token={token}
@@ -1690,13 +1681,13 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80">
                             <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center">
                                 <Download size={20} className="mr-2 text-purple-500" />
-                                {t('dolphinScheduler.exportWorkflow') || (lang === 'zh' ? '导出工作流' : 'Export Workflow')}
+                                {t('dolphinScheduler.exportWorkflow')}
                             </h3>
                         </div>
                         <div className="p-6 space-y-4">
                             <div>
                                 <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">
-                                    {t('dolphinScheduler.workflowTitle') || (lang === 'zh' ? '工作流' : 'Workflow')}
+                                    {t('dolphinScheduler.workflowTitle')}
                                 </label>
                                 <div className="px-3 py-2 bg-slate-100 dark:bg-slate-900 rounded-lg text-sm text-slate-600 dark:text-slate-400 truncate">
                                     {exportSingleProcess.name}
@@ -1704,7 +1695,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                             </div>
                             <div>
                                 <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">
-                                    {t('dolphinScheduler.exportVersion') || (lang === 'zh' ? '导出版本' : 'Export Version')}
+                                    {t('dolphinScheduler.exportVersion')}
                                 </label>
                                 <select
                                     value={exportSingleVersion}
@@ -1734,7 +1725,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                                 className="px-6 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg font-medium disabled:opacity-50 flex items-center"
                             >
                                 {exportingSingle && <Loader2 size={16} className="animate-spin mr-2" />}
-                                {t('dolphinScheduler.selectDirectoryAndExport') || (lang === 'zh' ? '选择目录并导出' : 'Select & Export')}
+                                {t('dolphinScheduler.selectDirectoryAndExport')}
                             </button>
                         </div>
                     </div>
@@ -1765,7 +1756,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
                                 />
                                 <p className="mt-1 text-xs text-slate-400">
-                                    {lang === 'zh' ? '节点名称自动转换' : 'Node name auto-converted'}
+                                    {t('dolphinScheduler.nodeNameAutoConverted')}
                                     {createK8sName && <span className="ml-1 text-emerald-500 font-mono">{`→ ${createK8sName.replace(/_/g, '-')}`}</span>}
                                 </p>
                             </div>
@@ -1806,7 +1797,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                                     </button>
                                 </div>
                                 <p className="mt-1 text-xs text-slate-400">
-                                    {lang === 'zh' ? '最终命令：' : 'Final command: '}
+                                    {t('dolphinScheduler.finalCommand')}
                                     <span className="font-mono text-slate-500">./bin/seatunnel.sh --config {createK8sConfigPath || '...'}</span>
                                 </p>
                                 {/* 资源中心文件浏览器 */}
@@ -1986,7 +1977,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
                                 {createK8sTimeoutFlag && (
                                     <div className="space-y-2">
                                         <div className="flex items-center space-x-4">
-                                            <span className="text-xs text-slate-500">{lang === 'zh' ? '超时策略' : 'Strategy'}</span>
+                                            <span className="text-xs text-slate-500">{t('dolphinScheduler.timeoutStrategy')}</span>
                                             <label className="flex items-center space-x-1.5 text-sm text-slate-600 dark:text-slate-300 cursor-pointer">
                                                 <input type="checkbox" checked={createK8sTimeoutWarn} onChange={e => setCreateK8sTimeoutWarn(e.target.checked)} className="rounded border-slate-300" />
                                                 <span className="text-xs">{t('dolphinScheduler.timeoutWarn')}</span>
@@ -2075,7 +2066,6 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
             {/* 任务编辑器 */}
             {editProcess && currentProject && (
                 <TaskEditor
-                    lang={lang}
                     process={editProcess}
                     projectConfig={currentProject}
                     onClose={() => setEditProcess(null)}
@@ -2085,7 +2075,6 @@ export const TaskManager: React.FC<TaskManagerProps> = ({
             {/* 参数设置弹窗 */}
             <GlobalSettingsModal 
                 show={showConfigModal}
-                lang={lang}
                 onClose={() => setShowConfigModal(false)}
                 onSave={(newSettings) => setGlobalSettings(newSettings)}
             />

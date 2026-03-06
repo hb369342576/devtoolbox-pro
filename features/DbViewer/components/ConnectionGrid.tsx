@@ -2,9 +2,9 @@ import React from 'react';
 import { Database, Plus } from 'lucide-react';
 import { Language, DbConnection } from '../../../types';
 import { Tooltip } from '../../common/Tooltip';
+import { useTranslation } from "react-i18next";
 
 interface ConnectionGridProps {
-    lang: Language;
     connections: DbConnection[];
     viewMode: 'grid' | 'list';
     onConnect: (conn: DbConnection) => void;
@@ -20,18 +20,19 @@ export const ConnectionGrid: React.FC<ConnectionGridProps> = ({
     onConnect,
     onNavigate
 }) => {
+    const { t, i18n } = useTranslation();
     if (connections.length === 0) {
         return (
             <div className="flex-1 flex flex-col items-center justify-center text-slate-400">
                 <div className="bg-slate-100 dark:bg-slate-800 p-6 rounded-full mb-4">
                     <Database size={48} className="opacity-50" />
                 </div>
-                <p className="mb-4 text-lg">{lang === 'zh' ? '暂无数据源' : 'No Data Sources'}</p>
+                <p className="mb-4 text-lg">{t('dbViewer.noDataSources')}</p>
                 <button
                     onClick={() => onNavigate('data-source-manager')}
                     className="text-blue-500 hover:underline"
                 >
-                    {lang === 'zh' ? '添加数据源' : 'Add Data Source'}
+                    {t('dbViewer.addDataSource')}
                 </button>
             </div>
         );
@@ -68,10 +69,10 @@ export const ConnectionGrid: React.FC<ConnectionGridProps> = ({
             ) : (
                 <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
                     <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-500 uppercase tracking-wider sticky top-0 z-10">
-                        <div className="col-span-4">{lang === 'zh' ? '连接名称' : 'Connection Name'}</div>
-                        <div className="col-span-2">{lang === 'zh' ? '类型' : 'Type'}</div>
-                        <div className="col-span-4">{lang === 'zh' ? '主机地址' : 'Host'}</div>
-                        <div className="col-span-2">{lang === 'zh' ? '端口' : 'Port'}</div>
+                        <div className="col-span-4">{t('dbViewer.connectionName')}</div>
+                        <div className="col-span-2">{t('dbViewer.type')}</div>
+                        <div className="col-span-4">{t('dbViewer.host')}</div>
+                        <div className="col-span-2">{t('dbViewer.port')}</div>
                     </div>
                     <div className="divide-y divide-slate-100 dark:divide-slate-700">
                         {connections.map(conn => (
@@ -99,7 +100,7 @@ export const ConnectionGrid: React.FC<ConnectionGridProps> = ({
                         ))}
                         {connections.length === 0 && (
                             <div className="px-6 py-8 text-center text-slate-400 text-sm italic">
-                                {lang === 'zh' ? '暂无数据' : 'No data'}
+                                {t('dbViewer.noData')}
                             </div>
                         )}
                     </div>

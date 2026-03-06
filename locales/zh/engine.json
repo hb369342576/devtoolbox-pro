@@ -1,0 +1,18 @@
+{
+  "title": "引擎管理",
+  "newEngine": "新建引擎",
+  "newEngineConfig": "新建引擎配置",
+  "editEngine": "编辑引擎配置",
+  "configName": "配置名称",
+  "placeholderName": "例如：生产环境 Zeta",
+  "type": "引擎类型",
+  "version": "版本",
+  "v2Tip": "V2 使用 Jetty REST，需在 seatunnel.yaml 开启",
+  "v1Tip": "V1 使用 Hazelcast REST（默认）",
+  "testing": "测试中...",
+  "connSuccess": "连接成功",
+  "connFailed": "连接失败",
+  "cannotConnect": "无法连接服务器",
+  "testConn": "测试连接",
+  "deleteConfirm": "确定要删除这个引擎配置吗？"
+}

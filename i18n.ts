@@ -1,15 +1,26 @@
+/// <reference types="vite/client" />
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
-import { TRANSLATIONS } from './locales';
+
+// Vite eager import to package all JSON locales at build time
+const zhModules = import.meta.glob('./locales/zh/*.json', { eager: true });
+const enModules = import.meta.glob('./locales/en/*.json', { eager: true });
+
+function formatModules(modules: Record<string, any>) {
+  const result: Record<string, any> = {};
+  for (const path in modules) {
+    const namespace = path.match(/\/([^/]+)\.json$/)?.[1];
+    if (namespace) {
+      result[namespace] = modules[path].default || modules[path];
+    }
+  }
+  return { translation: result }; // Merge into the default 'translation' namespace
+}
 
 const resources = {
-  en: {
-    translation: TRANSLATIONS.en
-  },
-  zh: {
-    translation: TRANSLATIONS.zh
-  }
+  zh: formatModules(zhModules),
+  en: formatModules(enModules)
 };
 
 i18n
@@ -24,3 +35,4 @@ i18n
   });
 
 export default i18n;
+

@@ -5,11 +5,10 @@ import { useToast } from '../../common/Toast';
 import { DolphinSchedulerApiVersion } from '../../../types';
 import { getWorkflowApiPath } from '../utils';
 import { Language, ProcessDefinition } from '../types';
-import { getTexts as getLocalesTexts } from '../../../locales';
+import { useTranslation } from "react-i18next";
 
 interface BatchPublishModalProps {
     show: boolean;
-    lang: Language;
     processes: ProcessDefinition[];
     projectCode: string;
     baseUrl: string;
@@ -19,9 +18,8 @@ interface BatchPublishModalProps {
     onSuccess: () => void;
 }
 
-export const BatchPublishModal: React.FC<BatchPublishModalProps> = ({ show, lang, processes, projectCode, baseUrl, token, apiVersion, onClose, onSuccess }) => {
-    const texts = getLocalesTexts(lang);
-    const dsTexts = texts.dolphinScheduler;
+export const BatchPublishModal: React.FC<BatchPublishModalProps> = ({show, processes, projectCode, baseUrl, token, apiVersion, onClose, onSuccess }) => {
+    const { t, i18n } = useTranslation();
     const { toast } = useToast();
     const [processing, setProcessing] = useState(false);
     const [selectedCodes, setSelectedCodes] = useState<number[]>([]);
@@ -54,7 +52,7 @@ export const BatchPublishModal: React.FC<BatchPublishModalProps> = ({ show, lang
     
     const handleBatchPublish = async () => {
         if (selectedCodes.length === 0) {
-            toast({ title: dsTexts.pleaseSelectWorkflows, variant: 'destructive' });
+            toast({ title: t('dolphinScheduler.pleaseSelectWorkflows'), variant: 'destructive' });
             return;
         }
         
@@ -76,8 +74,8 @@ export const BatchPublishModal: React.FC<BatchPublishModalProps> = ({ show, lang
         }
         
         setProcessing(false);
-        const actionText = action === 'ONLINE' ? dsTexts.states.online : dsTexts.states.offline;
-        const summary = dsTexts.batchActionComplete
+        const actionText = action === 'ONLINE' ? t('dolphinScheduler.states.online') : t('dolphinScheduler.states.offline');
+        const summary = t('dolphinScheduler.batchActionComplete')
             .replace('{action}', actionText)
             .replace('{success}', String(success))
             .replace('{fail}', String(failed));
@@ -93,7 +91,7 @@ export const BatchPublishModal: React.FC<BatchPublishModalProps> = ({ show, lang
                 <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800/80">
                     <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center">
                         <Power size={20} className="mr-2 text-green-500" />
-                        {dsTexts.batchPublishUnpublish}
+                        {t('dolphinScheduler.batchPublishUnpublish')}
                     </h3>
                     <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1"><XCircle size={20} /></button>
                 </div>
@@ -104,20 +102,20 @@ export const BatchPublishModal: React.FC<BatchPublishModalProps> = ({ show, lang
                             onClick={() => { setAction('ONLINE'); setSelectedCodes([]); }} 
                             className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${action === 'ONLINE' ? 'bg-green-500 text-white' : 'text-slate-600 dark:text-slate-400 hover:text-slate-800'}`}
                         >
-                            {dsTexts.states.online}
+                            {t('dolphinScheduler.states.online')}
                         </button>
                         <button 
                             onClick={() => { setAction('OFFLINE'); setSelectedCodes([]); }} 
                             className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${action === 'OFFLINE' ? 'bg-red-500 text-white' : 'text-slate-600 dark:text-slate-400 hover:text-slate-800'}`}
                         >
-                            {dsTexts.states.offline}
+                            {t('dolphinScheduler.states.offline')}
                         </button>
                     </div>
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                         <input 
                             type="text" 
-                            placeholder={dsTexts.searchWorkflows} 
+                            placeholder={t('dolphinScheduler.searchWorkflows')} 
                             value={searchTerm} 
                             onChange={e => setSearchTerm(e.target.value)} 
                             className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none" 
@@ -126,11 +124,11 @@ export const BatchPublishModal: React.FC<BatchPublishModalProps> = ({ show, lang
                     <div className="flex items-center justify-between">
                         <span className="text-xs text-slate-500">
                             {action === 'ONLINE' 
-                                ? dsTexts.canOnlineCount.replace('{total}', String(targetProcesses.length))
-                                : dsTexts.canOfflineCount.replace('{total}', String(targetProcesses.length))}
+                                ? t('dolphinScheduler.canOnlineCount').replace('{total}', String(targetProcesses.length))
+                                : t('dolphinScheduler.canOfflineCount').replace('{total}', String(targetProcesses.length))}
                         </span>
                         <button onClick={handleSelectAll} className="text-xs text-green-500 hover:text-green-600">
-                            {selectedCodes.length === filteredProcesses.length && filteredProcesses.length > 0 ? dsTexts.deselectAll : dsTexts.selectAll}
+                            {selectedCodes.length === filteredProcesses.length && filteredProcesses.length > 0 ? t('dolphinScheduler.deselectAll') : t('dolphinScheduler.selectAll')}
                         </button>
                     </div>
                 </div>
@@ -143,16 +141,16 @@ export const BatchPublishModal: React.FC<BatchPublishModalProps> = ({ show, lang
                                 <span className={`text-xs px-2 py-0.5 rounded ${p.releaseState === 'ONLINE' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>{p.releaseState}</span>
                             </label>
                         ))}
-                        {filteredProcesses.length === 0 && <p className="text-slate-400 text-center py-4 text-sm">{searchTerm ? dsTexts.noMatchingWorkflows : (action === 'ONLINE' ? dsTexts.noOfflineWorkflows : dsTexts.noOnlineWorkflows)}</p>}
+                        {filteredProcesses.length === 0 && <p className="text-slate-400 text-center py-4 text-sm">{searchTerm ? t('dolphinScheduler.noMatchingWorkflows') : (action === 'ONLINE' ? t('dolphinScheduler.noOfflineWorkflows') : t('dolphinScheduler.noOnlineWorkflows'))}</p>}
                     </div>
                 </div>
                 <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 flex justify-between items-center">
-                    <span className="text-sm text-slate-500">{dsTexts.selectedCount.replace('{count}', String(selectedCodes.length))}</span>
+                    <span className="text-sm text-slate-500">{t('dolphinScheduler.selectedCount').replace('{count}', String(selectedCodes.length))}</span>
                     <div className="flex space-x-3">
-                        <button onClick={onClose} className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg">{texts.common.cancel}</button>
+                        <button onClick={onClose} className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg">{t('common.cancel')}</button>
                         <button onClick={handleBatchPublish} disabled={processing || selectedCodes.length === 0} className={`px-6 py-2 text-white rounded-lg font-medium disabled:opacity-50 flex items-center ${action === 'ONLINE' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}`}>
                             {processing && <Loader2 size={16} className="animate-spin mr-2" />}
-                            {action === 'ONLINE' ? dsTexts.states.online : dsTexts.states.offline}
+                            {action === 'ONLINE' ? t('dolphinScheduler.states.online') : t('dolphinScheduler.states.offline')}
                         </button>
                     </div>
                 </div>

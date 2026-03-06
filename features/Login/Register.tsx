@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { User, Lock, ArrowRight, ArrowLeft, Mail, UserCircle } from 'lucide-react';
 import { Language } from '../../types';
+import { useTranslation } from "react-i18next";
 
 interface RegisterProps {
     onRegisterSuccess: (username: string) => void;
     onBack: () => void;
-    lang: Language;
 }
 
-export const Register: React.FC<RegisterProps> = ({ onRegisterSuccess, onBack, lang }) => {
+export const Register: React.FC<RegisterProps> = ({ onRegisterSuccess, onBack}) => {
+    const { t, i18n } = useTranslation();
     const [formData, setFormData] = useState({
         username: '',
         password: '',
@@ -27,13 +28,13 @@ export const Register: React.FC<RegisterProps> = ({ onRegisterSuccess, onBack, l
 
         // Validation
         if (!formData.username || !formData.password) {
-            setError(lang === 'zh' ? '请填写用户名和密码' : 'Username and password are required');
+            setError(t('common.usernameAndPasswordAreReq'));
             setIsLoading(false);
             return;
         }
 
         if (formData.password !== formData.confirmPassword) {
-            setError(lang === 'zh' ? '两次输入的密码不一致' : 'Passwords do not match');
+            setError(t('common.passwordsDoNotMatch'));
             setIsLoading(false);
             return;
         }
@@ -47,7 +48,7 @@ export const Register: React.FC<RegisterProps> = ({ onRegisterSuccess, onBack, l
 
                 // Check if username exists
                 if (users.some((u: any) => u.username === formData.username)) {
-                    setError(lang === 'zh' ? '用户名已存在' : 'Username already exists');
+                    setError(t('common.usernameAlreadyExists'));
                     setIsLoading(false);
                     return;
                 }
@@ -70,7 +71,7 @@ export const Register: React.FC<RegisterProps> = ({ onRegisterSuccess, onBack, l
                 setIsLoading(false);
                 onRegisterSuccess(formData.username);
             } catch (e) {
-                setError(lang === 'zh' ? '注册失败' : 'Registration failed');
+                setError(t('common.registrationFailed'));
                 setIsLoading(false);
             }
         }, 800);
@@ -81,10 +82,10 @@ export const Register: React.FC<RegisterProps> = ({ onRegisterSuccess, onBack, l
             <div className="p-8">
                 <div className="text-center mb-8">
                     <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
-                        {lang === 'zh' ? '创建账号' : 'Create Account'}
+                        {t('common.createAccount')}
                     </h1>
                     <p className="text-slate-500 dark:text-slate-400 text-sm">
-                        {lang === 'zh' ? '加入 DevToolbox Pro' : 'Join DevToolbox Pro'}
+                        {t('common.joinDevToolboxPro')}
                     </p>
                 </div>
 
@@ -98,7 +99,7 @@ export const Register: React.FC<RegisterProps> = ({ onRegisterSuccess, onBack, l
                                 value={formData.username}
                                 onChange={e => setFormData({ ...formData, username: e.target.value })}
                                 className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all dark:text-white"
-                                placeholder={lang === 'zh' ? "用户名" : "Username"}
+                                placeholder={t('common.username')}
                             />
                         </div>
                     </div>
@@ -112,7 +113,7 @@ export const Register: React.FC<RegisterProps> = ({ onRegisterSuccess, onBack, l
                                 value={formData.nickname}
                                 onChange={e => setFormData({ ...formData, nickname: e.target.value })}
                                 className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all dark:text-white"
-                                placeholder={lang === 'zh' ? "昵称 (可选)" : "Nickname (Optional)"}
+                                placeholder={t('common.nicknameOptional')}
                             />
                         </div>
                     </div>
@@ -126,7 +127,7 @@ export const Register: React.FC<RegisterProps> = ({ onRegisterSuccess, onBack, l
                                 value={formData.email}
                                 onChange={e => setFormData({ ...formData, email: e.target.value })}
                                 className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all dark:text-white"
-                                placeholder={lang === 'zh' ? "邮箱 (可选)" : "Email (Optional)"}
+                                placeholder={t('common.emailOptional')}
                             />
                         </div>
                     </div>
@@ -140,7 +141,7 @@ export const Register: React.FC<RegisterProps> = ({ onRegisterSuccess, onBack, l
                                 value={formData.password}
                                 onChange={e => setFormData({ ...formData, password: e.target.value })}
                                 className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all dark:text-white"
-                                placeholder={lang === 'zh' ? "密码" : "Password"}
+                                placeholder={t('common.password')}
                             />
                         </div>
                     </div>
@@ -154,7 +155,7 @@ export const Register: React.FC<RegisterProps> = ({ onRegisterSuccess, onBack, l
                                 value={formData.confirmPassword}
                                 onChange={e => setFormData({ ...formData, confirmPassword: e.target.value })}
                                 className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all dark:text-white"
-                                placeholder={lang === 'zh' ? "确认密码" : "Confirm Password"}
+                                placeholder={t('common.confirmPassword')}
                             />
                         </div>
                     </div>
@@ -183,7 +184,7 @@ export const Register: React.FC<RegisterProps> = ({ onRegisterSuccess, onBack, l
                                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                             ) : (
                                 <>
-                                    <span>{lang === 'zh' ? '注册' : 'Sign Up'}</span>
+                                    <span>{t('common.signUp')}</span>
                                     <ArrowRight size={18} />
                                 </>
                             )}

@@ -1,0 +1,23 @@
+{
+  "settings": "Settings",
+  "manageApplicationAppearan": "Manage application appearance and language preferences",
+  "appearance": "Appearance Theme",
+  "lightMode": "Light Mode",
+  "bestForBrightEnvironments": "Best for bright environments, clear and readable",
+  "darkMode": "Dark Mode",
+  "easyOnTheEyesBestForNight": "Easy on the eyes, best for night use",
+  "language": "Language Settings",
+  "chineseSimplified": "Chinese (Simplified)",
+  "chineseSimplifiedSub": "Chinese (Simplified)",
+  "english": "English",
+  "englishSub": "United States",
+  "systemMonitor": "System Monitor",
+  "enableSystemMonitor": "Enable System Monitor",
+  "showCPUMemoryUsageDisable": "Show CPU and memory usage. Disable to reduce resource consumption",
+  "aboutUpdate": "About & Update",
+  "checkUpdates": "Check for Updates",
+  "youAreOnTheLatestVersion": "You are on the latest version",
+  "failedToCheckForUpdatesPl": "Failed to check for updates, please try again later",
+  "newVersionAvailable": "New version available",
+  "updateNow": "Update Now"
+}

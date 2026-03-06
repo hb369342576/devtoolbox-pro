@@ -7,11 +7,12 @@ import { Language, DolphinSchedulerConnection, DSProject, DolphinSchedulerApiVer
 import { httpFetch } from '../../utils/http';
 import { useToast } from '../common/Toast';
 import { Tooltip } from '../common/Tooltip';
-import { ViewModeToggle } from '../common/ViewModeToggle';
 import { useViewMode } from '../../store/globalStore';
+import { ViewModeToggle } from '../common/ViewModeToggle';
+
+import { useTranslation } from "react-i18next";
 
 interface ProjectListViewProps {
-    lang: Language;
     connection: DolphinSchedulerConnection;
     onBack: () => void;
     onSelectProject: (project: DSProject) => void;
@@ -20,13 +21,13 @@ interface ProjectListViewProps {
 }
 
 export const ProjectListView: React.FC<ProjectListViewProps> = ({
-    lang,
     connection,
     onBack,
     onSelectProject,
     onOpenResourceCenter,
     onOpenDataSourceCenter
 }) => {
+    const { t, i18n } = useTranslation();
     const { toast } = useToast();
     const viewMode = useViewMode();
     const [projects, setProjects] = useState<DSProject[]>([]);
@@ -56,10 +57,10 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                 setProjects(result.data?.totalList || []);
                 setTotal(result.data?.total || 0);
             } else {
-                toast({ title: lang === 'zh' ? '加载失败' : 'Load Failed', description: result.msg, variant: 'destructive' });
+                toast({ title: t('common.loadFailed'), description: result.msg, variant: 'destructive' });
             }
         } catch (err: any) {
-            toast({ title: lang === 'zh' ? '加载失败' : 'Load Failed', description: err.message, variant: 'destructive' });
+            toast({ title: t('common.loadFailed'), description: err.message, variant: 'destructive' });
         } finally {
             setLoading(false);
         }
@@ -78,7 +79,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
             {/* 顶部导航 */}
             <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center space-x-4">
-                    <Tooltip content={lang === 'zh' ? '返回连接列表' : 'Back to connections'} position="right">
+                    <Tooltip content={t('dolphinScheduler.backToConnections')} position="right">
                         <button
                             onClick={onBack}
                             className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
@@ -96,7 +97,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                 </div>
                 <div className="flex items-center space-x-3">
                     <ViewModeToggle />
-                    <Tooltip content={lang === 'zh' ? '刷新' : 'Refresh'} position="bottom">
+                    <Tooltip content={t('common.refresh')} position="bottom">
                         <button
                             onClick={fetchProjects}
                             disabled={loading}
@@ -115,7 +116,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                         <input
                             type="text"
-                            placeholder={lang === 'zh' ? '搜索项目...' : 'Search projects...'}
+                            placeholder={t('dolphinScheduler.searchProjects')}
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
                             onKeyDown={e => e.key === 'Enter' && handleSearch()}
@@ -123,7 +124,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                         />
                     </div>
                     <span className="text-sm text-slate-500">
-                        {lang === 'zh' ? `共 ${total} 个项目` : `${total} projects total`}
+                        {t('dolphinScheduler.totalProjects', { count: total })}
                     </span>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -133,7 +134,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                         className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium flex items-center shadow-lg transition-colors"
                     >
                         <Database size={18} className="mr-2" />
-                        {lang === 'zh' ? '数据源中心' : 'DataSource'}
+                        {t('dolphinScheduler.dataSourceCenter')}
                     </button>
                     {/* 资源中心入口 */}
                     <button
@@ -141,7 +142,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                         className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-medium flex items-center shadow-lg transition-colors"
                     >
                         <HardDrive size={18} className="mr-2" />
-                        {lang === 'zh' ? '资源中心' : 'Resource'}
+                        {t('dolphinScheduler.resourceCenter')}
                     </button>
                 </div>
             </div>
@@ -186,17 +187,17 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                         ))}
                         {filteredProjects.length === 0 && !loading && (
                             <div className="w-full text-center py-20 text-slate-400">
-                                {lang === 'zh' ? '暂无项目' : 'No projects found'}
+                                {t('dolphinScheduler.noProjectsFound')}
                             </div>
                         )}
                     </div>
                 ) : (
                     <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
                         <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-500 uppercase tracking-wider sticky top-0 z-10">
-                            <div className="col-span-4">{lang === 'zh' ? '项目名称' : 'Project Name'}</div>
-                            <div className="col-span-4">{lang === 'zh' ? '描述' : 'Description'}</div>
-                            <div className="col-span-2">{lang === 'zh' ? '负责人' : 'Owner'}</div>
-                            <div className="col-span-2">{lang === 'zh' ? '更新时间' : 'Updated'}</div>
+                            <div className="col-span-4">{t('dolphinScheduler.projectName')}</div>
+                            <div className="col-span-4">{t('dolphinScheduler.description')}</div>
+                            <div className="col-span-2">{t('dolphinScheduler.owner')}</div>
+                            <div className="col-span-2">{t('dolphinScheduler.updated')}</div>
                         </div>
                         <div className="divide-y divide-slate-100 dark:divide-slate-700">
                             {filteredProjects.map(project => (
@@ -222,7 +223,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                             ))}
                             {filteredProjects.length === 0 && !loading && (
                                 <div className="px-6 py-8 text-center text-slate-400 text-sm italic">
-                                    {lang === 'zh' ? '暂无项目' : 'No projects found'}
+                                    {t('dolphinScheduler.noProjectsFound')}
                                 </div>
                             )}
                         </div>
@@ -238,7 +239,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                         disabled={pageNo === 1}
                         className="px-3 py-1 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded disabled:opacity-50"
                     >
-                        {lang === 'zh' ? '上一页' : 'Prev'}
+                        {t('dolphinScheduler.prev')}
                     </button>
                     <span className="text-sm text-slate-500">{pageNo} / {totalPages}</span>
                     <button
@@ -246,7 +247,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                         disabled={pageNo === totalPages}
                         className="px-3 py-1 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded disabled:opacity-50"
                     >
-                        {lang === 'zh' ? '下一页' : 'Next'}
+                        {t('dolphinScheduler.next')}
                     </button>
                 </div>
             )}

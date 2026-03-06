@@ -8,9 +8,9 @@ import { httpFetch } from '../../utils/http';
 import { useToast } from '../common/Toast';
 import { ConfirmModal } from '../common/ConfirmModal';
 import { Tooltip } from '../common/Tooltip';
+import { useTranslation } from "react-i18next";
 
 interface DataSourceCenterProps {
-    lang: Language;
     connection: DolphinSchedulerConnection;
     onBack: () => void;
 }
@@ -30,10 +30,10 @@ interface DSDataSource {
 }
 
 export const DataSourceCenter: React.FC<DataSourceCenterProps> = ({
-    lang,
     connection,
     onBack
 }) => {
+    const { t, i18n } = useTranslation();
     const { toast } = useToast();
     const [dataSources, setDataSources] = useState<DSDataSource[]>([]);
     const [loading, setLoading] = useState(true);
@@ -70,7 +70,7 @@ export const DataSourceCenter: React.FC<DataSourceCenterProps> = ({
             
             const responseText = await response.text();
             if (responseText.trim().startsWith('<')) {
-                toast({ title: lang === 'zh' ? '加载失败' : 'Load Failed', description: 'API error', variant: 'destructive' });
+                toast({ title: t('dolphinScheduler.loadFailed'), description: 'API error', variant: 'destructive' });
                 return;
             }
             
@@ -80,11 +80,11 @@ export const DataSourceCenter: React.FC<DataSourceCenterProps> = ({
                 setDataSources(Array.isArray(dataSourceList) ? dataSourceList : []);
                 setTotal(result.data?.total || dataSourceList.length || 0);
             } else {
-                toast({ title: lang === 'zh' ? '加载失败' : 'Load Failed', description: result.msg, variant: 'destructive' });
+                toast({ title: t('dolphinScheduler.loadFailed'), description: result.msg, variant: 'destructive' });
             }
         } catch (err: any) {
             console.error('DataSources fetch error:', err);
-            toast({ title: lang === 'zh' ? '加载失败' : 'Load Failed', description: err.message, variant: 'destructive' });
+            toast({ title: t('dolphinScheduler.loadFailed'), description: err.message, variant: 'destructive' });
         } finally {
             setLoading(false);
         }
@@ -105,13 +105,13 @@ export const DataSourceCenter: React.FC<DataSourceCenterProps> = ({
             });
             const result = await response.json();
             if (result.code === 0) {
-                toast({ title: lang === 'zh' ? '删除成功' : 'Deleted successfully', variant: 'success' });
+                toast({ title: t('dolphinScheduler.deletedSuccessfully'), variant: 'success' });
                 fetchDataSources();
             } else {
-                toast({ title: lang === 'zh' ? '删除失败' : 'Delete failed', description: result.msg, variant: 'destructive' });
+                toast({ title: t('dolphinScheduler.deleteFailed'), description: result.msg, variant: 'destructive' });
             }
         } catch (err: any) {
-            toast({ title: lang === 'zh' ? '删除失败' : 'Delete failed', description: err.message, variant: 'destructive' });
+            toast({ title: t('dolphinScheduler.deleteFailed'), description: err.message, variant: 'destructive' });
         } finally {
             setConfirmDelete({ isOpen: false, id: 0, name: '' });
         }
@@ -121,9 +121,9 @@ export const DataSourceCenter: React.FC<DataSourceCenterProps> = ({
     const handleCopy = async (ds: DSDataSource) => {
         try {
             await navigator.clipboard.writeText(ds.name);
-            toast({ title: lang === 'zh' ? '已复制名称' : 'Name copied', variant: 'success' });
+            toast({ title: t('dolphinScheduler.nameCopied'), variant: 'success' });
         } catch {
-            toast({ title: lang === 'zh' ? '复制失败' : 'Copy failed', variant: 'destructive' });
+            toast({ title: t('dolphinScheduler.copyFailed'), variant: 'destructive' });
         }
     };
 
@@ -141,7 +141,7 @@ export const DataSourceCenter: React.FC<DataSourceCenterProps> = ({
     // 保存数据源（创建/编辑）
     const handleSave = async () => {
         if (!formData.name?.trim()) {
-            toast({ title: lang === 'zh' ? '请输入名称' : 'Please enter name', variant: 'destructive' });
+            toast({ title: t('dolphinScheduler.pleaseEnterName'), variant: 'destructive' });
             return;
         }
         setSaving(true);
@@ -166,15 +166,15 @@ export const DataSourceCenter: React.FC<DataSourceCenterProps> = ({
             });
             const result = await response.json();
             if (result.code === 0) {
-                toast({ title: lang === 'zh' ? (isEdit ? '更新成功' : '创建成功') : (isEdit ? 'Updated' : 'Created'), variant: 'success' });
+                toast({ title: isEdit ? t('dolphinScheduler.updateSuccess') : t('dolphinScheduler.createSuccess'), variant: 'success' });
                 setEditModal({ isOpen: false, dataSource: null, isEdit: false });
                 setFormData({});
                 fetchDataSources();
             } else {
-                toast({ title: lang === 'zh' ? '保存失败' : 'Save failed', description: result.msg, variant: 'destructive' });
+                toast({ title: t('dolphinScheduler.saveFailed'), description: result.msg, variant: 'destructive' });
             }
         } catch (err: any) {
-            toast({ title: lang === 'zh' ? '保存失败' : 'Save failed', description: err.message, variant: 'destructive' });
+            toast({ title: t('dolphinScheduler.saveFailed'), description: err.message, variant: 'destructive' });
         } finally {
             setSaving(false);
         }
@@ -206,10 +206,10 @@ export const DataSourceCenter: React.FC<DataSourceCenterProps> = ({
             {/* 删除确认模态框 */}
             <ConfirmModal
                 isOpen={confirmDelete.isOpen}
-                title={lang === 'zh' ? '确认删除' : 'Confirm Delete'}
-                message={lang === 'zh' ? `确定要删除数据源 "${confirmDelete.name}" 吗？` : `Delete datasource "${confirmDelete.name}"?`}
-                confirmText={lang === 'zh' ? '删除' : 'Delete'}
-                cancelText={lang === 'zh' ? '取消' : 'Cancel'}
+                title={t('dolphinScheduler.confirmDelete')}
+                message={t('dolphinScheduler.deleteDatasourceConfirmDe')}
+                confirmText={t('dolphinScheduler.delete')}
+                cancelText={t('dolphinScheduler.cancel')}
                 onConfirm={handleDelete}
                 onCancel={() => setConfirmDelete({ isOpen: false, id: 0, name: '' })}
                 type="danger"
@@ -222,7 +222,7 @@ export const DataSourceCenter: React.FC<DataSourceCenterProps> = ({
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center">
                                 <Eye className="mr-2 text-blue-500" size={20} />
-                                {lang === 'zh' ? '数据源详情' : 'DataSource Details'}
+                                {t('dolphinScheduler.dataSourceDetails')}
                             </h3>
                             <button onClick={() => setViewModal({ isOpen: false, dataSource: null })} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded">
                                 <X size={20} className="text-slate-500" />
@@ -230,44 +230,44 @@ export const DataSourceCenter: React.FC<DataSourceCenterProps> = ({
                         </div>
                         <div className="space-y-3 text-sm">
                             <div className="grid grid-cols-3 gap-2">
-                                <span className="text-slate-500">{lang === 'zh' ? '名称' : 'Name'}:</span>
+                                <span className="text-slate-500">{t('dolphinScheduler.name')}:</span>
                                 <span className="col-span-2 font-medium text-slate-800 dark:text-white">{viewModal.dataSource.name}</span>
                             </div>
                             <div className="grid grid-cols-3 gap-2">
-                                <span className="text-slate-500">{lang === 'zh' ? '类型' : 'Type'}:</span>
+                                <span className="text-slate-500">{t('dolphinScheduler.type')}:</span>
                                 <span className="col-span-2 font-medium text-slate-800 dark:text-white">{viewModal.dataSource.type}</span>
                             </div>
                             <div className="grid grid-cols-3 gap-2">
-                                <span className="text-slate-500">{lang === 'zh' ? '主机' : 'Host'}:</span>
+                                <span className="text-slate-500">{t('dolphinScheduler.host')}:</span>
                                 <span className="col-span-2 font-mono text-slate-800 dark:text-white">{viewModal.dataSource.host || '-'}</span>
                             </div>
                             <div className="grid grid-cols-3 gap-2">
-                                <span className="text-slate-500">{lang === 'zh' ? '端口' : 'Port'}:</span>
+                                <span className="text-slate-500">{t('dolphinScheduler.port')}:</span>
                                 <span className="col-span-2 font-mono text-slate-800 dark:text-white">{viewModal.dataSource.port || '-'}</span>
                             </div>
                             <div className="grid grid-cols-3 gap-2">
-                                <span className="text-slate-500">{lang === 'zh' ? '数据库' : 'Database'}:</span>
+                                <span className="text-slate-500">{t('dolphinScheduler.database')}:</span>
                                 <span className="col-span-2 font-mono text-slate-800 dark:text-white">{viewModal.dataSource.database || '-'}</span>
                             </div>
                             <div className="grid grid-cols-3 gap-2">
-                                <span className="text-slate-500">{lang === 'zh' ? '用户名' : 'Username'}:</span>
+                                <span className="text-slate-500">{t('dolphinScheduler.username')}:</span>
                                 <span className="col-span-2 font-mono text-slate-800 dark:text-white">{viewModal.dataSource.userName || '-'}</span>
                             </div>
                             <div className="grid grid-cols-3 gap-2">
-                                <span className="text-slate-500">{lang === 'zh' ? '描述' : 'Note'}:</span>
+                                <span className="text-slate-500">{t('dolphinScheduler.note')}:</span>
                                 <span className="col-span-2 text-slate-800 dark:text-white">{viewModal.dataSource.note || '-'}</span>
                             </div>
                             <div className="grid grid-cols-3 gap-2">
-                                <span className="text-slate-500">{lang === 'zh' ? '创建时间' : 'Created'}:</span>
+                                <span className="text-slate-500">{t('dolphinScheduler.created')}:</span>
                                 <span className="col-span-2 text-slate-600 dark:text-slate-400">{viewModal.dataSource.createTime || '-'}</span>
                             </div>
                             <div className="grid grid-cols-3 gap-2">
-                                <span className="text-slate-500">{lang === 'zh' ? '更新时间' : 'Updated'}:</span>
+                                <span className="text-slate-500">{t('dolphinScheduler.updated')}:</span>
                                 <span className="col-span-2 text-slate-600 dark:text-slate-400">{viewModal.dataSource.updateTime || '-'}</span>
                             </div>
                             {viewModal.dataSource.connectionParams && (
                                 <div>
-                                    <span className="text-slate-500 block mb-1">{lang === 'zh' ? '连接参数' : 'Connection Params'}:</span>
+                                    <span className="text-slate-500 block mb-1">{t('dolphinScheduler.connectionParams')}:</span>
                                     <pre className="bg-slate-100 dark:bg-slate-900 p-2 rounded text-xs font-mono overflow-x-auto">{viewModal.dataSource.connectionParams}</pre>
                                 </div>
                             )}
@@ -282,11 +282,11 @@ export const DataSourceCenter: React.FC<DataSourceCenterProps> = ({
                     <div className="bg-white dark:bg-slate-800 rounded-xl p-6 w-[500px] shadow-2xl max-h-[80vh] overflow-y-auto">
                         <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center">
                             {editModal.isEdit ? <Edit className="mr-2 text-blue-500" size={20} /> : <Plus className="mr-2 text-green-500" size={20} />}
-                            {editModal.isEdit ? (lang === 'zh' ? '编辑数据源' : 'Edit DataSource') : (lang === 'zh' ? '创建数据源' : 'Create DataSource')}
+                            {editModal.isEdit ? (t('dolphinScheduler.editDataSource')) : (t('dolphinScheduler.createDataSource'))}
                         </h3>
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">{lang === 'zh' ? '名称' : 'Name'} *</label>
+                                <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">{t('dolphinScheduler.name')} *</label>
                                 <input
                                     type="text"
                                     value={formData.name || ''}
@@ -295,7 +295,7 @@ export const DataSourceCenter: React.FC<DataSourceCenterProps> = ({
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">{lang === 'zh' ? '类型' : 'Type'}</label>
+                                <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">{t('dolphinScheduler.type')}</label>
                                 <select
                                     value={formData.type || 'MYSQL'}
                                     onChange={e => setFormData({ ...formData, type: e.target.value })}
@@ -306,7 +306,7 @@ export const DataSourceCenter: React.FC<DataSourceCenterProps> = ({
                             </div>
                             <div className="grid grid-cols-3 gap-3">
                                 <div className="col-span-2">
-                                    <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">{lang === 'zh' ? '主机' : 'Host'}</label>
+                                    <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">{t('dolphinScheduler.host')}</label>
                                     <input
                                         type="text"
                                         value={formData.host || ''}
@@ -315,7 +315,7 @@ export const DataSourceCenter: React.FC<DataSourceCenterProps> = ({
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">{lang === 'zh' ? '端口' : 'Port'}</label>
+                                    <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">{t('dolphinScheduler.port')}</label>
                                     <input
                                         type="number"
                                         value={formData.port || ''}
@@ -325,7 +325,7 @@ export const DataSourceCenter: React.FC<DataSourceCenterProps> = ({
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">{lang === 'zh' ? '数据库' : 'Database'}</label>
+                                <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">{t('dolphinScheduler.database')}</label>
                                 <input
                                     type="text"
                                     value={formData.database || ''}
@@ -334,7 +334,7 @@ export const DataSourceCenter: React.FC<DataSourceCenterProps> = ({
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">{lang === 'zh' ? '用户名' : 'Username'}</label>
+                                <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">{t('dolphinScheduler.username')}</label>
                                 <input
                                     type="text"
                                     value={formData.userName || ''}
@@ -343,7 +343,7 @@ export const DataSourceCenter: React.FC<DataSourceCenterProps> = ({
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">{lang === 'zh' ? '描述' : 'Note'}</label>
+                                <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">{t('dolphinScheduler.note')}</label>
                                 <textarea
                                     value={formData.note || ''}
                                     onChange={e => setFormData({ ...formData, note: e.target.value })}
@@ -357,7 +357,7 @@ export const DataSourceCenter: React.FC<DataSourceCenterProps> = ({
                                 onClick={() => { setEditModal({ isOpen: false, dataSource: null, isEdit: false }); setFormData({}); }}
                                 className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
                             >
-                                {lang === 'zh' ? '取消' : 'Cancel'}
+                                {t('dolphinScheduler.cancel')}
                             </button>
                             <button
                                 onClick={handleSave}
@@ -365,7 +365,7 @@ export const DataSourceCenter: React.FC<DataSourceCenterProps> = ({
                                 className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium disabled:opacity-50 flex items-center"
                             >
                                 {saving && <Loader2 size={16} className="mr-2 animate-spin" />}
-                                {lang === 'zh' ? '保存' : 'Save'}
+                                {t('dolphinScheduler.save')}
                             </button>
                         </div>
                     </div>
@@ -375,7 +375,7 @@ export const DataSourceCenter: React.FC<DataSourceCenterProps> = ({
             {/* 顶部导航 */}
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center space-x-4">
-                    <Tooltip content={lang === 'zh' ? '返回项目列表' : 'Back to projects'} position="right">
+                    <Tooltip content={t('dolphinScheduler.backToProjects')} position="right">
                         <button onClick={onBack} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
                             <ArrowLeft size={20} className="text-slate-600 dark:text-slate-400" />
                         </button>
@@ -383,12 +383,12 @@ export const DataSourceCenter: React.FC<DataSourceCenterProps> = ({
                     <div>
                         <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center">
                             <Server className="mr-3 text-green-500" />
-                            {lang === 'zh' ? '数据源中心' : 'DataSource Center'}
+                            {t('dolphinScheduler.dataSourceCenter')}
                         </h2>
                         <p className="text-xs text-slate-500">{connection.name}</p>
                     </div>
                 </div>
-                <Tooltip content={lang === 'zh' ? '刷新' : 'Refresh'} position="bottom">
+                <Tooltip content={t('dolphinScheduler.refresh')} position="bottom">
                     <button onClick={fetchDataSources} disabled={loading} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors disabled:opacity-50">
                         <RefreshCw size={18} className={`text-slate-600 dark:text-slate-400 ${loading ? 'animate-spin' : ''}`} />
                     </button>
@@ -402,7 +402,7 @@ export const DataSourceCenter: React.FC<DataSourceCenterProps> = ({
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                         <input
                             type="text"
-                            placeholder={lang === 'zh' ? '搜索数据源...' : 'Search datasources...'}
+                            placeholder={t('dolphinScheduler.searchDatasources')}
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
                             onKeyDown={e => e.key === 'Enter' && handleSearch()}
@@ -410,7 +410,7 @@ export const DataSourceCenter: React.FC<DataSourceCenterProps> = ({
                         />
                     </div>
                     <span className="text-sm text-slate-500">
-                        {lang === 'zh' ? `共 ${total} 个数据源` : `${total} datasources`}
+                        {t('dolphinScheduler.TotalDatasources', { count: total })}
                     </span>
                 </div>
                 <button
@@ -418,7 +418,7 @@ export const DataSourceCenter: React.FC<DataSourceCenterProps> = ({
                     className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium flex items-center transition-colors"
                 >
                     <Plus size={18} className="mr-2" />
-                    {lang === 'zh' ? '创建数据源' : 'Create DataSource'}
+                    {t('dolphinScheduler.createDataSource')}
                 </button>
             </div>
 
@@ -434,12 +434,12 @@ export const DataSourceCenter: React.FC<DataSourceCenterProps> = ({
                             <thead>
                                 <tr className="bg-gradient-to-r from-slate-50 to-slate-100/80 dark:from-slate-800/80 dark:to-slate-800/60">
                                     <th className="w-11 px-3 py-2.5 text-left text-xs font-semibold text-slate-500 dark:text-slate-400">#</th>
-                                    <th className="w-40 px-3 py-2.5 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{lang === 'zh' ? '名称' : 'Name'}</th>
-                                    <th className="w-20 px-3 py-2.5 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{lang === 'zh' ? '类型' : 'Type'}</th>
-                                    <th className="w-32 px-3 py-2.5 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{lang === 'zh' ? '描述' : 'Description'}</th>
-                                    <th className="w-44 px-3 py-2.5 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{lang === 'zh' ? '创建时间' : 'Created'}</th>
-                                    <th className="w-44 px-3 py-2.5 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{lang === 'zh' ? '更新时间' : 'Updated'}</th>
-                                    <th className="w-32 px-3 py-2.5 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{lang === 'zh' ? '操作' : 'Actions'}</th>
+                                    <th className="w-40 px-3 py-2.5 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('dolphinScheduler.name')}</th>
+                                    <th className="w-20 px-3 py-2.5 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('dolphinScheduler.type')}</th>
+                                    <th className="w-32 px-3 py-2.5 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('dolphinScheduler.description')}</th>
+                                    <th className="w-44 px-3 py-2.5 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('dolphinScheduler.created')}</th>
+                                    <th className="w-44 px-3 py-2.5 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('dolphinScheduler.updated')}</th>
+                                    <th className="w-32 px-3 py-2.5 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('dolphinScheduler.actions')}</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white dark:bg-slate-800/40">
@@ -473,7 +473,7 @@ export const DataSourceCenter: React.FC<DataSourceCenterProps> = ({
                                         </td>
                                         <td className="px-3 py-2">
                                             <div className="flex items-center justify-end space-x-0.5 opacity-60 group-hover:opacity-100 transition-opacity">
-                                                <Tooltip content={lang === 'zh' ? '查看' : 'View'} position="top">
+                                                <Tooltip content={t('dolphinScheduler.view')} position="top">
                                                     <button
                                                         onClick={() => setViewModal({ isOpen: true, dataSource: ds })}
                                                         className="p-1 hover:bg-blue-500/10 dark:hover:bg-blue-500/15 rounded-md text-blue-400 transition-colors"
@@ -481,7 +481,7 @@ export const DataSourceCenter: React.FC<DataSourceCenterProps> = ({
                                                         <Eye size={15} />
                                                     </button>
                                                 </Tooltip>
-                                                <Tooltip content={lang === 'zh' ? '编辑' : 'Edit'} position="top">
+                                                <Tooltip content={t('dolphinScheduler.edit')} position="top">
                                                     <button
                                                         onClick={() => openEditModal(ds)}
                                                         className="p-1 hover:bg-slate-500/10 dark:hover:bg-slate-500/15 rounded-md text-slate-400 transition-colors"
@@ -489,7 +489,7 @@ export const DataSourceCenter: React.FC<DataSourceCenterProps> = ({
                                                         <Edit size={15} />
                                                     </button>
                                                 </Tooltip>
-                                                <Tooltip content={lang === 'zh' ? '复制名称' : 'Copy'} position="top">
+                                                <Tooltip content={t('dolphinScheduler.copy')} position="top">
                                                     <button
                                                         onClick={() => handleCopy(ds)}
                                                         className="p-1 hover:bg-slate-500/10 dark:hover:bg-slate-500/15 rounded-md text-slate-400 transition-colors"
@@ -497,7 +497,7 @@ export const DataSourceCenter: React.FC<DataSourceCenterProps> = ({
                                                         <Copy size={15} />
                                                     </button>
                                                 </Tooltip>
-                                                <Tooltip content={lang === 'zh' ? '删除' : 'Delete'} position="top">
+                                                <Tooltip content={t('dolphinScheduler.delete')} position="top">
                                                     <button
                                                         onClick={() => setConfirmDelete({ isOpen: true, id: ds.id, name: ds.name })}
                                                         className="p-1 hover:bg-red-500/10 dark:hover:bg-red-500/15 rounded-md text-red-400 transition-colors"
@@ -512,7 +512,7 @@ export const DataSourceCenter: React.FC<DataSourceCenterProps> = ({
                                 {filteredDataSources.length === 0 && !loading && (
                                     <tr>
                                         <td colSpan={7} className="px-6 py-12 text-center text-slate-400 dark:text-slate-500 text-sm">
-                                            {lang === 'zh' ? '暂无数据源' : 'No datasources found'}
+                                            {t('dolphinScheduler.noDatasourcesFound')}
                                         </td>
                                     </tr>
                                 )}
@@ -530,7 +530,7 @@ export const DataSourceCenter: React.FC<DataSourceCenterProps> = ({
                         disabled={pageNo === 1}
                         className="px-3 py-1 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded disabled:opacity-50"
                     >
-                        {lang === 'zh' ? '上一页' : 'Prev'}
+                        {t('dolphinScheduler.prev')}
                     </button>
                     <span className="text-sm text-slate-500">{pageNo} / {totalPages}</span>
                     <button
@@ -538,7 +538,7 @@ export const DataSourceCenter: React.FC<DataSourceCenterProps> = ({
                         disabled={pageNo === totalPages}
                         className="px-3 py-1 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded disabled:opacity-50"
                     >
-                        {lang === 'zh' ? '下一页' : 'Next'}
+                        {t('dolphinScheduler.next')}
                     </button>
                 </div>
             )}

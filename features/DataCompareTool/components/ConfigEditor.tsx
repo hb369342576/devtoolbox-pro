@@ -5,11 +5,10 @@ import {
 } from 'lucide-react';
 import { Language, DbConnection, CompareKey, TableInfo, TableDetail } from '../../../types';
 import { SavedCompareConfig, SideConfig } from '../types';
-import { getTexts } from '../../../locales';
 import { invoke } from '@tauri-apps/api/core';
+import { useTranslation } from "react-i18next";
 
 interface ConfigEditorProps {
-    lang: Language;
     connections: DbConnection[];
     configName: string;
     setConfigName: (name: string) => void;
@@ -41,7 +40,6 @@ interface ConfigEditorProps {
  * 用于创建和编辑数据对比配置
  */
 export const ConfigEditor: React.FC<ConfigEditorProps> = ({
-    lang,
     connections,
     configName,
     setConfigName,
@@ -67,7 +65,7 @@ export const ConfigEditor: React.FC<ConfigEditorProps> = ({
     onCompare,
     isLoading
 }) => {
-    const t = getTexts(lang);
+    const { t, i18n } = useTranslation();
     const [availableColumns, setAvailableColumns] = useState<string[]>([]);
 
     // 加载列信息
@@ -125,25 +123,25 @@ export const ConfigEditor: React.FC<ConfigEditorProps> = ({
                     </button>
                     <GitCompare className="mr-3 text-indigo-600" size={24} />
                     <h2 className="text-2xl font-bold text-slate-800 dark:text-white">
-                        {editingConfigId ? (lang === 'zh' ? '编辑对比' : 'Edit Compare') : (lang === 'zh' ? '新建对比' : 'New Compare')}
+                        {editingConfigId ? (t('dataCompare.editCompare')) : (t('dataCompare.newCompare'))}
                     </h2>
                 </div>
                 <button
                     onClick={onSave}
                     className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium"
                 >
-                    {lang === 'zh' ? '保存配置' : 'Save Config'}
+                    {t('dataCompare.saveConfig')}
                 </button>
             </div>
 
             {/* Config Name */}
             <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
-                <label className="block text-sm font-bold text-slate-400 uppercase mb-2">{lang === 'zh' ? '配置名称' : 'Config Name'}</label>
+                <label className="block text-sm font-bold text-slate-400 uppercase mb-2">{t('dataCompare.configName')}</label>
                 <input
                     type="text"
                     value={configName}
                     onChange={(e) => setConfigName(e.target.value)}
-                    placeholder={lang === 'zh' ? '输入配置名称...' : 'Enter config name...'}
+                    placeholder={t('dataCompare.enterConfigName')}
                     className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg text-sm outline-none dark:text-white"
                 />
             </div>
@@ -157,39 +155,39 @@ export const ConfigEditor: React.FC<ConfigEditorProps> = ({
                 {/* Source */}
                 <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border-l-4 border-l-blue-500 shadow-sm border border-slate-200 dark:border-slate-700">
                     <h3 className="font-bold text-slate-700 dark:text-slate-200 mb-4 flex items-center">
-                        <Database className="mr-2 text-blue-500" size={18} /> {t.dataCompare.sourceSide}
+                        <Database className="mr-2 text-blue-500" size={18} /> {t('dataCompare.sourceSide')}
                     </h3>
                     <div className="space-y-3">
                         <div>
-                            <label className="block text-xs font-bold text-slate-400 uppercase mb-1">{t.dataCompare.selectConn}</label>
+                            <label className="block text-xs font-bold text-slate-400 uppercase mb-1">{t('dataCompare.selectConn')}</label>
                             <select
                                 value={sourceConfig.connId}
                                 onChange={e => setSourceConfig({ ...sourceConfig, connId: e.target.value })}
                                 className="w-full p-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg text-sm outline-none dark:text-white truncate"
                             >
-                                <option value="">-- Select --</option>
+                                <option value="">{t('dataCompare.selectSelect')}</option>
                                 {connections.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                             </select>
                         </div>
                         <div>
-                            <label className="block text-xs font-bold text-slate-400 uppercase mb-1">{t.dataCompare.selectDb}</label>
+                            <label className="block text-xs font-bold text-slate-400 uppercase mb-1">{t('dataCompare.selectDb')}</label>
                             <select
                                 value={sourceConfig.db}
                                 onChange={e => setSourceConfig({ ...sourceConfig, db: e.target.value })}
                                 disabled={!sourceConfig.connId}
                                 className="w-full p-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg text-sm outline-none dark:text-white disabled:opacity-50 truncate"
                             >
-                                <option value="">-- DB --</option>
+                                <option value="">{t('dataCompare.selectDbPlaceholder')}</option>
                                 {sourceDbs.map(d => <option key={d} value={d}>{d}</option>)}
                             </select>
                         </div>
                         <div>
-                            <label className="block text-xs font-bold text-slate-400 uppercase mb-1">{t.dataCompare.selectTable}</label>
+                            <label className="block text-xs font-bold text-slate-400 uppercase mb-1">{t('dataCompare.selectTable')}</label>
                             <div className="relative mb-2">
                                 <Search size={14} className="absolute left-2 top-2 text-slate-400" />
                                 <input
                                     type="text"
-                                    placeholder={lang === 'zh' ? '搜索表...' : 'Search...'}
+                                    placeholder={t('dataCompare.search')}
                                     value={sourceTableSearch}
                                     onChange={(e) => setSourceTableSearch(e.target.value)}
                                     disabled={!sourceConfig.db}
@@ -202,7 +200,7 @@ export const ConfigEditor: React.FC<ConfigEditorProps> = ({
                                 disabled={!sourceConfig.db}
                                 className="w-full p-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg text-sm outline-none dark:text-white disabled:opacity-50 truncate"
                             >
-                                <option value="">-- Table --</option>
+                                <option value="">{t('dataCompare.selectTablePlaceholder')}</option>
                                 {filteredSourceTables.map(t => <option key={t.name} value={t.name}>{t.name}</option>)}
                             </select>
                         </div>
@@ -212,39 +210,39 @@ export const ConfigEditor: React.FC<ConfigEditorProps> = ({
                 {/* Target */}
                 <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border-l-4 border-l-green-500 shadow-sm border border-slate-200 dark:border-slate-700">
                     <h3 className="font-bold text-slate-700 dark:text-slate-200 mb-4 flex items-center">
-                        <Database className="mr-2 text-green-500" size={18} /> {t.dataCompare.targetSide}
+                        <Database className="mr-2 text-green-500" size={18} /> {t('dataCompare.targetSide')}
                     </h3>
                     <div className="space-y-3">
                         <div>
-                            <label className="block text-xs font-bold text-slate-400 uppercase mb-1">{t.dataCompare.selectConn}</label>
+                            <label className="block text-xs font-bold text-slate-400 uppercase mb-1">{t('dataCompare.selectConn')}</label>
                             <select
                                 value={targetConfig.connId}
                                 onChange={e => setTargetConfig({ ...targetConfig, connId: e.target.value })}
                                 className="w-full p-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg text-sm outline-none dark:text-white truncate"
                             >
-                                <option value="">-- Select --</option>
+                                <option value="">{t('dataCompare.selectSelect')}</option>
                                 {connections.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                             </select>
                         </div>
                         <div>
-                            <label className="block text-xs font-bold text-slate-400 uppercase mb-1">{t.dataCompare.selectDb}</label>
+                            <label className="block text-xs font-bold text-slate-400 uppercase mb-1">{t('dataCompare.selectDb')}</label>
                             <select
                                 value={targetConfig.db}
                                 onChange={e => setTargetConfig({ ...targetConfig, db: e.target.value })}
                                 disabled={!targetConfig.connId}
                                 className="w-full p-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg text-sm outline-none dark:text-white disabled:opacity-50 truncate"
                             >
-                                <option value="">-- DB --</option>
+                                <option value="">{t('dataCompare.selectDbPlaceholder')}</option>
                                 {targetDbs.map(d => <option key={d} value={d}>{d}</option>)}
                             </select>
                         </div>
                         <div>
-                            <label className="block text-xs font-bold text-slate-400 uppercase mb-1">{t.dataCompare.selectTable}</label>
+                            <label className="block text-xs font-bold text-slate-400 uppercase mb-1">{t('dataCompare.selectTable')}</label>
                             <div className="relative mb-2">
                                 <Search size={14} className="absolute left-2 top-2 text-slate-400" />
                                 <input
                                     type="text"
-                                    placeholder={lang === 'zh' ? '搜索表...' : 'Search...'}
+                                    placeholder={t('dataCompare.search')}
                                     value={targetTableSearch}
                                     onChange={(e) => setTargetTableSearch(e.target.value)}
                                     disabled={!targetConfig.db}
@@ -257,7 +255,7 @@ export const ConfigEditor: React.FC<ConfigEditorProps> = ({
                                 disabled={!targetConfig.db}
                                 className="w-full p-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg text-sm outline-none dark:text-white disabled:opacity-50 truncate"
                             >
-                                <option value="">-- Table --</option>
+                                <option value="">{t('dataCompare.selectTablePlaceholder')}</option>
                                 {filteredTargetTables.map(t => <option key={t.name} value={t.name}>{t.name}</option>)}
                             </select>
                         </div>
@@ -269,16 +267,16 @@ export const ConfigEditor: React.FC<ConfigEditorProps> = ({
             <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
                 <div className="flex items-center mb-4">
                     <Filter className="mr-2 text-indigo-500" size={20} />
-                    <h3 className="font-bold text-slate-800 dark:text-white">{t.dataCompare.configTitle}</h3>
+                    <h3 className="font-bold text-slate-800 dark:text-white">{t('dataCompare.configTitle')}</h3>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     {/* Primary Keys */}
                     <div>
                         <div className="flex justify-between items-center mb-2">
-                            <label className="text-xs font-bold text-slate-400 uppercase">{t.dataCompare.primaryKeys}</label>
+                            <label className="text-xs font-bold text-slate-400 uppercase">{t('dataCompare.primaryKeys')}</label>
                             <button onClick={addKey} disabled={primaryKeys.length >= 4} className="text-xs text-blue-500 hover:underline flex items-center disabled:opacity-50">
-                                <Plus size={12} className="mr-1" /> {t.dataCompare.addKey}
+                                <Plus size={12} className="mr-1" /> {t('dataCompare.addKey')}
                             </button>
                         </div>
                         <div className="space-y-2">
@@ -289,7 +287,7 @@ export const ConfigEditor: React.FC<ConfigEditorProps> = ({
                                         onChange={e => updateKey(idx, 'field', e.target.value)}
                                         className="flex-1 p-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg text-sm outline-none dark:text-white"
                                     >
-                                        <option value="">Column...</option>
+                                        <option value="">{t('dataCompare.selectColumn')}</option>
                                         {availableColumns.map(c => <option key={c} value={c}>{c}</option>)}
                                     </select>
                                     <button
@@ -301,19 +299,19 @@ export const ConfigEditor: React.FC<ConfigEditorProps> = ({
                                     <button onClick={() => removeKey(idx)} className="p-2 text-slate-400 hover:text-red-500"><X size={16} /></button>
                                 </div>
                             ))}
-                            {primaryKeys.length === 0 && <div className="text-sm text-slate-400 italic p-2">Please add at least one key.</div>}
+                            {primaryKeys.length === 0 && <div className="text-sm text-slate-400 italic p-2">{t('dataCompare.addAtLeastOneKey')}</div>}
                         </div>
                     </div>
 
                     {/* Filter */}
                     <div>
-                        <label className="block text-xs font-bold text-slate-400 uppercase mb-2">{t.dataCompare.filter}</label>
+                        <label className="block text-xs font-bold text-slate-400 uppercase mb-2">{t('dataCompare.filter')}</label>
                         <textarea
                             rows={4}
                             value={filterCondition}
                             onChange={e => setFilterCondition(e.target.value)}
                             className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg text-sm outline-none dark:text-white font-mono resize-none"
-                            placeholder={t.dataCompare.filterPlaceholder}
+                            placeholder={t('dataCompare.filterPlaceholder')}
                         />
                     </div>
                 </div>
@@ -325,7 +323,7 @@ export const ConfigEditor: React.FC<ConfigEditorProps> = ({
                         className="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow-lg flex items-center transition-all disabled:opacity-70"
                     >
                         {isLoading ? <RefreshCw className="animate-spin mr-2" size={20} /> : <Play className="mr-2" size={20} />}
-                        {t.dataCompare.startCompare}
+                        {t('dataCompare.startCompare')}
                     </button>
                 </div>
             </div>

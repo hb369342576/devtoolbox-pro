@@ -2,13 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { X, ArrowRight, Trash2 } from 'lucide-react';
 import { useFieldMappingStore } from '../store';
 import { FieldMapping, Language } from '../../../types';
-import { getTexts } from '../../../locales';
+import { useTranslation } from "react-i18next";
 
 interface MappingModalProps {
-    lang: Language;
 }
 
-export const MappingModal: React.FC<MappingModalProps> = ({ lang }) => {
+export const MappingModal: React.FC<MappingModalProps> = ({}) => {
+    const { t, i18n } = useTranslation();
     // Zustand
     const showMappingModal = useFieldMappingStore((state) => state.showMappingModal);
     const activeLink = useFieldMappingStore((state) => state.activeLink);
@@ -54,9 +54,7 @@ export const MappingModal: React.FC<MappingModalProps> = ({ lang }) => {
         // 如果有修改，提示保存
         if (hasChanges()) {
             const confirmSave = window.confirm(
-                lang === 'zh' 
-                    ? '映射已修改，是否保存？' 
-                    : 'Mappings have been modified. Save changes?'
+                t('mapping.mappingsHaveBeenModifiedS')
             );
             if (confirmSave) {
                 handleSave();
@@ -148,8 +146,6 @@ export const MappingModal: React.FC<MappingModalProps> = ({ lang }) => {
     };
 
     if (!showMappingModal || !activeLink || !sourceNode || !targetNode) return null;
-
-    const t = getTexts(lang);
 
     // Auto-map helpers
     const handleAutoMap = () => {
@@ -303,7 +299,7 @@ export const MappingModal: React.FC<MappingModalProps> = ({ lang }) => {
                                     {localMappings.length === 0 && (
                                         <tr>
                                             <td colSpan={4} className="p-8 text-center text-slate-400 italic">
-                                                {lang === 'zh' ? '暂无映射，请添加' : 'No mappings yet.'}
+                                                {t('mapping.noMappingsYet')}
                                             </td>
                                         </tr>
                                     )}

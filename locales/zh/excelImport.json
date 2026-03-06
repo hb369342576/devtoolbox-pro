@@ -1,0 +1,22 @@
+{
+  "title": "表格数据导入",
+  "newImport": "新建导入任务",
+  "newImportTask": "新建导入任务",
+  "untitled": "未命名导入",
+  "homeDesc": "将 Excel/CSV 数据快速映射并导入到数据库表，支持存为模板。",
+  "targetCol": "目标字段 (DB)",
+  "arrow": "映射",
+  "sourceHeader": "源表头 (Excel)",
+  "defaultValue": "固定默认值",
+  "exit": "退出编辑器",
+  "save": "保存配置",
+  "profileName": "配置名称",
+  "deleteConfirm": "确定要删除此导入配置吗？",
+  "couldNotFetchDbs": "无法获取数据库列表",
+  "failedToLoadSchema": "加载表结构失败",
+  "couldNotFetchTableSchema": "无法获取表结构",
+  "noMappings": "暂无字段映射",
+  "sourceFile": "源文件 (Excel)",
+  "headerRow": "标题行号",
+  "selectTargetTableFirst": "请先选择目标表"
+}

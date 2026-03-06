@@ -8,11 +8,12 @@ import { httpFetch } from '../../utils/http';
 import { useToast } from '../common/Toast';
 import { ConfirmModal } from '../common/ConfirmModal';
 import { Tooltip } from '../common/Tooltip';
-import { ViewModeToggle } from '../common/ViewModeToggle';
 import { useViewMode } from '../../store/globalStore';
+import { ViewModeToggle } from '../common/ViewModeToggle';
+
+import { useTranslation } from "react-i18next";
 
 interface ConnectionManagerProps {
-    lang: Language;
     connections: DolphinSchedulerConnection[];
     onAdd: (conn: Omit<DolphinSchedulerConnection, 'id'>) => void;
     onUpdate: (conn: DolphinSchedulerConnection) => void;
@@ -21,13 +22,13 @@ interface ConnectionManagerProps {
 }
 
 export const ConnectionManager: React.FC<ConnectionManagerProps> = ({
-    lang,
     connections,
     onAdd,
     onUpdate,
     onDelete,
     onSelect
 }) => {
+    const { t, i18n } = useTranslation();
     const viewMode = useViewMode();
     const [showModal, setShowModal] = useState(false);
     const [editingConn, setEditingConn] = useState<Partial<DolphinSchedulerConnection>>({});
@@ -93,11 +94,11 @@ export const ConnectionManager: React.FC<ConnectionManagerProps> = ({
                 setTestStatus('success');
             } else {
                 setTestStatus('failed');
-                setTestErrorMsg(result.msg || '连接失败');
+                setTestErrorMsg(result.msg || t('dolphinScheduler.connFailed'));
             }
         } catch (err: any) {
             setTestStatus('failed');
-            setTestErrorMsg(err.message || '连接失败');
+            setTestErrorMsg(err.message || t('dolphinScheduler.connFailed'));
         }
         
         setTimeout(() => {
@@ -112,10 +113,10 @@ export const ConnectionManager: React.FC<ConnectionManagerProps> = ({
         <div className="h-full flex flex-col">
             <ConfirmModal
                 isOpen={confirmDelete.isOpen}
-                title={lang === 'zh' ? '确认删除' : 'Confirm Delete'}
-                message={lang === 'zh' ? '确定要删除这个连接吗？' : 'Are you sure you want to delete this connection?'}
-                confirmText={lang === 'zh' ? '删除' : 'Delete'}
-                cancelText={lang === 'zh' ? '取消' : 'Cancel'}
+                title={t('common.confirmDelete')}
+                message={t('dolphinScheduler.deleteConnConfirm')}
+                confirmText={t('common.delete')}
+                cancelText={t('common.cancel')}
                 onConfirm={handleConfirmDelete}
                 onCancel={() => setConfirmDelete({ isOpen: false, id: '' })}
                 type="danger"
@@ -124,7 +125,7 @@ export const ConnectionManager: React.FC<ConnectionManagerProps> = ({
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center">
                     <Database className="mr-3 text-blue-600" />
-                    {lang === 'zh' ? 'DS 服务器管理' : 'DS Server Manager'}
+                    {t('dolphinScheduler.serverManager')}
                 </h2>
                 <div className="flex items-center space-x-3">
                     <ViewModeToggle />
@@ -133,7 +134,7 @@ export const ConnectionManager: React.FC<ConnectionManagerProps> = ({
                         className="min-w-[140px] px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium flex items-center justify-center shadow-lg transition-colors"
                     >
                         <Plus size={18} className="mr-2" />
-                        {lang === 'zh' ? '新建连接' : 'New Connection'}
+                        {t('common.newConnection')}
                     </button>
                 </div>
             </div>
@@ -180,16 +181,16 @@ export const ConnectionManager: React.FC<ConnectionManagerProps> = ({
                             <div className="p-4 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform duration-300 mb-4">
                                 <Plus size={32} />
                             </div>
-                            <span className="font-bold text-lg text-slate-600 dark:text-slate-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{lang === 'zh' ? '新建连接' : 'New Connection'}</span>
+                            <span className="font-bold text-lg text-slate-600 dark:text-slate-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{t('common.newConnection')}</span>
                         </button>
                     </div>
                 ) : (
                     <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
                         <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-500 uppercase tracking-wider sticky top-0 z-10">
-                            <div className="col-span-3">{lang === 'zh' ? '名称' : 'Name'}</div>
+                            <div className="col-span-3">{t('common.name')}</div>
                             <div className="col-span-5">Base URL</div>
                             <div className="col-span-2">API</div>
-                            <div className="col-span-2 text-right">{lang === 'zh' ? '操作' : 'Actions'}</div>
+                            <div className="col-span-2 text-right">{t('common.actions')}</div>
                         </div>
                         <div className="divide-y divide-slate-100 dark:divide-slate-700">
                             {connections.map(conn => (
@@ -216,7 +217,7 @@ export const ConnectionManager: React.FC<ConnectionManagerProps> = ({
                                     </div>
                                 </div>
                             ))}
-                            {connections.length === 0 && <div className="px-6 py-8 text-center text-slate-400 text-sm italic">{lang === 'zh' ? '暂无连接，点击上方按钮添加' : 'No connections, click button above to add'}</div>}
+                            {connections.length === 0 && <div className="px-6 py-8 text-center text-slate-400 text-sm italic">{t('dolphinScheduler.noConnectionsClickButtonA')}</div>}
                         </div>
                     </div>
                 )}
@@ -227,7 +228,7 @@ export const ConnectionManager: React.FC<ConnectionManagerProps> = ({
                     <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200 dark:border-slate-700">
                         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800/80">
                             <h3 className="font-bold text-lg text-slate-800 dark:text-white">
-                                {editingConn.id ? (lang === 'zh' ? '编辑连接' : 'Edit Connection') : (lang === 'zh' ? '新建连接' : 'New Connection')}
+                                {editingConn.id ? t('dolphinScheduler.editConnection') : t('common.newConnection')}
                             </h3>
                             <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><X size={20} /></button>
                         </div>
@@ -235,20 +236,20 @@ export const ConnectionManager: React.FC<ConnectionManagerProps> = ({
                         <div className="p-6 space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                                    {lang === 'zh' ? '连接名称' : 'Connection Name'} <span className="text-red-500">*</span>
+                                    {t('common.name')} <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     type="text"
                                     value={editingConn.name || ''}
                                     onChange={e => setEditingConn({ ...editingConn, name: e.target.value })}
                                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white"
-                                    placeholder={lang === 'zh' ? '例如：生产环境' : 'e.g. Production'}
+                                    placeholder={t('dolphinScheduler.eGProduction')}
                                 />
                             </div>
 
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                                    API Base URL <span className="text-red-500">*</span>
+                                    {t('dolphinScheduler.configPath')} <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     type="text"
@@ -261,20 +262,20 @@ export const ConnectionManager: React.FC<ConnectionManagerProps> = ({
 
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                                    API Token <span className="text-red-500">*</span>
+                                    {t('dolphinScheduler.apiToken')} <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     type="password"
                                     value={editingConn.token || ''}
                                     onChange={e => setEditingConn({ ...editingConn, token: e.target.value })}
                                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white font-mono text-sm"
-                                    placeholder={lang === 'zh' ? '从 DS 安全中心获取' : 'Get from DS Security Center'}
+                                    placeholder={t('dolphinScheduler.getFromDSSecurityCenter')}
                                 />
                             </div>
 
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                                    API {lang === 'zh' ? '版本' : 'Version'}
+                                    {t('dolphinScheduler.apiVersion')}
                                 </label>
                                 <select
                                     value={editingConn.apiVersion || 'v3.2'}
@@ -295,22 +296,22 @@ export const ConnectionManager: React.FC<ConnectionManagerProps> = ({
                             >
                                 {testStatus === 'testing' ? <RefreshCw className="animate-spin" size={16} /> : <Power size={16} />}
                                 <span>
-                                    {testStatus === 'testing' ? (lang === 'zh' ? '测试中...' : 'Testing...') :
-                                        testStatus === 'success' ? (lang === 'zh' ? '连接成功' : 'Success') :
-                                            testStatus === 'failed' ? (testErrorMsg || (lang === 'zh' ? '连接失败' : 'Failed')) :
-                                                (lang === 'zh' ? '测试连接' : 'Test Connection')}
+                                    {testStatus === 'testing' ? t('dolphinScheduler.testing') :
+                                        testStatus === 'success' ? t('dolphinScheduler.success') :
+                                            testStatus === 'failed' ? (testErrorMsg || t('dolphinScheduler.failed')) :
+                                                t('dolphinScheduler.testConnection')}
                                 </span>
                             </button>
                             <div className="flex space-x-3">
                                 <button onClick={() => setShowModal(false)} className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors">
-                                    {lang === 'zh' ? '取消' : 'Cancel'}
+                                    {t('common.cancel')}
                                 </button>
                                 <button
                                     onClick={handleSave}
                                     disabled={!isFormValid}
                                     className={`px-6 py-2 rounded-lg font-medium transition-colors ${isFormValid ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/20' : 'bg-slate-300 dark:bg-slate-700 text-slate-500 cursor-not-allowed'}`}
                                 >
-                                    {lang === 'zh' ? '保存' : 'Save'}
+                                    {t('common.save')}
                                 </button>
                             </div>
                         </div>

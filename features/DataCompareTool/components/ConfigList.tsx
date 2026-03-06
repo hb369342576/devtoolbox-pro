@@ -1,15 +1,13 @@
 import React from 'react';
 import { GitCompare, Plus, Edit, Trash2 } from 'lucide-react';
-import { Language } from '../../../types';
 import { SavedCompareConfig } from '../types';
-import { getTexts } from '../../../locales';
+import { useTranslation } from 'react-i18next';
 import { ConfirmModal } from '../../common/ConfirmModal';
-import { ViewModeToggle } from '../../common/ViewModeToggle';
 import { useViewMode } from '../../../store/globalStore';
 import { Tooltip } from '../../common/Tooltip';
+import { ViewModeToggle } from '../../common/ViewModeToggle';
 
 interface ConfigListProps {
-    lang: Language;
     configs: SavedCompareConfig[];
     onNew: () => void;
     onEdit: (config: SavedCompareConfig) => void;
@@ -22,16 +20,14 @@ interface ConfigListProps {
  * 配置列表视图组件
  * 显示所有保存的对比配置
  */
-export const ConfigList: React.FC<ConfigListProps> = ({
-    lang,
-    configs,
+export const ConfigList: React.FC<ConfigListProps> = ({ configs,
     onNew,
     onEdit,
     onDelete,
     confirmDelete,
     setConfirmDelete
 }) => {
-    const t = getTexts(lang);
+    const { t } = useTranslation();
     const viewMode = useViewMode();
 
     return (
@@ -39,10 +35,10 @@ export const ConfigList: React.FC<ConfigListProps> = ({
             {/* Delete Confirmation Modal */}
             <ConfirmModal
                 isOpen={confirmDelete.isOpen}
-                title={lang === 'zh' ? '确认删除' : 'Confirm Delete'}
-                message={lang === 'zh' ? '确定要删除这个对比配置吗？' : 'Are you sure you want to delete this config?'}
-                confirmText={lang === 'zh' ? '删除' : 'Delete'}
-                cancelText={lang === 'zh' ? '取消' : 'Cancel'}
+                title={t('dataCompare.confirmDelete')}
+                message={t('dataCompare.areYouSureYouWantToDelete')}
+                confirmText={t('dataCompare.delete')}
+                cancelText={t('dataCompare.cancel')}
                 onConfirm={() => {
                     onDelete(confirmDelete.id);
                     setConfirmDelete({ isOpen: false, id: '' });
@@ -55,7 +51,7 @@ export const ConfigList: React.FC<ConfigListProps> = ({
             <div className="flex items-center justify-between">
                 <div className="flex items-center">
                     <GitCompare className="mr-3 text-indigo-600" size={24} />
-                    <h2 className="text-2xl font-bold text-slate-800 dark:text-white">{t.dataCompare.title}</h2>
+                    <h2 className="text-2xl font-bold text-slate-800 dark:text-white">{t('dataCompare.title')}</h2>
                 </div>
                 <div className="flex items-center space-x-3">
                     <ViewModeToggle />
@@ -64,7 +60,7 @@ export const ConfigList: React.FC<ConfigListProps> = ({
                         className="min-w-[140px] px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium flex items-center justify-center space-x-2 shadow-lg transition-colors"
                     >
                         <Plus size={18} />
-                        <span>{lang === 'zh' ? '新建对比' : 'New Compare'}</span>
+                        <span>{t('dataCompare.newCompare')}</span>
                     </button>
                 </div>
             </div>
@@ -111,11 +107,11 @@ export const ConfigList: React.FC<ConfigListProps> = ({
                                     <h3 className="font-bold text-lg text-slate-800 dark:text-white mb-2 truncate flex-1 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{config.name}</h3>
                                     <div className="space-y-2 text-sm">
                                         <div className="flex items-center text-slate-600 dark:text-slate-400">
-                                            <span className="font-medium mr-2">{lang === 'zh' ? '源端:' : 'Source:'}</span>
+                                            <span className="font-medium mr-2">{t('dataCompare.source')}</span>
                                             <span className="truncate">{config.sourceConfig.table || '-'}</span>
                                         </div>
                                         <div className="flex items-center text-slate-600 dark:text-slate-400">
-                                            <span className="font-medium mr-2">{lang === 'zh' ? '目标:' : 'Target:'}</span>
+                                            <span className="font-medium mr-2">{t('dataCompare.target')}</span>
                                             <span className="truncate">{config.targetConfig.table || '-'}</span>
                                         </div>
                                     </div>
@@ -133,17 +129,17 @@ export const ConfigList: React.FC<ConfigListProps> = ({
                             <Plus size={32} />
                         </div>
                         <span className="font-bold text-lg text-slate-600 dark:text-slate-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                            {lang === 'zh' ? '新建对比配置' : 'New Compare Config'}
+                            {t('dataCompare.newCompareConfig')}
                         </span>
                     </button>
                 </div>
             ) : (
                 <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
                     <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                        <div className="col-span-4">{lang === 'zh' ? '配置名称' : 'Config Name'}</div>
-                        <div className="col-span-3">{lang === 'zh' ? '源端表' : 'Source Table'}</div>
-                        <div className="col-span-3">{lang === 'zh' ? '目标表' : 'Target Table'}</div>
-                        <div className="col-span-2 text-right">{lang === 'zh' ? '操作' : 'Actions'}</div>
+                        <div className="col-span-4">{t('dataCompare.configName')}</div>
+                        <div className="col-span-3">{t('dataCompare.sourceTable')}</div>
+                        <div className="col-span-3">{t('dataCompare.targetTable')}</div>
+                        <div className="col-span-2 text-right">{t('dataCompare.actions')}</div>
                     </div>
                     <div className="divide-y divide-slate-100 dark:divide-slate-700">
                         {configs.map(config => (
@@ -185,7 +181,7 @@ export const ConfigList: React.FC<ConfigListProps> = ({
                         ))}
                         {configs.length === 0 && (
                             <div className="px-6 py-8 text-center text-slate-400 text-sm italic">
-                                {lang === 'zh' ? '暂无配置' : 'No configs'}
+                                {t('dataCompare.noConfigs')}
                             </div>
                         )}
                     </div>

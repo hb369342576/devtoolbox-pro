@@ -3,7 +3,6 @@ import { Table as TableIcon, Code, Copy, Loader2, Columns, Key, RefreshCw, Play,
 import { detectDbTypeFromDdl, convertMysqlToDoris, convertDorisToMysql, formatColumnType } from '../utils/ddlConverter';
 import { Language } from '../../../types';
 import { useDbViewerStore } from '../store';
-import { getTexts } from '../../../locales';
 import { useTableDetail } from '../hooks/useTableDetail';
 import { useToast } from '../../common/Toast';
 import { ConfirmModal } from '../../common/ConfirmModal';
@@ -11,7 +10,7 @@ import { Tooltip } from '../../common/Tooltip';
 import { ContextMenu } from '../../common/ContextMenu';
 import { invoke } from '@tauri-apps/api/core';
 import { SqlEditor } from './SqlEditor';
-
+import { useTranslation } from "react-i18next";
 
 // SQL标签页接口
 interface SqlTab {
@@ -26,8 +25,8 @@ interface SqlTab {
     sortDirection: 'asc' | 'desc';
 }
 
-export const TableViewer: React.FC<{ lang: Language }> = ({ lang }) => {
-    const t = getTexts(lang);
+export const TableViewer: React.FC<{}> = ({}) => {
+    const { t, i18n } = useTranslation();
     const selectedTable = useDbViewerStore((state) => state.selectedTable);
     const selectedConnection = useDbViewerStore((state) => state.selectedConnection);
     const selectedDatabase = useDbViewerStore((state) => state.selectedDatabase);
@@ -36,7 +35,7 @@ export const TableViewer: React.FC<{ lang: Language }> = ({ lang }) => {
     const tables = useDbViewerStore((state) => state.tables);
 
     const { toast } = useToast();
-    const showToast = (title: string, variant: 'success' | 'error') => toast({ title, variant: variant === 'error' ? 'destructive' : 'success' });
+    const showToast = (message: string, variant: 'success' | 'error') => toast({ message, type: variant === 'error' ? 'error' : 'success' });
 
     // 触发数据加载
     const { loading, error } = useTableDetail();
@@ -218,12 +217,12 @@ export const TableViewer: React.FC<{ lang: Language }> = ({ lang }) => {
         const sql = activeTab_sql.sql;
         
         if (!sql.trim()) {
-            showToast(lang === 'zh' ? '请输入SQL语句' : 'Please enter SQL statement', 'error');
+            showToast(t('db_viewer.pleaseEnterSQLStatement'), 'error');
             return;
         }
 
         if (!selectedConnection) {
-            showToast(lang === 'zh' ? '请先选择数据库连接' : 'Please select a database connection first', 'error');
+            showToast(t('dbViewer.pleaseSelectADatabaseConn'), 'error');
             return;
         }
 
@@ -235,10 +234,10 @@ export const TableViewer: React.FC<{ lang: Language }> = ({ lang }) => {
             
             const results = await invoke<any[]>('db_query', { id: connectionId, sql: sql.trim() });
             updateSqlTab(activeTab_sql.id, { results, loading: false });
-            showToast(lang === 'zh' ? `查询成功，共 ${results.length} 条记录` : `Query successful, ${results.length} records`, 'success');
+            showToast(t('db_viewer.querySuccessfulResultsLen', { count: results.length }), 'success');
         } catch (error: any) {
             updateSqlTab(activeTab_sql.id, { error: error.toString(), loading: false });
-            showToast(lang === 'zh' ? '查询失败: ' + error : 'Query failed: ' + error, 'error');
+            showToast(`${t('dbViewer.queryFailed')}: ${error}`, 'error');
         }
     };
 
@@ -266,12 +265,12 @@ export const TableViewer: React.FC<{ lang: Language }> = ({ lang }) => {
         const selectedText = getSelectedText ? getSelectedText() : '';
         
         if (!selectedText.trim()) {
-            showToast(lang === 'zh' ? '请先选中SQL语句' : 'Please select SQL statement first', 'error');
+            showToast(t('db_viewer.pleaseSelectSQLStatementF'), 'error');
             return;
         }
 
         if (!selectedConnection) {
-            showToast(lang === 'zh' ? '请先选择数据库连接' : 'Please select a database connection first', 'error');
+            showToast(t('dbViewer.pleaseSelectADatabaseConn'), 'error');
             return;
         }
 
@@ -281,10 +280,10 @@ export const TableViewer: React.FC<{ lang: Language }> = ({ lang }) => {
             const connectionId = `mysql://${selectedConnection.user}:${selectedConnection.password || ''}@${selectedConnection.host}:${selectedConnection.port}/${selectedDatabase || ''}`;
             const results = await invoke<any[]>('db_query', { id: connectionId, sql: selectedText.trim() });
             updateSqlTab(activeTab_sql.id, { results, loading: false });
-            showToast(lang === 'zh' ? `查询成功，共 ${results.length} 条记录` : `Query successful, ${results.length} records`, 'success');
+            showToast(t('db_viewer.querySuccessfulResultsLen', { count: results.length }), 'success');
         } catch (error: any) {
             updateSqlTab(activeTab_sql.id, { error: error.toString(), loading: false });
-            showToast(lang === 'zh' ? '查询失败: ' + error : 'Query failed: ' + error, 'error');
+            showToast(`${t('db_viewer.queryFailed')}: ${error}`, 'error');
         }
     };
 
@@ -317,7 +316,7 @@ export const TableViewer: React.FC<{ lang: Language }> = ({ lang }) => {
         formatted = formatted.replace(/^\n+/, '');
         
         updateSqlTab(activeTab_sql.id, { sql: formatted });
-        showToast(lang === 'zh' ? 'SQL已美化' : 'SQL formatted', 'success');
+        showToast(t('db_viewer.sQLFormatted'), 'success');
     };
 
     // 导出数据到CSV
@@ -350,10 +349,10 @@ export const TableViewer: React.FC<{ lang: Language }> = ({ lang }) => {
             if (filePath) {
                 const { writeTextFile } = await import('@tauri-apps/plugin-fs');
                 await writeTextFile(filePath, csv);
-                showToast(lang === 'zh' ? '导出成功' : 'Export successful', 'success');
+                showToast(t('db_viewer.exportSuccessful'), 'success');
             }
         } catch (err: any) {
-            showToast(lang === 'zh' ? '导出失败: ' + err : 'Export failed: ' + err, 'error');
+            showToast(`${t('db_viewer.exportFailed')}: ${err}`, 'error');
         }
     };
 
@@ -370,9 +369,9 @@ export const TableViewer: React.FC<{ lang: Language }> = ({ lang }) => {
         
         try {
             await navigator.clipboard.writeText(text);
-            showToast(lang === 'zh' ? `已复制 ${paginatedResults.length} 条数据` : `Copied ${paginatedResults.length} rows`, 'success');
+            showToast(t('db_viewer.copiedPaginatedResultsLen'), 'success');
         } catch (err) {
-            showToast(lang === 'zh' ? '复制失败' : 'Copy failed', 'error');
+            showToast(t('db_viewer.copyFailed'), 'error');
         }
     };
 
@@ -384,12 +383,12 @@ export const TableViewer: React.FC<{ lang: Language }> = ({ lang }) => {
             y: e.clientY,
             items: [
                 {
-                    label: lang === 'zh' ? '复制当前页数据' : 'Copy Current Page',
+                    label: t('db_viewer.copyCurrentPage'),
                     icon: <Clipboard size={14} />,
                     onClick: handleCopyData
                 },
                 {
-                    label: lang === 'zh' ? '导出全部数据 (CSV)' : 'Export All (CSV)',
+                    label: t('db_viewer.exportAllCSV'),
                     icon: <Download size={14} />,
                     onClick: handleExportData
                 }
@@ -427,10 +426,10 @@ export const TableViewer: React.FC<{ lang: Language }> = ({ lang }) => {
     const handleCopy = async (text: string) => {
         try {
             await navigator.clipboard.writeText(text);
-            showToast(lang === 'zh' ? '复制成功' : 'Copied successfully', 'success');
+            showToast(t('db_viewer.copiedSuccessfully'), 'success');
         } catch (err) {
             console.error('Failed to copy:', err);
-            showToast(lang === 'zh' ? '复制失败' : 'Failed to copy', 'error');
+            showToast(t('db_viewer.failedToCopy'), 'error');
         }
     };
 
@@ -443,17 +442,17 @@ export const TableViewer: React.FC<{ lang: Language }> = ({ lang }) => {
             const colName = data?.name;
             items = [
                 {
-                    label: lang === 'zh' ? '复制列名' : 'Copy Column Name',
+                    label: t('dbViewer.copyColumnName'),
                     icon: <Copy size={14} />,
                     onClick: () => handleCopy(colName)
                 },
                 {
-                    label: lang === 'zh' ? '复制所有列 (逗号分隔)' : 'Copy All Columns (CSV)',
+                    label: t('dbViewer.copyAllColumnsCSV'),
                     icon: <Columns size={14} />,
                     onClick: () => handleCopy(columns.map(c => c.name).join(', '))
                 },
                 {
-                    label: lang === 'zh' ? '复制所有列 (列表)' : 'Copy All Columns (List)',
+                    label: t('dbViewer.copyAllColumnsList'),
                     icon: <Columns size={14} />,
                     onClick: () => handleCopy(columns.map(c => c.name).join('\n'))
                 }
@@ -461,7 +460,7 @@ export const TableViewer: React.FC<{ lang: Language }> = ({ lang }) => {
         } else if (type === 'ddl') {
             items = [
                 {
-                    label: lang === 'zh' ? '复制 DDL' : 'Copy DDL',
+                    label: t('dbViewer.copyDDL'),
                     icon: <Copy size={14} />,
                     onClick: () => handleCopy(isConvertedDdl ? convertedDdl : ddl)
                 }
@@ -471,8 +470,8 @@ export const TableViewer: React.FC<{ lang: Language }> = ({ lang }) => {
             if (detectedDbType === 'mysql' || detectedDbType === 'doris') {
                 items.push({
                     label: isConvertedDdl
-                        ? (lang === 'zh' ? '恢复原始 DDL' : 'Restore Original DDL')
-                        : (lang === 'zh' ? `转换为 ${detectedDbType === 'mysql' ? 'Doris' : 'MySQL'}` : `Convert to ${detectedDbType === 'mysql' ? 'Doris' : 'MySQL'}`),
+                        ? (t('db_viewer.restoreOriginalDDL'))
+                        : (t('db_viewer.convertToDetectedDbTypeMy', { dbType: detectedDbType === 'mysql' ? 'Doris' : 'MySQL' })),
                     icon: <RefreshCw size={14} />,
                     onClick: handleConvertDdl
                 });
@@ -490,7 +489,7 @@ export const TableViewer: React.FC<{ lang: Language }> = ({ lang }) => {
         return (
             <div className="flex-1 flex flex-col items-center justify-center text-slate-300 dark:text-slate-600">
                 <TableIcon size={64} className="mb-4 opacity-20" />
-                <p className="text-lg">{t.dbViewer.selectDb}</p>
+                <p className="text-lg">{t('dbViewer.selectDb')}</p>
             </div>
         );
     }
@@ -505,7 +504,7 @@ export const TableViewer: React.FC<{ lang: Language }> = ({ lang }) => {
                     <button
                         onClick={() => handleCopy(selectedTable)}
                         className="ml-2 p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-colors text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-                        title={lang === 'zh' ? '复制表名' : 'Copy Table Name'}
+                        title={t('db_viewer.copyTableName')}
                     >
                         <Copy size={16} />
                     </button>
@@ -513,7 +512,7 @@ export const TableViewer: React.FC<{ lang: Language }> = ({ lang }) => {
                 {loading && (
                     <div className="flex items-center text-slate-500 text-sm">
                         <Loader2 className="animate-spin mr-2" size={16} />
-                        {lang === 'zh' ? '加载中...' : 'Loading...'}
+                        {t('db_viewer.loading')}
                     </div>
                 )}
             </div>
@@ -529,7 +528,7 @@ export const TableViewer: React.FC<{ lang: Language }> = ({ lang }) => {
                     }`}
                 >
                     <Database size={16} />
-                    <span>{lang === 'zh' ? '数据查询' : 'Query'}</span>
+                    <span>{t('dbViewer.query')}</span>
                 </button>
                 <button
                     onClick={() => setActiveTab('structure')}
@@ -540,7 +539,7 @@ export const TableViewer: React.FC<{ lang: Language }> = ({ lang }) => {
                     }`}
                 >
                     <Columns size={16} />
-                    <span>{lang === 'zh' ? '表结构' : 'Structure'}</span>
+                    <span>{t('db_viewer.structure')}</span>
                 </button>
             </div>
 
@@ -600,7 +599,7 @@ export const TableViewer: React.FC<{ lang: Language }> = ({ lang }) => {
                                 {columns.length === 0 && !loading && (
                                     <tr>
                                         <td colSpan={6} className="px-4 py-8 text-center text-slate-400">
-                                            {lang === 'zh' ? '暂无字段信息' : 'No columns found'}
+                                            {t('db_viewer.noColumnsFound')}
                                         </td>
                                     </tr>
                                 )}
@@ -642,11 +641,11 @@ export const TableViewer: React.FC<{ lang: Language }> = ({ lang }) => {
                                         : 'hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500'
                                         }`}
                                     title={isConvertedDdl
-                                        ? (lang === 'zh' ? '恢复原始 DDL' : 'Restore Original')
-                                        : (lang === 'zh' ? `转换为 ${detectedDbType === 'mysql' ? 'Doris' : 'MySQL'}` : `Convert to ${detectedDbType === 'mysql' ? 'Doris' : 'MySQL'}`)}
+                                        ? (t('db_viewer.restoreOriginal'))
+                                        : (t('db_viewer.convertToDetectedDbTypeMy', { dbType: detectedDbType === 'mysql' ? 'Doris' : 'MySQL' }))}
                                 >
                                     <RefreshCw size={14} className={isConvertedDdl ? 'mr-1' : ''} />
-                                    {isConvertedDdl && (lang === 'zh' ? '恢复' : 'Restore')}
+                                    {isConvertedDdl && (t('db_viewer.restore'))}
                                 </button>
                             )}
                             <button
@@ -655,14 +654,14 @@ export const TableViewer: React.FC<{ lang: Language }> = ({ lang }) => {
                                     handleCopy(isConvertedDdl ? convertedDdl : ddl);
                                 }}
                                 className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-colors text-slate-500"
-                                title={lang === 'zh' ? '复制' : 'Copy'}
+                                title={t('dbViewer.copy')}
                             >
                                 <Copy size={14} />
                             </button>
                         </div>
                     </div>
                     <div className="flex-1 overflow-auto p-4 font-mono text-xs text-slate-700 dark:text-slate-300 whitespace-pre">
-                        {isConvertedDdl ? convertedDdl : (ddl || (loading ? (lang === 'zh' ? '加载中...' : 'Loading...') : (lang === 'zh' ? '无 DDL 信息' : 'No DDL available')))}
+                        {isConvertedDdl ? convertedDdl : (ddl || (loading ? (t('db_viewer.loading')) : (t('db_viewer.noDDLAvailable'))))}
                     </div>
                 </div>
                 </div>
@@ -698,7 +697,7 @@ export const TableViewer: React.FC<{ lang: Language }> = ({ lang }) => {
                         <button
                             onClick={handleAddSqlTab}
                             className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-colors ml-1 shrink-0"
-                            title={lang === 'zh' ? '新建查询' : 'New Query'}
+                            title={t('dbViewer.newQuery')}
                         >
                             <Plus size={16} className="text-slate-500" />
                         </button>
@@ -709,13 +708,13 @@ export const TableViewer: React.FC<{ lang: Language }> = ({ lang }) => {
                         <div className="flex-1 flex items-center justify-center text-slate-400">
                             <div className="text-center">
                                 <Database size={48} className="mx-auto mb-3 opacity-30" />
-                                <p className="mb-4">{lang === 'zh' ? '点击 + 添加新的查询标签' : 'Click + to add a new query tab'}</p>
+                                <p className="mb-4">{t('db_viewer.clickToAddANewQueryTab')}</p>
                                 <button
                                     onClick={handleAddSqlTab}
                                     className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm flex items-center space-x-2 mx-auto"
                                 >
                                     <Plus size={16} />
-                                    <span>{lang === 'zh' ? '新建查询' : 'New Query'}</span>
+                                    <span>{t('db_viewer.newQuery')}</span>
                                 </button>
                             </div>
                         </div>
@@ -738,19 +737,19 @@ export const TableViewer: React.FC<{ lang: Language }> = ({ lang }) => {
                                         <button
                                             onClick={handleFormatSql}
                                             className="px-2.5 py-1.5 bg-purple-500 hover:bg-purple-600 text-white rounded-lg text-sm flex items-center space-x-1 transition-colors"
-                                            title={lang === 'zh' ? '美化SQL' : 'Format SQL'}
+                                            title={t('db_viewer.formatSQL')}
                                         >
                                             <Sparkles size={14} />
-                                            <span>{lang === 'zh' ? '美化' : 'Format'}</span>
+                                            <span>{t('db_viewer.format')}</span>
                                         </button>
                                         <button
                                             onClick={handleExecuteSelected}
                                             disabled={activeTab_sql.loading}
                                             className="px-2.5 py-1.5 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-400 text-white rounded-lg text-sm flex items-center space-x-1 transition-colors"
-                                            title={lang === 'zh' ? '执行选中的SQL' : 'Run Selected'}
+                                            title={t('db_viewer.runSelected')}
                                         >
                                             <Play size={14} />
-                                            <span>{lang === 'zh' ? '执行选中' : 'Run Selected'}</span>
+                                            <span>{t('db_viewer.runSelected')}</span>
                                         </button>
                                         <button
                                             onClick={handleExecuteQuery}
@@ -762,7 +761,7 @@ export const TableViewer: React.FC<{ lang: Language }> = ({ lang }) => {
                                             ) : (
                                                 <Play size={14} />
                                             )}
-                                            <span>{lang === 'zh' ? '执行' : 'Run'}</span>
+                                            <span>{t('db_viewer.run')}</span>
                                         </button>
                                     </div>
                                 </div>
@@ -778,7 +777,7 @@ export const TableViewer: React.FC<{ lang: Language }> = ({ lang }) => {
                                         onExecuteSelected={(text) => {
                                             // 执行选中的SQL
                                             if (!selectedConnection) {
-                                                showToast(lang === 'zh' ? '请先选择数据库连接' : 'Please select a database connection first', 'error');
+                                                showToast(t('dbViewer.pleaseSelectADatabaseConn'), 'error');
                                                 return;
                                             }
                                             updateSqlTab(activeTab_sql.id, { loading: true, error: '', currentPage: 1 });
@@ -786,11 +785,11 @@ export const TableViewer: React.FC<{ lang: Language }> = ({ lang }) => {
                                             invoke<any[]>('db_query', { id: connectionId, sql: text.trim() })
                                                 .then(results => {
                                                     updateSqlTab(activeTab_sql.id, { results, loading: false });
-                                                    showToast(lang === 'zh' ? `查询成功，共 ${results.length} 条记录` : `Query successful, ${results.length} records`, 'success');
+                                                    showToast(t('dbViewer.querySuccessfulResultsLen'), 'success');
                                                 })
                                                 .catch((error: any) => {
                                                     updateSqlTab(activeTab_sql.id, { error: error.toString(), loading: false });
-                                                    showToast(lang === 'zh' ? '查询失败: ' + error : 'Query failed: ' + error, 'error');
+                                                    showToast(`${t('dbViewer.queryFailed')}: ${error}`, 'error');
                                                 });
                                         }}
                                         theme={document.documentElement.classList.contains('dark') ? 'dark' : 'light'}
@@ -812,7 +811,7 @@ export const TableViewer: React.FC<{ lang: Language }> = ({ lang }) => {
                                 {/* Results Header */}
                                 <div className="px-4 py-2 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between bg-slate-50 dark:bg-slate-800 shrink-0">
                                     <span className="text-xs font-medium text-slate-500">
-                                        {lang === 'zh' ? `共 ${sortedResults.length} 条记录` : `${sortedResults.length} records`}
+                                        {t('db_viewer.SortedResultsLengthRecord', { length: sortedResults.length })}
                                     </span>
                                     {totalPages > 1 && (
                                         <div className="flex items-center space-x-2">
@@ -845,7 +844,7 @@ export const TableViewer: React.FC<{ lang: Language }> = ({ lang }) => {
                                         <div className="flex-1 flex items-center justify-center text-slate-400 py-12">
                                             <div className="text-center">
                                                 <Database size={48} className="mx-auto mb-3 opacity-30" />
-                                                <p>{lang === 'zh' ? '执行查询以查看结果' : 'Run a query to see results'}</p>
+                                                <p>{t('db_viewer.runAQueryToSeeResults')}</p>
                                             </div>
                                         </div>
                                     ) : (

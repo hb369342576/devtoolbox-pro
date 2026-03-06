@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronLeft, CheckCircle, AlertCircle } from 'lucide-react';
 import { Language, CompareResultRow, CompareKey } from '../../../types';
-import { getTexts } from '../../../locales';
+import { useTranslation } from "react-i18next";
 
 interface CompareStats {
     match: number;
@@ -11,7 +11,6 @@ interface CompareStats {
 }
 
 interface ComparisonResultProps {
-    lang: Language;
     results: CompareResultRow[];
     stats: CompareStats;
     primaryKeys: CompareKey[];
@@ -23,13 +22,12 @@ interface ComparisonResultProps {
  * 显示数据对比的详细结果
  */
 export const ComparisonResult: React.FC<ComparisonResultProps> = ({
-    lang,
     results,
     stats,
     primaryKeys,
     onBack
 }) => {
-    const t = getTexts(lang);
+    const { t, i18n } = useTranslation();
     const [hoverRow, setHoverRow] = useState<number | null>(null);
 
     return (
@@ -40,19 +38,19 @@ export const ComparisonResult: React.FC<ComparisonResultProps> = ({
                     <button onClick={onBack} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500">
                         <ChevronLeft size={20} />
                     </button>
-                    <h2 className="text-xl font-bold text-slate-800 dark:text-white">{t.dataCompare.step2}</h2>
+                    <h2 className="text-xl font-bold text-slate-800 dark:text-white">{t('dataCompare.step2')}</h2>
                     <div className="flex space-x-2 text-xs font-medium">
                         <span className="px-2 py-1 bg-green-100 text-green-700 rounded flex items-center">
-                            <CheckCircle size={12} className="mr-1" /> {stats.match} {t.dataCompare.statMatch}
+                            <CheckCircle size={12} className="mr-1" /> {stats.match} {t('dataCompare.statMatch')}
                         </span>
                         <span className="px-2 py-1 bg-red-100 text-red-700 rounded flex items-center">
-                            <AlertCircle size={12} className="mr-1" /> {stats.diff} {t.dataCompare.statDiff}
+                            <AlertCircle size={12} className="mr-1" /> {stats.diff} {t('dataCompare.statDiff')}
                         </span>
                         <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded">
-                            {stats.sourceOnly} {t.dataCompare.statSourceOnly}
+                            {stats.sourceOnly} {t('dataCompare.statSourceOnly')}
                         </span>
                         <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded">
-                            {stats.targetOnly} {t.dataCompare.statTargetOnly}
+                            {stats.targetOnly} {t('dataCompare.statTargetOnly')}
                         </span>
                     </div>
                 </div>
@@ -62,12 +60,12 @@ export const ComparisonResult: React.FC<ComparisonResultProps> = ({
             <div className="flex-1 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col">
                 {/* Header Row */}
                 <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-500 uppercase tracking-wider sticky top-0 z-10 shadow-sm">
-                    <div className="col-span-1">{t.dataCompare.rowStatus}</div>
+                    <div className="col-span-1">{t('dataCompare.rowStatus')}</div>
                     <div className="col-span-3">
-                        {t.dataCompare.keyVal} ({primaryKeys.map(k => k.field).join(',')})
+                        {t('dataCompare.keyVal')} ({primaryKeys.map(k => k.field).join(',')})
                     </div>
-                    <div className="col-span-4">{t.dataCompare.sourceSide}</div>
-                    <div className="col-span-4">{t.dataCompare.targetSide}</div>
+                    <div className="col-span-4">{t('dataCompare.sourceSide')}</div>
+                    <div className="col-span-4">{t('dataCompare.targetSide')}</div>
                 </div>
 
                 {/* Body Rows */}
@@ -133,7 +131,7 @@ export const ComparisonResult: React.FC<ComparisonResultProps> = ({
                     ))}
                     {results.length === 0 && (
                         <div className="p-8 text-center text-slate-400 italic">
-                            {t.common.noData || "No results"}
+                            {t('common.noData') || "No results"}
                         </div>
                     )}
                 </div>

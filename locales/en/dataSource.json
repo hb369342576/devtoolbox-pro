@@ -1,0 +1,22 @@
+{
+  "title": "Data Source Manager",
+  "addTitle": "New Connection",
+  "editTitle": "Edit Connection",
+  "connectionName": "Connection Name",
+  "type": "Database Type",
+  "host": "Host / IP",
+  "port": "Port",
+  "user": "Username",
+  "password": "Password",
+  "defaultDb": "Default Database",
+  "filePath": "Database File Path",
+  "testConn": "Test Connection",
+  "testing": "Connecting...",
+  "connSuccess": "Connection Successful",
+  "connFailed": "Connection Failed",
+  "saveConn": "Save Connection",
+  "deleteConfirm": "Are you sure you want to delete this data source?",
+  "placeholderName": "e.g. Production Master",
+  "placeholderHost": "e.g. 127.0.0.1",
+  "placeholderPath": "e.g. /path/to/db.sqlite"
+}

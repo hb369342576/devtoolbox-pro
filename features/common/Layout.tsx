@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Menu, Moon, Sun, ChevronLeft, ChevronRight, Settings, Globe, LogOut, User as UserIcon, MoreHorizontal, UserCog, X } from 'lucide-react';
+import { Menu, Moon, Sun, ChevronLeft, ChevronRight, Settings, Globe, LogOut, User as UserIcon, MoreHorizontal, UserCog, X, Check } from 'lucide-react';
 import { NAV_ITEMS } from '../../constants';
 import { Language, Theme, User } from '../../types';
 import { Tooltip } from './Tooltip';
+import { useTranslation } from "react-i18next";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -10,7 +11,6 @@ interface LayoutProps {
   onTabChange: (id: string) => void;
   openTabs: string[];
   onCloseTab: (id: string) => void;
-  lang: Language;
   onLangChange: (lang: Language) => void;
   theme: Theme;
   onThemeChange: (theme: Theme) => void;
@@ -26,7 +26,6 @@ export const Layout: React.FC<LayoutProps> = ({
   onTabChange,
   openTabs,
   onCloseTab,
-  lang,
   onLangChange,
   theme,
   onThemeChange,
@@ -35,11 +34,16 @@ export const Layout: React.FC<LayoutProps> = ({
   expandedMenus,
   onToggleMenu
 }) => {
+    const { t, i18n } = useTranslation();
   const [collapsed, setCollapsed] = useState(false);
 
   // Top-right User Menu State
   const [showUserMenu, setShowUserMenu] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
+
+  // Language Menu State
+  const [showLangMenu, setShowLangMenu] = useState(false);
+  const langMenuRef = useRef<HTMLDivElement>(null);
 
   // Bottom-left More Menu State
   const [showMoreMenu, setShowMoreMenu] = useState(false);
@@ -50,6 +54,10 @@ export const Layout: React.FC<LayoutProps> = ({
       // Close Top-right user menu
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
         setShowUserMenu(false);
+      }
+      // Close Language menu
+      if (langMenuRef.current && !langMenuRef.current.contains(event.target as Node)) {
+        setShowLangMenu(false);
       }
       // Close Bottom-left more menu
       if (moreMenuRef.current && !moreMenuRef.current.contains(event.target as Node)) {
@@ -78,7 +86,7 @@ export const Layout: React.FC<LayoutProps> = ({
 
     if (id === 'settings') {
       return {
-        label: { en: 'Settings', zh: '系统设置' },
+        label: 'nav.settings',
         icon: Settings,
         category: 'system',
         order: 999,
@@ -88,7 +96,7 @@ export const Layout: React.FC<LayoutProps> = ({
     }
     // Fallback
     return {
-      label: { en: 'Unknown', zh: '未知页面' },
+      label: 'nav.unknown',
       icon: Settings,
       category: 'system',
       order: 999,
@@ -109,7 +117,7 @@ export const Layout: React.FC<LayoutProps> = ({
     if (isParent) {
       return (
         <div key={item.id} className="mb-1">
-          <Tooltip content={item.tooltip?.[lang] || ''} position="right">
+          <Tooltip content={item.tooltip ? t(item.tooltip) : ''} position="right">
             <button
               onClick={() => {
                 if (collapsed) setCollapsed(false);
@@ -126,7 +134,7 @@ export const Layout: React.FC<LayoutProps> = ({
               {!collapsed && (
                 <>
                   <span className="ml-3 text-sm font-medium whitespace-nowrap flex-1 text-left">
-                    {item.label[lang]}
+                    {t(item.label)}
                   </span>
                   <ChevronRight size={16} className={`transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} />
                 </>
@@ -145,7 +153,7 @@ export const Layout: React.FC<LayoutProps> = ({
 
     // Leaf Node
     return (
-      <Tooltip key={item.id} content={item.tooltip?.[lang] || ''} position="right">
+      <Tooltip key={item.id} content={item.tooltip ? t(item.tooltip) : ''} position="right">
         <button
           onClick={() => onTabChange(item.id)}
           className={`
@@ -158,7 +166,7 @@ export const Layout: React.FC<LayoutProps> = ({
           <item.icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-blue-600 dark:text-blue-400' : ''}`} />
           {!collapsed && (
             <span className="ml-3 text-sm font-medium whitespace-nowrap">
-              {item.label[lang]}
+              {t(item.label)}
             </span>
           )}
         </button>
@@ -210,14 +218,14 @@ export const Layout: React.FC<LayoutProps> = ({
                     className="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center"
                   >
                     <UserCog size={16} className="mr-2" />
-                    {lang === 'zh' ? '个人中心' : 'User Profile'}
+                    {t('common.userProfile')}
                   </button>
                   <button
                     onClick={() => { setShowMoreMenu(false); onTabChange('settings'); }}
                     className="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center"
                   >
                     <Settings size={16} className="mr-2" />
-                    {lang === 'zh' ? '系统设置' : 'Settings'}
+                    {t('common.settings')}
                   </button>
                 </div>
                 <div className="py-1 border-t border-slate-100 dark:border-slate-700">
@@ -226,7 +234,7 @@ export const Layout: React.FC<LayoutProps> = ({
                     className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center"
                   >
                     <LogOut size={16} className="mr-2" />
-                    {lang === 'zh' ? '退出登录' : 'Logout'}
+                    {t('common.logout')}
                   </button>
                 </div>
               </div>
@@ -237,10 +245,10 @@ export const Layout: React.FC<LayoutProps> = ({
                  w-full flex items-center p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors
                  ${collapsed ? 'justify-center' : ''}
                `}
-              title={lang === 'zh' ? '更多' : 'More'}
+              title={t('common.more')}
             >
               <MoreHorizontal size={20} />
-              {!collapsed && <span className="ml-3 text-sm font-medium">{lang === 'zh' ? '更多' : 'More'}</span>}
+              {!collapsed && <span className="ml-3 text-sm font-medium">{t('common.more')}</span>}
             </button>
           </div>
 
@@ -257,7 +265,7 @@ export const Layout: React.FC<LayoutProps> = ({
       {/* Main Content */}
       <main className="flex-1 flex flex-col h-full bg-slate-50 dark:bg-slate-900 overflow-hidden">
         {/* Header with Tabs */}
-        <header className="h-14 flex items-end justify-between px-4 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 shadow-sm relative z-10">
+        <header className="h-14 flex items-end justify-between px-4 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 shadow-sm relative z-30">
 
           {/* Tabs Container */}
           <div className="flex-1 flex items-end space-x-1 overflow-x-auto no-scrollbar h-full pt-2">
@@ -277,7 +285,7 @@ export const Layout: React.FC<LayoutProps> = ({
                   `}
                 >
                   <info.icon size={14} className={isActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'} />
-                  <span className="text-xs truncate flex-1">{info.label[lang]}</span>
+                  <span className="text-xs truncate flex-1">{t(info.label)}</span>
 
                   {/* Dashboard is not closable */}
                   {tabId !== 'dashboard' && (
@@ -301,16 +309,60 @@ export const Layout: React.FC<LayoutProps> = ({
 
           {/* Header Controls */}
           <div className="flex items-center space-x-2 pb-2 pl-4 ml-2 border-l border-slate-200 dark:border-slate-700">
-            <button
-              onClick={() => onLangChange(lang === 'en' ? 'zh' : 'en')}
-              className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 transition-colors"
-              title="Switch Language"
-            >
-              <div className="flex items-center space-x-1">
+            <div className="relative" ref={langMenuRef}>
+              <button
+                onClick={() => setShowLangMenu(!showLangMenu)}
+                className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 transition-colors flex items-center space-x-1"
+                title={t('settings.language')}
+              >
                 <Globe size={16} />
-                <span className="text-xs font-medium uppercase">{lang}</span>
-              </div>
-            </button>
+                <span className="text-[10px] font-bold uppercase">{i18n.language === 'zh' ? 'CN' : 'US'}</span>
+              </button>
+
+              {showLangMenu && (
+                <div className="absolute right-0 top-full mt-2 w-52 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 py-1 animate-in fade-in zoom-in-95 duration-100 z-50">
+                  <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-700">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t('settings.language')}</p>
+                  </div>
+                  <div className="py-1">
+                    <button
+                      onClick={() => { onLangChange('zh'); setShowLangMenu(false); }}
+                      className={`w-full text-left px-4 py-2.5 text-sm flex items-center justify-between transition-colors ${
+                        i18n.language === 'zh'
+                          ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
+                          : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <span className="text-lg">🇨🇳</span>
+                        <div>
+                          <p className="font-medium">简体中文</p>
+                          <p className="text-[10px] text-slate-400">Chinese (Simplified)</p>
+                        </div>
+                      </div>
+                      {i18n.language === 'zh' && <Check size={16} className="text-blue-500 flex-shrink-0" />}
+                    </button>
+                    <button
+                      onClick={() => { onLangChange('en'); setShowLangMenu(false); }}
+                      className={`w-full text-left px-4 py-2.5 text-sm flex items-center justify-between transition-colors ${
+                        i18n.language === 'en'
+                          ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
+                          : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <span className="text-lg">🇺🇸</span>
+                        <div>
+                          <p className="font-medium">English</p>
+                          <p className="text-[10px] text-slate-400">United States</p>
+                        </div>
+                      </div>
+                      {i18n.language === 'en' && <Check size={16} className="text-blue-500 flex-shrink-0" />}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
 
             <button
               onClick={() => onThemeChange(theme === 'light' ? 'dark' : 'light')}
@@ -350,14 +402,14 @@ export const Layout: React.FC<LayoutProps> = ({
                         className="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center"
                       >
                         <UserIcon size={16} className="mr-2" />
-                        {lang === 'zh' ? '个人中心' : 'Profile'}
+                        {t('common.profile')}
                       </button>
                       <button
                         onClick={() => { setShowUserMenu(false); onTabChange('settings'); }}
                         className="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center"
                       >
                         <Settings size={16} className="mr-2" />
-                        {lang === 'zh' ? '系统设置' : 'Settings'}
+                        {t('common.settings')}
                       </button>
                     </div>
                     <div className="py-1 border-t border-slate-100 dark:border-slate-700">
@@ -366,7 +418,7 @@ export const Layout: React.FC<LayoutProps> = ({
                         className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center"
                       >
                         <LogOut size={16} className="mr-2" />
-                        {lang === 'zh' ? '退出登录' : 'Logout'}
+                        {t('common.logout')}
                       </button>
                     </div>
                   </div>

@@ -26,13 +26,12 @@ export const defaultSettingsTemplate = {
 
 interface GlobalSettingsModalProps {
     show: boolean;
-    lang: Language;
     onClose: () => void;
     onSave: (settings: any) => void;
 }
 
-export const GlobalSettingsModal: React.FC<GlobalSettingsModalProps> = ({ show, lang, onClose, onSave }) => {
-    const { t } = useTranslation();
+export const GlobalSettingsModal: React.FC<GlobalSettingsModalProps> = ({show, onClose, onSave }) => {
+  const { t, i18n } = useTranslation();
     const { toast } = useToast();
     const [activeTab, setActiveTab] = useState<'common' | 'k8s' | 'sql'>('common');
     

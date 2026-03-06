@@ -3,13 +3,12 @@ import { Eye, XCircle, Search, Loader2, Tag, RefreshCw } from 'lucide-react';
 import { httpFetch } from '../../../utils/http';
 import { useToast } from '../../common/Toast';
 import { Tooltip } from '../../common/Tooltip';
-import { getTexts } from '../../../locales';
 import { Language, ProcessInstance } from '../types';
 import { DolphinSchedulerApiVersion } from '../../../types';
+import { useTranslation } from "react-i18next";
 
 interface LogModalProps {
     show: boolean;
-    lang: Language;
     projectCode: string;
     baseUrl: string;
     token: string;
@@ -17,9 +16,8 @@ interface LogModalProps {
     onClose: () => void;
 }
 
-export const LogModal: React.FC<LogModalProps> = ({ show, lang, projectCode, baseUrl, token, apiVersion, onClose }) => {
-    const texts = getTexts(lang);
-    const dsTexts = texts.dolphinScheduler;
+export const LogModal: React.FC<LogModalProps> = ({show, projectCode, baseUrl, token, apiVersion, onClose }) => {
+    const { t, i18n } = useTranslation();
     const { toast } = useToast();
     const [loading, setLoading] = useState(false);
     const [instances, setInstances] = useState<ProcessInstance[]>([]);
@@ -79,10 +77,10 @@ export const LogModal: React.FC<LogModalProps> = ({ show, lang, projectCode, bas
                 setInstances(result.data?.totalList || []);
                 setTotal(result.data?.total || 0);
             } else {
-                toast({ title: texts.common.failed, description: result.msg, variant: 'destructive' });
+                toast({ title: t('common.failed'), description: result.msg, variant: 'destructive' });
             }
         } catch (err: any) {
-            toast({ title: texts.common.failed, description: err.message, variant: 'destructive' });
+            toast({ title: t('common.failed'), description: err.message, variant: 'destructive' });
         } finally {
             setLoading(false);
         }
@@ -119,15 +117,15 @@ export const LogModal: React.FC<LogModalProps> = ({ show, lang, projectCode, bas
             }
             
             if (tasks.length > 0) {
-                let allLogs = `${dsTexts.workflowInstance}: ${instance.name}\n${dsTexts.state}: ${instance.state}\n${dsTexts.startTime}: ${instance.startTime}\n${dsTexts.endTime}: ${instance.endTime || '-'}\n${dsTexts.duration}: ${instance.duration || '-'}\n\n`;
-                allLogs += `${dsTexts.totalCount?.replace('{total}', String(tasks.length)) || `Total ${tasks.length} tasks`}\n`;
+                let allLogs = `${t('dolphinScheduler.workflowInstance')}: ${instance.name}\n${t('dolphinScheduler.state')}: ${instance.state}\n${t('dolphinScheduler.startTime')}: ${instance.startTime}\n${t('dolphinScheduler.endTime')}: ${instance.endTime || '-'}\n${t('dolphinScheduler.duration')}: ${instance.duration || '-'}\n\n`;
+                allLogs += `${t('dolphinScheduler.totalCount')?.replace('{total}', String(tasks.length)) || `Total ${tasks.length} tasks`}\n`;
                 allLogs += '='.repeat(60) + '\n';
                 
                 for (const task of tasks) {
-                    allLogs += `\n【${task.name}】 ${dsTexts.state}: ${task.state}\n`;
-                    allLogs += `  ${dsTexts.startTime}: ${task.startTime || '-'}\n`;
-                    allLogs += `  ${dsTexts.endTime}: ${task.endTime || '-'}\n`;
-                    allLogs += `  ${dsTexts.duration}: ${task.duration || '-'}\n`;
+                    allLogs += `\n【${task.name}】 ${t('dolphinScheduler.state')}: ${task.state}\n`;
+                    allLogs += `  ${t('dolphinScheduler.startTime')}: ${task.startTime || '-'}\n`;
+                    allLogs += `  ${t('dolphinScheduler.endTime')}: ${task.endTime || '-'}\n`;
+                    allLogs += `  ${t('dolphinScheduler.duration')}: ${task.duration || '-'}\n`;
                     allLogs += `  Host: ${task.host || '-'}\n`;
                     allLogs += `  TaskID: ${task.id || '-'}\n`;
                     
@@ -171,10 +169,10 @@ export const LogModal: React.FC<LogModalProps> = ({ show, lang, projectCode, bas
                             if (fullLog.trim()) {
                                 allLogs += `\n--- Log Content ---\n${fullLog}\n`;
                             } else {
-                                allLogs += `  [${dsTexts.noLog}]\n`;
+                                allLogs += `  [${t('dolphinScheduler.noLog')}]\n`;
                             }
                         } catch (logErr: any) {
-                            allLogs += `  [${texts.common.failed}: ${logErr.message}]\n`;
+                            allLogs += `  [${t('common.failed')}: ${logErr.message}]\n`;
                         }
                     } else {
                         allLogs += `  [No ID]\n`;
@@ -183,7 +181,7 @@ export const LogModal: React.FC<LogModalProps> = ({ show, lang, projectCode, bas
                 }
                 setLogContent(allLogs);
             } else {
-                const errMsg = taskResult.msg || dsTexts.noTaskRecords;
+                const errMsg = taskResult.msg || t('dolphinScheduler.noTaskRecords');
                 setLogContent(`${errMsg}\n\nData: ${JSON.stringify(taskResult, null, 2)}`);
             }
         } catch (err: any) {
@@ -213,10 +211,10 @@ export const LogModal: React.FC<LogModalProps> = ({ show, lang, projectCode, bas
                 <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800/80 shrink-0">
                     <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center">
                         <Eye size={20} className="mr-2 text-blue-500" />
-                        {dsTexts.runLogs}
+                        {t('dolphinScheduler.runLogs')}
                     </h3>
                     <div className="flex items-center space-x-2">
-                        <Tooltip content={dsTexts.refreshList} position="bottom">
+                        <Tooltip content={t('dolphinScheduler.refreshList')} position="bottom">
                             <button 
                                 onClick={() => fetchInstances()} 
                                 disabled={loading}
@@ -237,7 +235,7 @@ export const LogModal: React.FC<LogModalProps> = ({ show, lang, projectCode, bas
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
                                 <input 
                                     type="text" 
-                                    placeholder={texts.common.search} 
+                                    placeholder={t('common.search')} 
                                     value={searchTerm} 
                                     onChange={e => setSearchTerm(e.target.value)} 
                                     className="w-full pl-8 pr-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm" 
@@ -248,7 +246,7 @@ export const LogModal: React.FC<LogModalProps> = ({ show, lang, projectCode, bas
                             {loading ? (
                                 <div className="flex items-center justify-center py-8"><Loader2 size={24} className="animate-spin text-slate-400" /></div>
                             ) : filteredInstances.length === 0 ? (
-                                <p className="text-slate-400 text-center py-8 text-sm">{dsTexts.noRecords}</p>
+                                <p className="text-slate-400 text-center py-8 text-sm">{t('dolphinScheduler.noRecords')}</p>
                             ) : (
                                 <div className="divide-y divide-slate-100 dark:divide-slate-700">
                                     {filteredInstances.map(instance => (
@@ -260,12 +258,12 @@ export const LogModal: React.FC<LogModalProps> = ({ show, lang, projectCode, bas
                                             <div className="text-xs text-slate-400 space-y-0.5">
                                                 <div>{instance.startTime || '-'}</div>
                                                 <div className="flex justify-between">
-                                                    <span>{dsTexts.duration}: {instance.duration || '-'}</span>
+                                                    <span>{t('dolphinScheduler.duration')}: {instance.duration || '-'}</span>
                                                     <span>{instance.executorName || '-'}</span>
                                                 </div>
                                                 <div className="flex justify-between text-slate-500">
                                                     <span><Tag size={10} className="inline mr-1" />{instance.commandType || 'START_PROCESS'}</span>
-                                                    <span>{dsTexts.retry}: {instance.runTimes || 1}</span>
+                                                    <span>{t('dolphinScheduler.retry')}: {instance.runTimes || 1}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -296,7 +294,7 @@ export const LogModal: React.FC<LogModalProps> = ({ show, lang, projectCode, bas
                                 <div className="px-4 py-2 bg-slate-800 border-b border-slate-700 flex items-center justify-between shrink-0">
                                     <span className="text-sm text-slate-300 truncate flex-1" title={selectedInstance.name}>{selectedInstance.name}</span>
                                     <div className="flex items-center space-x-2 shrink-0">
-                                        <Tooltip content={dsTexts.reload} position="bottom">
+                                        <Tooltip content={t('dolphinScheduler.reload')} position="bottom">
                                             <button 
                                                 onClick={() => fetchTaskLog(selectedInstance)} 
                                                 disabled={loadingLog}
@@ -318,7 +316,7 @@ export const LogModal: React.FC<LogModalProps> = ({ show, lang, projectCode, bas
                             </>
                         ) : (
                             <div className="flex-1 flex items-center justify-center text-slate-500 text-sm">
-                                {dsTexts.selectInstanceToViewLog}
+                                {t('dolphinScheduler.selectInstanceToViewLog')}
                             </div>
                         )}
                     </div>
