@@ -32,13 +32,21 @@ export const ToastProvider: React.FC<{ children?: React.ReactNode }> = ({ childr
 
   useEffect(() => {
     const handleEvent = (e: any) => {
-      const newToast = e.detail;
+      // Normalize shadcn-like usage to our ToastMessage schema
+      const raw = e.detail;
+      const newToast = {
+        id: raw.id,
+        message: raw.message || raw.title || '',
+        description: raw.description,
+        type: raw.type || (raw.variant === 'destructive' ? 'error' : raw.variant === 'default' ? 'info' : raw.variant) || 'info',
+        duration: raw.duration || 5000
+      } as ToastMessage;
+
       setToasts(prev => [...prev.slice(-2), newToast]); // 最多保留3个
       
-      const duration = newToast.duration || 5000;
       setTimeout(() => {
         setToasts(prev => prev.filter(t => t.id !== newToast.id));
-      }, duration);
+      }, newToast.duration);
     };
 
     window.addEventListener(TOAST_EVENT, handleEvent);
@@ -83,12 +91,12 @@ export const ToastProvider: React.FC<{ children?: React.ReactNode }> = ({ childr
           <div className="mt-0.5">{icons[t_msg.type]}</div>
           <div className="ml-3 flex-1 overflow-hidden">
             <p className="text-sm font-bold text-slate-800 dark:text-white leading-tight break-words">
-              {t_msg.message.length > 100 ? t_msg.message.substring(0, 100) + '...' : t_msg.message}
+              {t_msg.message?.length > 100 ? t_msg.message.substring(0, 100) + '...' : (t_msg.message || '')}
             </p>
             {t_msg.description && (
               <div className="mt-1.5 overflow-hidden">
                 <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed break-all whitespace-pre-wrap">
-                  {t_msg.description.length > 200 ? t_msg.description.substring(0, 200) + '...' : t_msg.description}
+                  {t_msg.description?.length > 200 ? t_msg.description.substring(0, 200) + '...' : t_msg.description}
                 </p>
               </div>
             )}

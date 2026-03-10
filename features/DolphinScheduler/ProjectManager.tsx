@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
     Plus, Edit, Trash2, CheckCircle, X,
-    FolderKanban, AlertCircle, RefreshCw, Power, CalendarClock, LogIn
+    FolderKanban, AlertCircle, RefreshCw, Power, CalendarClock, LogIn, Activity
 } from 'lucide-react';
 import { Language, DolphinSchedulerConfig } from '../../types';
 import { useTranslation } from "react-i18next";
@@ -103,10 +103,11 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({
         try {
             // Test connection by fetching project info
             const url = `${editingConfig.baseUrl}/projects/analysis?projectName=${encodeURIComponent(editingConfig.projectName || '')}`;
-            const result = await httpFetch<any>(url, {
+            const response = await httpFetch(url, {
                 method: 'GET',
                 headers: { 'token': editingConfig.token || '' }
             });
+            const result = await response.json();
 
             if (result.code === 0) {
                 // If project name matches or is found

@@ -175,6 +175,10 @@
     "updated": "更新时间",
     "prev": "上一页",
     "next": "下一页",
+    "workflowDefinitionTab": "工作流定义",
+    "workflowInstanceTab": "工作流实例",
+    "workflowScheduleTab": "工作流定时",
+    "taskInstanceTab": "任务实例",
     "projectManager": {
       "title": "项目管理",
       "refresh": "刷新",

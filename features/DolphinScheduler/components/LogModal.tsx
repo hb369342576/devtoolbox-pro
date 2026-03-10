@@ -14,9 +14,10 @@ interface LogModalProps {
     token: string;
     apiVersion?: DolphinSchedulerApiVersion;
     onClose: () => void;
+    directTaskId?: number;
 }
 
-export const LogModal: React.FC<LogModalProps> = ({show, projectCode, baseUrl, token, apiVersion, onClose }) => {
+export const LogModal: React.FC<LogModalProps> = ({show, projectCode, baseUrl, token, apiVersion, onClose, directTaskId }) => {
     const { t, i18n } = useTranslation();
     const { toast } = useToast();
     const [loading, setLoading] = useState(false);
@@ -61,9 +62,46 @@ export const LogModal: React.FC<LogModalProps> = ({show, projectCode, baseUrl, t
     
     useEffect(() => {
         if (show && projectCode) {
-            fetchInstances();
+            if (directTaskId) {
+                fetchDirectTaskLog(directTaskId);
+            } else {
+                fetchInstances();
+            }
         }
-    }, [show, projectCode, pageNo]);
+    }, [show, projectCode, pageNo, directTaskId]);
+    
+    const fetchDirectTaskLog = async (taskId: number) => {
+        setLoadingLog(true);
+        setLogContent('');
+        try {
+            let fullLog = '';
+            let skipLineNum = 0;
+            const limit = 1000;
+            let hasMore = true;
+            let fetchCount = 0;
+            while (hasMore && fetchCount < 10) {
+                fetchCount++;
+                const logUrl = `${baseUrl}/log/detail?taskInstanceId=${taskId}&limit=${limit}&skipLineNum=${skipLineNum}`;
+                const logResponse = await httpFetch(logUrl, { headers: { 'token': token } });
+                const logResult = await logResponse.json();
+                if (logResult.code === 0 && logResult.data) {
+                    const logMsg = logResult.data.message || '';
+                    const lineNum = logResult.data.lineNum || 0;
+                    if (logMsg && logMsg.trim()) fullLog += logMsg;
+                    if (lineNum > skipLineNum) skipLineNum = lineNum;
+                    else hasMore = false;
+                } else {
+                    hasMore = false;
+                    if (!fullLog) fullLog = logResult.msg || '暂无日志';
+                }
+            }
+            setLogContent(fullLog.trim() ? fullLog : `[暂无日志]`);
+        } catch (err: any) {
+            setLogContent(`Error: ${err.message}`);
+        } finally {
+            setLoadingLog(false);
+        }
+    };
     
     const fetchInstances = async () => {
         setLoading(true);

@@ -175,6 +175,10 @@
     "updated": "Updated",
     "prev": "Prev",
     "next": "Next",
+    "workflowDefinitionTab": "Workflow Definition",
+    "workflowInstanceTab": "Workflow Instance",
+    "workflowScheduleTab": "Schedulers",
+    "taskInstanceTab": "Task Instance",
     "projectManager": {
       "title": "Project Management",
       "refresh": "Refresh",

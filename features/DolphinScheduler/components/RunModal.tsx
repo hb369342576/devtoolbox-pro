@@ -2,19 +2,22 @@ import React, { useState } from 'react';
 import { PlayCircle, XCircle, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { httpFetch } from '../../../utils/http';
+import { getExecutorStartPath, getWorkflowCodeParamName } from '../utils';
 import { useToast } from '../../common/Toast';
 import { Language, ProcessDefinition } from '../types';
+import { DolphinSchedulerApiVersion } from '../../../types';
 
 interface RunModalProps {
     process: ProcessDefinition | null;
     projectCode: string;
     baseUrl: string;
     token: string;
+    apiVersion?: DolphinSchedulerApiVersion;
     onClose: () => void;
     onSuccess: () => void;
 }
 
-export const RunModal: React.FC<RunModalProps> = ({process, projectCode, baseUrl, token, onClose, onSuccess }) => {
+export const RunModal: React.FC<RunModalProps> = ({process, projectCode, baseUrl, token, apiVersion, onClose, onSuccess }) => {
   const { t, i18n } = useTranslation();
     const { toast } = useToast();
     const [running, setRunning] = useState(false);
@@ -26,26 +29,25 @@ export const RunModal: React.FC<RunModalProps> = ({process, projectCode, baseUrl
     const handleRun = async () => {
         setRunning(true);
         try {
-            // DolphinScheduler API: POST /projects/{projectCode}/executors/start-process-instance
-            const url = `${baseUrl}/projects/${projectCode}/executors/start-process-instance`;
+            // DolphinScheduler API: POST /projects/{projectCode}/executors/start-process-instance or start-workflow-instance
+            const url = `${baseUrl}/projects/${projectCode}/executors/${getExecutorStartPath(apiVersion)}`;
             
-            const params = new URLSearchParams({
-                processDefinitionCode: String(process.code),
-                failureStrategy,
-                warningType,
-                scheduleTime: '',
-                startNodeList: '',
-                taskDependType: 'TASK_POST',
-                execType: 'START_PROCESS',
-                runMode: 'RUN_MODE_SERIAL',
-                processInstancePriority: 'MEDIUM',
-                workerGroup: 'default',
-                environmentCode: '',
-                startParams: '',
-                expectedParallelismNumber: '',
-                dryRun: '0',
-                complementDependentMode: 'OFF_MODE'
-            });
+            const params = new URLSearchParams();
+            params.append(getWorkflowCodeParamName(apiVersion), String(process.code));
+            params.append('scheduleTime', '');
+            params.append('startNodeList', '');
+            params.append('startParams', '');
+            params.append('failureStrategy', failureStrategy);
+            params.append('warningType', warningType);
+            params.append('warningGroupId', '0');
+            params.append('taskDependType', 'TASK_POST');
+            params.append('runMode', 'RUN_MODE_SERIAL');
+            params.append('processInstancePriority', 'MEDIUM');
+            params.append('workerGroup', 'default');
+            params.append('tenantCode', 'default');
+            params.append('dryRun', '0');
+            params.append('testFlag', '0');
+            params.append('complementDependentMode', 'OFF_MODE');
             
             console.log('[DolphinScheduler] Running workflow:', url);
             

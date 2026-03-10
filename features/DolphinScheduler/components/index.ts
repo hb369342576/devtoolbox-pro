@@ -6,5 +6,5 @@ export * from './BatchPublishModal';
 export * from './ExportModal';
 export * from './ImportModal';
 export * from './LogModal';
-export * from './TaskEditor';
+export * from './TaskEditor/index';
 export * from './GlobalSettingsModal';

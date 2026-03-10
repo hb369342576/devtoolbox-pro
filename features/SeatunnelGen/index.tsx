@@ -1,546 +1,98 @@
-import React, { useState, useEffect } from 'react';
-import { Language, DbConnection, ScriptJob, JobConfig } from '../../types';
-import {
-  Workflow, Plus, Trash2, ChevronLeft, Save, X,
-  ArrowRight, Database, Play, Settings, Plug, Search, Check, Upload, FileJson
-} from 'lucide-react';
-import { invoke } from '@tauri-apps/api/core';
-import { TableInfo, ColumnInfo, TableDetail } from '../../types';
+import React from 'react';
+import { DbConnection } from '../../types';
+import { useSeatunnel } from './hooks/useSeatunnel';
+import { DataSourceSelectorModal } from './components/DataSourceSelectorModal';
+import { JobListView } from './components/JobListView';
+import { JobEditorHeader } from './components/JobEditorHeader';
+import { SourceSinkPanel } from './components/SourceSinkPanel';
+import { ConfigPreview } from './components/ConfigPreview';
 import { ConfirmModal } from '../common/ConfirmModal';
-import { useViewMode, useGlobalStore } from '../../store/globalStore';
-import { generateConfig } from './utils/configGenerator';
-import { useToast } from '../common/Toast';
-import { Tooltip } from '../common/Tooltip';
-import { ViewModeToggle } from '../common/ViewModeToggle';
-import { SeaTunnelEngineConfig } from '../SeaTunnelManager/types';
+import { useTranslation } from 'react-i18next';
 import { seaTunnelApi } from '../SeaTunnelManager/api';
 import { convertToJson } from '../../utils/hoconParser';
-import { useTranslation } from "react-i18next";
-
-// 数据源选择弹窗
-const DataSourceSelectorModal: React.FC<{
-  isOpen: boolean;
-  onClose: () => void;
-  connections: DbConnection[];
-  onSelect: (conn: DbConnection) => void;
-  onNavigate: (id: string) => void;
-}> = ({ isOpen, onClose, connections, onSelect, onNavigate}) => {
-  const { t } = useTranslation();
-  if (!isOpen) return null;
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in">
-      <div className="bg-white dark:bg-slate-800 rounded-xl w-full max-w-md shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-        <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
-          <h3 className="font-bold text-slate-800 dark:text-white">{t('common.selectDataSource')}</h3>
-          <button onClick={onClose}><X size={20} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200" /></button>
-        </div>
-        <div className="p-4 space-y-2 max-h-96 overflow-y-auto custom-scrollbar">
-          {connections.length === 0 ? (
-            <div className="text-center py-8">
-              <div className="bg-slate-100 dark:bg-slate-700 rounded-full p-4 w-16 h-16 mx-auto flex items-center justify-center mb-3">
-                <Database className="h-8 w-8 text-slate-400" />
-              </div>
-              <p className="text-slate-500 text-sm mb-4">{t('common.noDataSourcesFound')}</p>
-              <button
-                onClick={() => { onClose(); onNavigate('data-source-manager'); }}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors font-medium"
-              >
-                {t('common.addDataSource')}
-              </button>
-            </div>
-          ) : (
-            connections.map(conn => (
-              <button
-                key={conn.id}
-                onClick={() => { onSelect(conn); onClose(); }}
-                className="w-full text-left p-3 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:border-blue-400 dark:hover:border-blue-500 transition-all group"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className={`p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-blue-600 dark:text-blue-400`}>
-                      <Database size={18} />
-                    </div>
-                    <div>
-                      <p className="font-bold text-slate-800 dark:text-white text-sm">{conn.name}</p>
-                      <p className="text-xs text-slate-500">{conn.type} &bull; {conn.host}</p>
-                    </div>
-                  </div>
-                  <ArrowRight size={16} className="text-slate-300 group-hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-all" />
-                </div>
-              </button>
-            ))
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
+import { useToast } from '../common/Toast';
 
 export const SeatunnelGen: React.FC<{
   connections: DbConnection[];
   onNavigate: (id: string) => void;
 }> = ({ connections, onNavigate }) => {
-  const { t, i18n } = useTranslation();
-  const viewMode = useViewMode();
+  const { t } = useTranslation();
+  const { toast } = useToast();
+  
+  const seatunnel = useSeatunnel(connections);
+  const {
+    jobs, activeJob, generatedConfig, isGenerating,
+    sourceDbs, sinkDbs, sourceTables, sinkTables,
+    sourceTableSearch, setSourceTableSearch,
+    sinkTableSearch, setSinkTableSearch,
+    isSourceLoadingDbs, isSinkLoadingDbs,
+    isSourceLoadingTables, isSinkLoadingTables,
+    confirmDelete, engines, selectedEngineId, isSubmitting,
+    configPanelHeight, setConfigPanelHeight,
+    isConfigEditing, setIsConfigEditing,
+    editingConfig, setEditingConfig,
+    exitConfirmModal, setExitConfirmModal,
+    showSelector, setShowSelector,
+    
+    updateJobDetails, handleSelectDataSource,
+    handleCreateJob, handleDeleteJob, confirmDeleteJob,
+    handleBackClick, handleGenerateConfig,
+    setActiveJob, saveJobs
+  } = seatunnel;
 
-  // 模拟持久化存储 Jobs
-  const [jobs, setJobs] = useState<ScriptJob[]>(() => {
-    const saved = localStorage.getItem('seatunnel_jobs');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const saveJobs = (newJobs: ScriptJob[]) => {
-    setJobs(newJobs);
-    localStorage.setItem('seatunnel_jobs', JSON.stringify(newJobs));
-  };
-
-  const [activeJob, setActiveJob] = useState<ScriptJob | null>(null);
-  const [showSelector, setShowSelector] = useState(false);
-  const [selectingFor, setSelectingFor] = useState<'source' | 'sink' | null>(null);
-  const [generatedConfig, setGeneratedConfig] = useState<string>('');
-  const [isGenerating, setIsGenerating] = useState(false);
-
-  // 新增：数据库和表状态
-  const [sourceDbs, setSourceDbs] = useState<string[]>([]);
-  const [sinkDbs, setSinkDbs] = useState<string[]>([]);
-  const [sourceTables, setSourceTables] = useState<TableInfo[]>([]);
-  const [sinkTables, setSinkTables] = useState<TableInfo[]>([]);
-  const [sourceTableSearch, setSourceTableSearch] = useState('');
-  const [sinkTableSearch, setSinkTableSearch] = useState('');
-  const [isSourceLoadingDbs, setIsSourceLoadingDbs] = useState(false);
-  const [isSinkLoadingDbs, setIsSinkLoadingDbs] = useState(false);
-  const [isSourceLoadingTables, setIsSourceLoadingTables] = useState(false);
-  const [isSinkLoadingTables, setIsSinkLoadingTables] = useState(false);
-  const isTauri = typeof window !== 'undefined' && !!(window as any).__TAURI_INTERNALS__;
-
-  // 删除确认状态
-  const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; jobId: string }>({ isOpen: false, jobId: '' });
-
-  // SeaTunnel 引擎配置
-  const [engines, setEngines] = useState<SeaTunnelEngineConfig[]>(() => {
-    const saved = localStorage.getItem('seatunnel_engine_configs');
-    return saved ? JSON.parse(saved) : [];
-  });
-  const [selectedEngineId, setSelectedEngineId] = useState<string>(() => {
-    return localStorage.getItem('seatunnel_gen_selected_engine') || '';
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [configPanelHeight, setConfigPanelHeight] = useState(300);
-
-  // 配置文件编辑模式
-  const [isConfigEditing, setIsConfigEditing] = useState(false);
-  const [editingConfig, setEditingConfig] = useState('');
-
-  // 同步 selectedEngineId 到 localStorage
-  useEffect(() => {
-    if (selectedEngineId) {
-      localStorage.setItem('seatunnel_gen_selected_engine', selectedEngineId);
-    }
-  }, [selectedEngineId]);
-
-  // 同步 generatedConfig 到当前 job
-  useEffect(() => {
-    if (activeJob && generatedConfig) {
-      const updatedJob = { ...activeJob, generatedConfig };
-      const newJobs = jobs.map(j => j.id === activeJob.id ? updatedJob : j);
-      // 不调用 saveJobs 避免循环，直接更新 localStorage
-      localStorage.setItem('seatunnel_jobs', JSON.stringify(newJobs));
-    }
-  }, [generatedConfig]);
-
-  // 切换 job 时恢复 generatedConfig
-  useEffect(() => {
-    setGeneratedConfig((activeJob as any)?.generatedConfig || '');
-    setIsConfigEditing(false);
-  }, [activeJob?.id]);
-
-  // 退出确认弹窗状态
-  const [exitConfirmModal, setExitConfirmModal] = useState(false);
-
-  // 检测是否有未保存的更改
-  const hasUnsavedChanges = () => {
-    if (!activeJob) return false;
-    const savedJob = jobs.find(j => j.id === activeJob.id);
-    if (!savedJob) return true;
-    // 比较配置文件是否有变化
-    return generatedConfig !== ((savedJob as any).generatedConfig || '');
-  };
-
-  // 处理返回按钮点击
-  const handleBackClick = () => {
-    if (hasUnsavedChanges()) {
-      setExitConfirmModal(true);
-    } else {
-      setActiveJob(null);
-    }
-  };
-
-  // Auto-load databases and tables when entering a job
-  useEffect(() => {
-    if (activeJob && connections.length > 0) {
-      // Load Source
-      if (activeJob.source.host) {
-        // Try to match connection by host/port/user or just reuse properties to fetch DBs
-        // We need a DbConnection object to pass to loadDatabases. 
-        // Logic: if we have the credentials in activeJob, we can temporarily construct a conn object 
-        // or find it in connections list. Finding is safer if we want the 'name' etc.
-        const conn = connections.find(c =>
-          c.host === activeJob.source.host &&
-          c.port === activeJob.source.port &&
-          (c.user === activeJob.source.user)
-        );
-
-        // If found or if we can construct one (for saved jobs that might not be in cur connections? Unlikely)
-        if (conn) {
-          loadDatabases(conn, 'source').then(() => {
-            if (activeJob.source.database) {
-              // Also load tables if DB is selected
-              loadTables(activeJob.source, activeJob.source.database, 'source');
-            }
-          });
-        }
-      }
-
-      // Load Sink
-      if (activeJob.sink.host) {
-        const conn = connections.find(c =>
-          c.host === activeJob.sink.host &&
-          c.port === activeJob.sink.port &&
-          (c.user === activeJob.sink.user)
-        );
-        if (conn) {
-          loadDatabases(conn, 'sink').then(() => {
-            if (activeJob.sink.database) {
-              loadTables(activeJob.sink, activeJob.sink.database, 'sink');
-            }
-          });
-        }
-      }
-    }
-  }, [activeJob?.id]); // Depend on ID so it runs on switch. 
-  // Note: we don't depend on 'connections' to avoid loops, assuming connections are stable or loaded on mount.
-
-
-  const handleCreateJob = () => {
-    const newJob: ScriptJob = {
-      id: Date.now().toString(),
-      name: t('common.newSyncJob'),
-      scriptType: 'seatunnel',
-      source: {} as JobConfig,
-      sink: {} as JobConfig,
-      createdAt: Date.now()
-    };
-    saveJobs([newJob, ...jobs]);
-    setActiveJob(newJob);
-    setGeneratedConfig('');
-  };
-
-  const handleDeleteJob = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setConfirmDelete({ isOpen: true, jobId: id });
-  };
-
-  const confirmDeleteJob = () => {
-    saveJobs(jobs.filter(j => j.id !== confirmDelete.jobId));
-    if (activeJob?.id === confirmDelete.jobId) setActiveJob(null);
-    setConfirmDelete({ isOpen: false, jobId: '' });
-  };
-
-  const handleSelectDataSource = async (conn: DbConnection, target?: 'source' | 'sink') => {
-    const targetSide = target || selectingFor;
-
-    if (activeJob && targetSide) {
-      const jobConfig: JobConfig = {
-        type: conn.type,
-        host: conn.host,
-        port: conn.port,
-        user: conn.user,
-        password: conn.password,
-        database: conn.defaultDatabase || '',
-        table: '',
-        name: conn.name
-      };
-
-      const updatedJob = { ...activeJob, [targetSide]: jobConfig };
-      setActiveJob(updatedJob);
-      saveJobs(jobs.map(j => j.id === activeJob.id ? updatedJob : j));
-
-      // 加载数据库列表
-      await loadDatabases(conn, targetSide);
-
-      // 如果有默认数据库，自动加载对应的表列表
-      if (conn.defaultDatabase) {
-        await loadTables(jobConfig, conn.defaultDatabase, targetSide);
-      }
-    }
-    setShowSelector(false);
-    setSelectingFor(null);
-  };
-
-  // 加载数据库列表
-  const loadDatabases = async (conn: DbConnection, side: 'source' | 'sink') => {
-    if (side === 'source') setIsSourceLoadingDbs(true);
-    else setIsSinkLoadingDbs(true);
-
+  const handleSubmit = async () => {
+    if (!generatedConfig || !selectedEngineId) return;
+    const engine = engines.find(e => e.id === selectedEngineId);
+    if (!engine) return;
+    
+    seatunnel.setIsSubmitting(true);
     try {
-      let dbs: string[] = [];
-      if (isTauri) {
-        const connStr = `mysql://${conn.user}:${conn.password || ''}@${conn.host}:${conn.port}`;
-        dbs = await invoke('db_get_databases', { id: connStr });
-      } else {
-        dbs = ['demo_db_1', 'demo_db_2', 'test_schema'];
+      const convertResult = convertToJson(generatedConfig);
+      if (convertResult.error) {
+        throw new Error(convertResult.error);
       }
-      if (side === 'source') setSourceDbs(dbs);
-      else setSinkDbs(dbs);
-    } catch (e) {
-      console.error('Failed to load databases:', e);
-      if (side === 'source') setSourceDbs([]);
-      else setSinkDbs([]);
-    }
-
-    if (side === 'source') setIsSourceLoadingDbs(false);
-    else setIsSinkLoadingDbs(false);
-  };
-
-  // 加载表列表
-  const loadTables = async (conn: JobConfig, dbName: string, side: 'source' | 'sink') => {
-    if (side === 'source') setIsSourceLoadingTables(true);
-    else setIsSinkLoadingTables(true);
-
-    try {
-      let tables: TableInfo[] = [];
-      if (isTauri) {
-        const connStr = `mysql://${conn.user}:${conn.password || ''}@${conn.host}:${conn.port}`;
-        tables = await invoke('db_get_tables', { id: connStr, db: dbName });
-      } else {
-        tables = [{ name: 'table_1', rows: 100, size: '1KB' }, { name: 'table_2', rows: 200, size: '2KB' }];
-      }
-      if (side === 'source') setSourceTables(tables);
-      else setSinkTables(tables);
-    } catch (e) {
-      console.error('Failed to load tables:', e);
-      if (side === 'source') setSourceTables([]);
-      else setSinkTables([]);
-    }
-
-    if (side === 'source') setIsSourceLoadingTables(false);
-    else setIsSinkLoadingTables(false);
-  };
-
-  const updateJobDetails = (part: 'source' | 'sink', key: keyof JobConfig, value: string) => {
-    setActiveJob(prev => {
-      if (!prev) return null;
-      const updated = {
-        ...prev,
-        [part]: { ...prev[part], [key]: value }
-      };
-
-      setJobs(currentJobs => {
-        const newJobs = currentJobs.map(j => j.id === prev.id ? updated : j);
-        localStorage.setItem('seatunnel_jobs', JSON.stringify(newJobs));
-        return newJobs;
+      const result = await seaTunnelApi.submitJob(engine, {
+        jobName: activeJob!.name,
+        config: convertResult.json
       });
-      return updated;
-    });
-  };
-
-  const handleGenerateConfig = async () => {
-    if (!activeJob) return;
-
-    // 验证必要字段
-    if (!activeJob.source.host || !activeJob.source.database || !activeJob.source.table ||
-      !activeJob.sink.host || !activeJob.sink.database || !activeJob.sink.table) {
+      if (result.success) {
+        toast({
+          title: t('common.submitSuccess'),
+          description: `Job ID: ${result.data}`,
+          variant: 'success'
+        });
+      } else {
+        toast({
+          title: t('common.submitFailed'),
+          description: result.error,
+          variant: 'destructive'
+        });
+      }
+    } catch (err: any) {
       toast({
-        title: t('common.incompleteConfiguration'),
-        description: t('common.pleaseFullyConfigureSourc'),
+        title: t('common.submitFailed'),
+        description: err.message,
         variant: 'destructive'
       });
-      return;
-    }
-
-    setIsGenerating(true);
-    try {
-      // Reliable check for Tauri v2
-      const isTauri = typeof window !== 'undefined' && !!(window as any).__TAURI_INTERNALS__;
-
-      let sourceColumns: ColumnInfo[] = [];
-      let sinkColumns: ColumnInfo[] = [];
-
-      if (isTauri) {
-        // Fetch Source Schema
-        try {
-          const sourceConnStr = `mysql://${activeJob.source.user}:${activeJob.source.password || ''}@${activeJob.source.host}:${activeJob.source.port}`;
-          const sourceTableDetail = await invoke<TableDetail>('db_get_table_schema', {
-            id: sourceConnStr,
-            db: activeJob.source.database,
-            table: activeJob.source.table
-          });
-          sourceColumns = sourceTableDetail.columns;
-        } catch (e) {
-          console.error('Source Schema Error:', e);
-          throw new Error(t('common.failedToFetchSourceSchema', { table: activeJob.source.table }));
-        }
-
-        // Fetch Sink Schema
-        try {
-          const sinkConnStr = `mysql://${activeJob.sink.user}:${activeJob.sink.password || ''}@${activeJob.sink.host}:${activeJob.sink.port}`;
-          const sinkTableDetail = await invoke<TableDetail>('db_get_table_schema', {
-            id: sinkConnStr,
-            db: activeJob.sink.database,
-            table: activeJob.sink.table
-          });
-          sinkColumns = sinkTableDetail.columns;
-        } catch (e) {
-          // For JDBC Sink, we really need columns. For Doris, maybe optional?
-          // But we'll throw for consistency as we want to validate connectivity
-          console.error('Sink Schema Error:', e);
-          throw new Error(t('common.failedToFetchSinkSchemaAc', { table: activeJob.sink.table }));
-        }
-      } else {
-        // Mock columns for browser testing
-        sourceColumns = [
-          { name: 'id', type: 'int', isPrimaryKey: true, nullable: false, comment: '' },
-          { name: 'name', type: 'varchar', isPrimaryKey: false, nullable: true, comment: '' }
-        ];
-        sinkColumns = [
-          { name: 'id', type: 'int', isPrimaryKey: true, nullable: false, comment: '' },
-          { name: 'name', type: 'varchar', isPrimaryKey: false, nullable: true, comment: '' }
-        ];
-      }
-
-      const config = generateConfig(activeJob.source, activeJob.sink, sourceColumns, sinkColumns);
-      setGeneratedConfig(config);
-
-    } catch (error: any) {
-      toast({
-        title: t('common.generationFailed'),
-        description: error.message,
-        variant: 'destructive',
-        duration: 5000
-      });
-      console.error('Generate config error:', error);
     } finally {
-      setIsGenerating(false);
+      seatunnel.setIsSubmitting(false);
     }
   };
 
-  const { toast } = useToast();
-  // --- LIST VIEW ---
   if (!activeJob) {
     return (
-      <div className="h-full flex flex-col">
-        <ConfirmModal
-          isOpen={confirmDelete.isOpen}
-          title={t('common.confirmDelete')}
-          message={t('common.areYouSureYouWantToDelete')}
-          confirmText={t('common.delete')}
-          cancelText={t('common.cancel')}
-          onConfirm={confirmDeleteJob}
-          onCancel={() => setConfirmDelete({ isOpen: false, jobId: '' })}
-          type="danger"
-        />
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center">
-            <Workflow className="mr-3 text-purple-600" />
-            {t('common.scriptGenerator')}
-          </h2>
-          <div className="flex items-center space-x-3">
-            <ViewModeToggle />
-            <button onClick={handleCreateJob} className="min-w-[140px] px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium flex items-center justify-center shadow-lg transition-colors">
-              <Plus size={18} className="mr-2" />
-              {t('common.newJob')}
-            </button>
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto pb-4 custom-scrollbar">
-          {viewMode === 'grid' ? (
-            <div className="flex flex-wrap gap-6 pt-2">
-              {jobs.map(job => (
-                <Tooltip key={job.id} content={job.name} position="top">
-                  <div
-                    onClick={() => setActiveJob(job)}
-                    className="w-[288px] h-[200px] flex-shrink-0 flex flex-col group relative bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border-2 border-slate-200 dark:border-slate-700 hover:border-purple-400 dark:hover:border-purple-500 hover:shadow-2xl hover:shadow-purple-500/20 hover:-translate-y-2 transition-all duration-300 cursor-pointer overflow-hidden"
-                  >
-                    {/* Gradient */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-purple-50 via-pink-50/30 to-transparent dark:from-purple-900/20 dark:via-pink-900/10 dark:to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-
-                    <div className="relative z-10">
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="p-3 rounded-lg bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform duration-300">
-                          <Workflow size={24} />
-                        </div>
-                        <button onClick={(e) => handleDeleteJob(job.id, e)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors relative z-10 opacity-0 group-hover:opacity-100">
-                          <Trash2 size={18} />
-                        </button>
-                      </div>
-                      <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2 truncate group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">{job.name}</h3>
-                      <div className="flex items-center justify-between text-xs text-slate-500 bg-slate-50 dark:bg-slate-700/50 p-3 rounded-lg border border-slate-100 dark:border-slate-700">
-                        <span className="font-bold uppercase truncate max-w-[45%]">{job.source.type || '?'}</span>
-                        <ArrowRight size={12} className="text-slate-300" />
-                        <span className="font-bold uppercase truncate max-w-[45%]">{job.sink.type || '?'}</span>
-                      </div>
-                      <div className="mt-3 text-[10px] text-slate-400 text-right">
-                        {new Date(job.createdAt).toLocaleDateString(i18n.language.startsWith('zh') ? 'zh-CN' : 'en-US')}
-                      </div>
-                    </div>
-                  </div>
-                </Tooltip>
-              ))}
-
-              <button onClick={handleCreateJob} className="w-[288px] h-[200px] flex-shrink-0 group flex flex-col items-center justify-center p-6 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-600 bg-gradient-to-br from-purple-50/50 to-indigo-50/50 dark:from-purple-900/10 dark:to-indigo-900/10 hover:border-purple-400 dark:hover:border-purple-500 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 cursor-pointer">
-                <div className="p-4 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform duration-300 mb-4">
-                  <Plus size={32} />
-                </div>
-                <span className="font-bold text-lg text-slate-600 dark:text-slate-300 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">{t('common.createNewJob')}</span>
-              </button>
-            </div>
-          ) : (
-            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-              <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-500 uppercase tracking-wider sticky top-0 z-10">
-                <div className="col-span-4">{t('common.jobName')}</div>
-                <div className="col-span-4">{t('common.sourceSink')}</div>
-                <div className="col-span-2">{t('common.created')}</div>
-                <div className="col-span-2 text-right">{t('common.actions')}</div>
-              </div>
-              <div className="divide-y divide-slate-100 dark:divide-slate-700">
-                {jobs.map(job => (
-                  <div
-                    key={job.id}
-                    onClick={() => setActiveJob(job)}
-                    className="grid grid-cols-12 gap-4 px-6 py-4 items-center hover:bg-slate-50 dark:hover:bg-slate-700/30 cursor-pointer transition-colors"
-                  >
-                    <div className="col-span-4 flex items-center space-x-3">
-                      <div className="p-1.5 rounded-lg bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 flex-shrink-0">
-                        <Workflow size={16} />
-                      </div>
-                      <span className="font-medium text-slate-800 dark:text-white truncate">{job.name}</span>
-                    </div>
-                    <div className="col-span-4 text-xs font-mono text-slate-500 dark:text-slate-400 truncate flex items-center">
-                      <span className="bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-600">{job.source.type || 'Source'}</span>
-                      <ArrowRight size={10} className="mx-2 text-slate-300" />
-                      <span className="bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-600">{job.sink.type || 'Sink'}</span>
-                    </div>
-                    <div className="col-span-2 text-xs text-slate-500 dark:text-slate-400">
-                      {new Date(job.createdAt).toLocaleDateString(i18n.language.startsWith('zh') ? 'zh-CN' : 'en-US')}
-                    </div>
-                    <div className="col-span-2 flex justify-end">
-                      <button onClick={(e) => handleDeleteJob(job.id, e)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors relative z-10">
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-                {jobs.length === 0 && <div className="px-6 py-8 text-center text-slate-400 text-sm italic">{t('common.noJobsFound')}</div>}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+      <JobListView
+        jobs={jobs}
+        onSelectJob={setActiveJob}
+        onCreateJob={handleCreateJob}
+        onDeleteJob={handleDeleteJob}
+        confirmDelete={confirmDelete}
+        onConfirmDelete={confirmDeleteJob}
+        onCancelDelete={() => seatunnel.setConfirmDelete({ isOpen: false, jobId: '' })}
+      />
     );
   }
 
-  // --- EDITOR VIEW ---
   return (
     <div className="flex flex-col h-full gap-4">
       <DataSourceSelectorModal
@@ -549,10 +101,8 @@ export const SeatunnelGen: React.FC<{
         connections={connections}
         onSelect={handleSelectDataSource}
         onNavigate={onNavigate}
-
       />
 
-      {/* 退出确认弹窗 */}
       <ConfirmModal
         isOpen={exitConfirmModal}
         title={t('common.confirmExit')}
@@ -561,7 +111,6 @@ export const SeatunnelGen: React.FC<{
         cancelText={t('common.discard')}
         type="info"
         onConfirm={() => {
-          // 保存配置到 job
           const updatedJob = { ...activeJob, generatedConfig };
           saveJobs(jobs.map(j => j.id === activeJob.id ? updatedJob : j));
           setExitConfirmModal(false);
@@ -573,437 +122,89 @@ export const SeatunnelGen: React.FC<{
         }}
       />
 
-      {/* Header */}
-      <div className="flex items-center justify-between bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-        <div className="flex items-center space-x-3">
-          <button onClick={handleBackClick} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 transition-colors">
-            <ChevronLeft size={20} />
-          </button>
-          <input
-            value={activeJob.name}
-            onChange={e => {
-              const newName = e.target.value;
-              setActiveJob({ ...activeJob, name: newName });
-              saveJobs(jobs.map(j => j.id === activeJob.id ? { ...j, name: newName } : j));
-            }}
-            className="font-bold text-lg text-slate-800 dark:text-white bg-transparent outline-none border-b border-transparent focus:border-purple-500 transition-colors"
-          />
-        </div>
-        <div className="flex items-center space-x-3">
-          {/* 项目选择 */}
-          <select
-            value={selectedEngineId}
-            onChange={(e) => setSelectedEngineId(e.target.value)}
-            className="px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm outline-none focus:ring-2 focus:ring-purple-500"
-          >
-            <option value="">{t('common.SelectProject')}</option>
-            {engines.filter(e => e.engineType === 'zeta').map(engine => (
-              <option key={engine.id} value={engine.id}>{engine.name}</option>
-            ))}
-          </select>
-          <button
-            onClick={handleGenerateConfig}
-            disabled={isGenerating || !activeJob.source.host || !activeJob.sink.host}
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg font-medium flex items-center shadow-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Play size={16} className="mr-2" />
-            {isGenerating ? t('common.generating') : t('common.preview')}
-          </button>
-          <button
-            onClick={async () => {
-              if (!generatedConfig || !selectedEngineId) return;
-              const engine = engines.find(e => e.id === selectedEngineId);
-              if (!engine) return;
-              
-              setIsSubmitting(true);
-              try {
-                // 转换为 JSON
-                const convertResult = convertToJson(generatedConfig);
-                if (convertResult.error) {
-                  throw new Error(convertResult.error);
-                }
-                const result = await seaTunnelApi.submitJob(engine, {
-                  jobName: activeJob.name,
-                  config: convertResult.json
-                });
-                if (result.success) {
-                  toast({
-                    title: t('common.submitSuccess'),
-                    description: `Job ID: ${result.data}`,
-                    variant: 'success'
-                  });
-                } else {
-                  toast({
-                    title: t('common.submitFailed'),
-                    description: result.error,
-                    variant: 'destructive'
-                  });
-                }
-              } catch (err: any) {
-                toast({
-                  title: t('common.submitFailed'),
-                  description: err.message,
-                  variant: 'destructive'
-                });
-              } finally {
-                setIsSubmitting(false);
-              }
-            }}
-            disabled={!generatedConfig || !selectedEngineId || isSubmitting}
-            className="px-4 py-2 bg-cyan-600 text-white rounded-lg font-medium flex items-center shadow-lg hover:bg-cyan-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Upload size={16} className="mr-2" />
-            {isSubmitting ? t('common.submitting') : t('common.submit')}
-          </button>
-        </div>
-      </div>
+      <JobEditorHeader
+        activeJob={activeJob}
+        onJobNameChange={(name) => {
+          setActiveJob({ ...activeJob, name });
+          saveJobs(jobs.map(j => j.id === activeJob.id ? { ...j, name } : j));
+        }}
+        onBackClick={handleBackClick}
+        engines={engines}
+        selectedEngineId={selectedEngineId}
+        onEngineSelect={seatunnel.setSelectedEngineId}
+        onGenerateConfig={handleGenerateConfig}
+        onSubmit={handleSubmit}
+        isGenerating={isGenerating}
+        isSubmitting={isSubmitting}
+        canGenerate={!!(activeJob.source.host && activeJob.sink.host)}
+        canSubmit={!!generatedConfig && !!selectedEngineId}
+      />
 
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-6">
-          {/* Source Config Card */}
-          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col shadow-sm">
-            <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700 bg-blue-50 dark:bg-blue-900/10 flex justify-between items-center">
-              <span className="font-bold text-blue-700 dark:text-blue-300 flex items-center"><Database size={16} className="mr-2" /> Source</span>
-            </div>
+          <SourceSinkPanel
+            type="source"
+            activeJob={activeJob}
+            connections={connections}
+            dbs={sourceDbs}
+            tables={sourceTables}
+            tableSearch={sourceTableSearch}
+            setTableSearch={setSourceTableSearch}
+            isLoadingDbs={isSourceLoadingDbs}
+            isLoadingTables={isSourceLoadingTables}
+            onSelectConn={(id) => {
+              const conn = connections.find(c => c.id === id);
+              if (conn) {
+                 handleSelectDataSource(conn, 'source');
+                 setShowSelector(false); // Make sure modal state if used inside is handled, actually handleSelectDataSource handles setShowSelector(false);
+                 // Wait, handleSelectDataSource handles `selectingFor` and uses modal.
+                 // Actually the old code: `onChange={(e) => onSelectConn(...)}` triggers directly and passes connections!
+                 // In the old code:
+                 // onChange={(e) => { const conn = connections.find...; if(conn) handleSelectDataSource(conn, 'source'); }}
+              }
+            }}
+            onChangeDb={(db) => {
+              updateJobDetails('source', 'database', db);
+              updateJobDetails('source', 'table', '');
+              seatunnel.loadTables(activeJob.source, db, 'source');
+            }}
+            onSelectTable={(table) => updateJobDetails('source', 'table', table)}
+          />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-slate-200 dark:divide-slate-700 h-[210px]">
-              {/* Left: Connection & DB Select */}
-              <div className="p-5 flex flex-col space-y-6 bg-slate-50/50 dark:bg-slate-900/20">
-                {/* Source Connection Select */}
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-2">数据源连接</label>
-                  <select
-                    value={connections.find(c => c.host === activeJob.source.host && c.port === activeJob.source.port && c.name === activeJob.source.name)?.id || ''}
-                    onChange={(e) => {
-                      const conn = connections.find(c => c.id === e.target.value);
-                      if (conn) {
-                        handleSelectDataSource(conn, 'source');
-                      }
-                    }}
-                    className="w-full p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg text-sm outline-none focus:border-blue-500 dark:text-white"
-                  >
-                    <option value="" disabled>-- 选择数据源 --</option>
-                    {connections.map(conn => (
-                      <option key={conn.id} value={conn.id}>{conn.name} ({conn.type})</option>
-                    ))}
-                  </select>
-                  {activeJob.source.host && (
-                    <div className="mt-2 text-xs text-slate-400 flex items-center">
-                      <div className={`w-2 h-2 rounded-full mr-2 bg-blue-500`}></div>
-                      {activeJob.source.type} - {activeJob.source.host}:{activeJob.source.port}
-                    </div>
-                  )}
-                </div>
-
-                {/* Database Select */}
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-2">数据库</label>
-                  <select
-                    value={activeJob.source.database || ''}
-                    onChange={(e) => {
-                      const db = e.target.value;
-                      // Update state immediately
-                      updateJobDetails('source', 'database', db);
-                      updateJobDetails('source', 'table', '');
-                      // Trigger load
-                      loadTables(activeJob.source, db, 'source');
-                    }}
-                    disabled={!activeJob.source.host || isSourceLoadingDbs}
-                    className="w-full p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg text-sm outline-none focus:border-blue-500 dark:text-white disabled:opacity-50"
-                  >
-                    <option value="">-- 选择数据库 --</option>
-                    {sourceDbs.map(db => (
-                      <option key={db} value={db}>{db}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Right: Table List */}
-              <div className="p-4 flex flex-col h-full min-h-0">
-                {activeJob.source.database ? (
-                  <>
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2">选择数据表</label>
-                    <div className="relative mb-3 flex-shrink-0">
-                      <Search size={14} className="absolute left-2.5 top-2.5 text-slate-400" />
-                      <input
-                        type="text"
-                        placeholder="搜索表..."
-                        value={sourceTableSearch}
-                        onChange={(e) => setSourceTableSearch(e.target.value)}
-                        className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg text-sm outline-none focus:border-blue-500 transition-colors"
-                      />
-                    </div>
-                    <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar border border-slate-100 dark:border-slate-800 rounded-lg bg-slate-50/30 dark:bg-slate-900/30">
-                      {isSourceLoadingTables ? (
-                        <div className="flex items-center justify-center h-full text-xs text-slate-400">加载中...</div>
-                      ) : (
-                        <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                          {sourceTables
-                            .filter(t => t.name.toLowerCase().includes(sourceTableSearch.toLowerCase()))
-                            .map(t => (
-                              <button
-                                key={t.name}
-                                onClick={() => updateJobDetails('source', 'table', t.name)}
-                                className={`w-full text-left px-4 py-2.5 text-xs sm:text-sm flex items-center justify-between group transition-colors ${activeJob.source.table === t.name
-                                  ? 'bg-blue-600 text-white'
-                                  : 'hover:bg-white dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300'
-                                  }`}
-                              >
-                                <span className="font-mono">{t.name}</span>
-                                {activeJob.source.table === t.name && <Check size={14} className="text-white" />}
-                              </button>
-                            ))}
-                          {sourceTables.length === 0 && <div className="p-4 text-center text-xs text-slate-400">{t('common.noData')}</div>}
-                        </div>
-                      )}
-                    </div>
-                  </>
-                ) : (
-                  <div className="h-full flex flex-col items-center justify-center text-slate-400">
-                    <Database size={32} className="mb-2 opacity-20" />
-                    <span className="text-xs">请先在左侧选择数据库</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Sink Config Card */}
-          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col shadow-sm">
-            <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700 bg-green-50 dark:bg-green-900/10 flex justify-between items-center">
-              <span className="font-bold text-green-700 dark:text-green-300 flex items-center"><Database size={16} className="mr-2" /> Sink</span>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-slate-200 dark:divide-slate-700 h-[210px]">
-              {/* Left: Connection & DB Select */}
-              <div className="p-5 flex flex-col space-y-6 bg-slate-50/50 dark:bg-slate-900/20">
-                {/* Sink Connection Select */}
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-2">数据源连接</label>
-                  <select
-                    value={connections.find(c => c.host === activeJob.sink.host && c.port === activeJob.sink.port && c.name === activeJob.sink.name)?.id || ''}
-                    onChange={(e) => {
-                      const conn = connections.find(c => c.id === e.target.value);
-                      if (conn) {
-                        handleSelectDataSource(conn, 'sink');
-                      }
-                    }}
-                    className="w-full p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg text-sm outline-none focus:border-green-500 dark:text-white"
-                  >
-                    <option value="" disabled>-- 选择数据源 --</option>
-                    {connections.map(conn => (
-                      <option key={conn.id} value={conn.id}>{conn.name} ({conn.type})</option>
-                    ))}
-                  </select>
-                  {activeJob.sink.host && (
-                    <div className="mt-2 text-xs text-slate-400 flex items-center">
-                      <div className={`w-2 h-2 rounded-full mr-2 bg-green-500`}></div>
-                      {activeJob.sink.type} - {activeJob.sink.host}:{activeJob.sink.port}
-                    </div>
-                  )}
-                </div>
-
-                {/* Database Select */}
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-2">数据库</label>
-                  <select
-                    value={activeJob.sink.database || ''}
-                    onChange={(e) => {
-                      const db = e.target.value;
-                      updateJobDetails('sink', 'database', db);
-                      updateJobDetails('sink', 'table', '');
-                      loadTables(activeJob.sink, db, 'sink');
-                    }}
-                    disabled={!activeJob.sink.host || isSinkLoadingDbs}
-                    className="w-full p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg text-sm outline-none focus:border-green-500 dark:text-white disabled:opacity-50"
-                  >
-                    <option value="">-- 选择数据库 --</option>
-                    {sinkDbs.map(db => (
-                      <option key={db} value={db}>{db}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Right: Table List */}
-              <div className="p-4 flex flex-col h-full min-h-0">
-                {activeJob.sink.database ? (
-                  <>
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2">选择数据表</label>
-                    <div className="relative mb-3 flex-shrink-0">
-                      <Search size={14} className="absolute left-2.5 top-2.5 text-slate-400" />
-                      <input
-                        type="text"
-                        placeholder="搜索表..."
-                        value={sinkTableSearch}
-                        onChange={(e) => setSinkTableSearch(e.target.value)}
-                        className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg text-sm outline-none focus:border-green-500 transition-colors"
-                      />
-                    </div>
-                    <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar border border-slate-100 dark:border-slate-800 rounded-lg bg-slate-50/30 dark:bg-slate-900/30">
-                      {isSinkLoadingTables ? (
-                        <div className="flex items-center justify-center h-full text-xs text-slate-400">加载中...</div>
-                      ) : (
-                        <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                          {sinkTables
-                            .filter(t => t.name.toLowerCase().includes(sinkTableSearch.toLowerCase()))
-                            .map(t => (
-                              <button
-                                key={t.name}
-                                onClick={() => updateJobDetails('sink', 'table', t.name)}
-                                className={`w-full text-left px-4 py-2.5 text-xs sm:text-sm flex items-center justify-between group transition-colors ${activeJob.sink.table === t.name
-                                  ? 'bg-green-600 text-white'
-                                  : 'hover:bg-white dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300'
-                                  }`}
-                              >
-                                <span className="font-mono">{t.name}</span>
-                                {activeJob.sink.table === t.name && <Check size={14} className="text-white" />}
-                              </button>
-                            ))}
-                          {sinkTables.length === 0 && <div className="p-4 text-center text-xs text-slate-400">{t('common.noData')}</div>}
-                        </div>
-                      )}
-                    </div>
-                  </>
-                ) : (
-                  <div className="h-full flex flex-col items-center justify-center text-slate-400">
-                    <Database size={32} className="mb-2 opacity-20" />
-                    <span className="text-xs">请先在左侧选择数据库</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+          <SourceSinkPanel
+            type="sink"
+            activeJob={activeJob}
+            connections={connections}
+            dbs={sinkDbs}
+            tables={sinkTables}
+            tableSearch={sinkTableSearch}
+            setTableSearch={setSinkTableSearch}
+            isLoadingDbs={isSinkLoadingDbs}
+            isLoadingTables={isSinkLoadingTables}
+            onSelectConn={(id) => {
+              const conn = connections.find(c => c.id === id);
+              if (conn) handleSelectDataSource(conn, 'sink');
+            }}
+            onChangeDb={(db) => {
+              updateJobDetails('sink', 'database', db);
+              updateJobDetails('sink', 'table', '');
+              seatunnel.loadTables(activeJob.sink, db, 'sink');
+            }}
+            onSelectTable={(table) => updateJobDetails('sink', 'table', table)}
+          />
         </div>
 
-        {/* 可拖动分隔线 */}
-        <div 
-          className="h-2 bg-slate-200 dark:bg-slate-700 rounded cursor-ns-resize hover:bg-purple-400 dark:hover:bg-purple-600 transition-colors flex items-center justify-center mt-2"
-          onMouseDown={(e) => {
-            e.preventDefault();
-            const startY = e.clientY;
-            const startHeight = configPanelHeight;
-            const onMouseMove = (moveEvent: MouseEvent) => {
-              const delta = startY - moveEvent.clientY;
-              const newHeight = Math.max(150, Math.min(600, startHeight + delta));
-              setConfigPanelHeight(newHeight);
-            };
-            const onMouseUp = () => {
-              document.removeEventListener('mousemove', onMouseMove);
-              document.removeEventListener('mouseup', onMouseUp);
-            };
-            document.addEventListener('mousemove', onMouseMove);
-            document.addEventListener('mouseup', onMouseUp);
-          }}
-        >
-          <div className="w-8 h-1 bg-slate-400 dark:bg-slate-500 rounded-full" />
-        </div>
-
-        <div className="bg-[#1e1e1e] rounded-xl border border-slate-800 overflow-hidden mt-2" style={{ height: configPanelHeight }}>
-          <div className="h-9 bg-[#252526] border-b border-slate-700 flex items-center justify-between px-4">
-            <span className="text-xs text-slate-400 font-mono">
-              {t('common.configuration')}
-              {isConfigEditing && <span className="ml-2 text-amber-400">({t('common.editing')})</span>}
-            </span>
-            <div className="flex items-center space-x-3">
-              {isConfigEditing ? (
-                <>
-                  <button
-                    onClick={() => {
-                      setGeneratedConfig(editingConfig);
-                      setIsConfigEditing(false);
-                    }}
-                    className="text-xs text-green-400 hover:text-green-300 flex items-center"
-                  >
-                    <Save size={14} className="mr-1" /> {t('common.save')}
-                  </button>
-                  <button
-                    onClick={() => {
-                      setEditingConfig(generatedConfig);
-                      setIsConfigEditing(false);
-                    }}
-                    className="text-xs text-slate-400 hover:text-white"
-                  >
-                    {t('common.cancel')}
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    onClick={() => {
-                      setEditingConfig(generatedConfig);
-                      setIsConfigEditing(true);
-                    }}
-                    disabled={!generatedConfig}
-                    className="text-xs text-blue-400 hover:text-blue-300 flex items-center disabled:opacity-30 disabled:cursor-not-allowed"
-                  >
-                    {t('common.edit')}
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (generatedConfig) {
-                        try {
-                          const convertResult = convertToJson(generatedConfig);
-                          if (convertResult.error) {
-                            throw new Error(convertResult.error);
-                          }
-                          setGeneratedConfig(convertResult.json);
-                          toast({
-                            title: t('common.converted'),
-                            description: t('common.convertedToJSONFormat'),
-                            variant: 'success'
-                          });
-                        } catch (err: any) {
-                          toast({
-                            title: t('common.convertFailed'),
-                            description: err.message,
-                            variant: 'destructive'
-                          });
-                        }
-                      }
-                    }}
-                    disabled={!generatedConfig}
-                    className="text-xs text-amber-400 hover:text-amber-300 flex items-center transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                  >
-                    <FileJson size={14} className="mr-1" /> JSON
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (generatedConfig) {
-                        navigator.clipboard.writeText(generatedConfig);
-                        toast({
-                          title: t('common.copied'),
-                          description: t('common.configurationCopiedToClip'),
-                          variant: 'success'
-                        });
-                      }
-                    }}
-                    disabled={!generatedConfig}
-                    className="text-xs text-slate-400 hover:text-white flex items-center transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                  >
-                    <Save size={14} className="mr-1" /> Copy
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-          <div className="font-mono text-sm overflow-y-auto custom-scrollbar" style={{ height: 'calc(100% - 36px)' }}>
-            {isConfigEditing ? (
-              <textarea
-                value={editingConfig}
-                onChange={(e) => setEditingConfig(e.target.value)}
-                className="w-full h-full p-4 bg-transparent text-green-300 resize-none outline-none"
-                spellCheck={false}
-              />
-            ) : generatedConfig ? (
-              <pre className="p-4 whitespace-pre-wrap text-green-300">{generatedConfig}</pre>
-            ) : (
-              <span className="p-4 text-slate-500 block"># {t('common.clickGenerateToPreviewCon')}</span>
-            )}
-          </div>
-        </div>
+        <ConfigPreview
+          configPanelHeight={configPanelHeight}
+          setConfigPanelHeight={setConfigPanelHeight}
+          isConfigEditing={isConfigEditing}
+          setIsConfigEditing={setIsConfigEditing}
+          generatedConfig={generatedConfig}
+          setGeneratedConfig={seatunnel.setGeneratedConfig}
+          editingConfig={editingConfig}
+          setEditingConfig={setEditingConfig}
+        />
       </div>
-    </div >
+    </div>
   );
 };

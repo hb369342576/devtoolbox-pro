@@ -1,17 +1,16 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React from 'react';
 import {
-    ListTodo, ArrowLeft, Search, RefreshCw, PlayCircle, 
-    StopCircle, AlertCircle, CheckCircle2, XCircle, Timer,
-    Loader2, Upload, Eye, Clock, ChevronLeft, ChevronRight, FileText
+    ListTodo, ArrowLeft, Search, RefreshCw, StopCircle, Eye,
+    Loader2, Upload, ChevronLeft, ChevronRight, AlertCircle
 } from 'lucide-react';
-import { Language } from '../../types';
-import { SeaTunnelEngineConfig, SeaTunnelJob, JobStatus, FinishedJobState } from './types';
-import { seaTunnelApi } from './api';
+import { SeaTunnelEngineConfig, FinishedJobState } from './types';
 import { Tooltip } from '../common/Tooltip';
-import { useToast } from '../common/Toast';
 import { ConfirmModal } from '../common/ConfirmModal';
-import { DagVisualizer } from './components/DagVisualizer';
 import { useTranslation } from "react-i18next";
+import { useJobManager } from './hooks/useJobManager';
+import { JobDetailModal } from './components/JobDetailModal';
+import { EngineListView } from './components/EngineListView';
+import { StatusTag } from './components/StatusTag';
 
 interface JobManagerProps {
     currentEngine: SeaTunnelEngineConfig | null;
@@ -28,135 +27,14 @@ export const JobManager: React.FC<JobManagerProps> = ({
     onNavigate,
     onOpenSubmitModal
 }) => {
-    const { t, i18n } = useTranslation();
-    const { toast } = useToast();
-    const [searchTerm, setSearchTerm] = useState('');
-    const [jobs, setJobs] = useState<SeaTunnelJob[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [cancelConfirm, setCancelConfirm] = useState<{ isOpen: boolean; jobId: string; jobName: string }>({ isOpen: false, jobId: '', jobName: '' });
-    const [detailJob, setDetailJob] = useState<SeaTunnelJob | null>(null);
-    const [detailLoading, setDetailLoading] = useState(false);
-    const [jobLog, setJobLog] = useState<string | null>(null);
-    const [logLoading, setLogLoading] = useState(false);
-    
-    // 分页状态
-    const [pageNo, setPageNo] = useState(1);
-    const [pageSize] = useState(20);
-    
-    // 状态过滤
-    const [statusFilter, setStatusFilter] = useState<FinishedJobState | ''>('');
-    const finishedJobStates: FinishedJobState[] = ['FINISHED', 'CANCELED', 'FAILED', 'SAVEPOINT_DONE', 'UNKNOWABLE'];
-
-    // 获取作业列表
-    const fetchJobs = useCallback(async () => {
-        if (!currentEngine) return;
-        
-        setLoading(true);
-        setError(null);
-        try {
-            const result = await seaTunnelApi.getAllJobs(currentEngine);
-            if (result.success) {
-                setJobs(result.data || []);
-            } else {
-                throw new Error(result.error);
-            }
-        } catch (err: any) {
-            console.error('[JobManager] Fetch error:', err);
-            setError(err.message);
-            toast({ title: t('seatunnel.loadFailed'), description: err.message, variant: 'destructive' });
-        } finally {
-            setLoading(false);
-        }
-    }, [currentEngine, i18n.language, toast]);
-
-    useEffect(() => {
-        if (currentEngine) {
-            fetchJobs();
-        } else {
-            setJobs([]);
-        }
-    }, [currentEngine, fetchJobs]);
-
-    // 取消作业
-    const handleCancelJob = async () => {
-        if (!currentEngine || !cancelConfirm.jobId) return;
-        
-        try {
-            const result = await seaTunnelApi.cancelJob(currentEngine, cancelConfirm.jobId);
-            if (result.success) {
-                toast({ title: t('seatunnel.jobCanceled'), variant: 'success' });
-                fetchJobs();
-            } else {
-                throw new Error(result.error);
-            }
-        } catch (err: any) {
-            toast({ title: t('seatunnel.cancelFailed'), description: err.message, variant: 'destructive' });
-        }
-        setCancelConfirm({ isOpen: false, jobId: '', jobName: '' });
-    };
-
-    // 渲染状态标签
-    const renderStatusTag = (status: JobStatus) => {
-        const config: Record<JobStatus, { color: string; icon: React.ReactNode }> = {
-            RUNNING: { color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400', icon: <Loader2 size={12} className="animate-spin mr-1" /> },
-            FINISHED: { color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400', icon: <CheckCircle2 size={12} className="mr-1" /> },
-            FAILED: { color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400', icon: <XCircle size={12} className="mr-1" /> },
-            CANCELED: { color: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400', icon: <StopCircle size={12} className="mr-1" /> },
-            CREATED: { color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400', icon: <Timer size={12} className="mr-1" /> },
-            SCHEDULED: { color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400', icon: <Clock size={12} className="mr-1" /> },
-            CANCELING: { color: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400', icon: <Loader2 size={12} className="animate-spin mr-1" /> },
-            SAVEPOINT_DONE: { color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400', icon: <CheckCircle2 size={12} className="mr-1" /> },
-            UNKNOWABLE: { color: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400', icon: <AlertCircle size={12} className="mr-1" /> },
-        };
-        const { color, icon } = config[status] || config.CREATED;
-        return (
-            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider ${color}`}>
-                {icon}
-                {t('seatunnel.status_' + status)}
-            </span>
-        );
-    };
-    
-    // 查看详情
-    const handleViewDetail = async (job: SeaTunnelJob) => {
-        if (!currentEngine) return;
-        
-        // 先设置基本信息
-        setDetailJob(job);
-        setDetailLoading(true);
-        
-        try {
-            // 如果是 Zeta 引擎，调用 getJobInfo 获取详细信息
-            if (currentEngine.engineType === 'zeta') {
-                const result = await seaTunnelApi.getJobInfo(currentEngine, job.jobId);
-                if (result.success && result.data) {
-                    setDetailJob(result.data);
-                }
-            }
-        } catch (err) {
-            console.error('[JobManager] Get job info failed:', err);
-        } finally {
-            setDetailLoading(false);
-        }
-    };
-
-    // 过滤作业
-    const filteredJobs = jobs.filter(job => {
-        const matchSearch = job.jobName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            job.jobId.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchStatus = !statusFilter || job.jobStatus === statusFilter;
-        return matchSearch && matchStatus;
-    }).sort((a, b) => {
-        // 按创建时间倒序排序
-        const timeA = a.createTime ? new Date(a.createTime).getTime() : 0;
-        const timeB = b.createTime ? new Date(b.createTime).getTime() : 0;
-        return timeB - timeA;
-    });
-    
-    // 分页计算
-    const totalPages = Math.ceil(filteredJobs.length / pageSize);
-    const paginatedJobs = filteredJobs.slice((pageNo - 1) * pageSize, pageNo * pageSize);
+    const { t } = useTranslation();
+    const {
+        searchTerm, setSearchTerm, loading, error, cancelConfirm, setCancelConfirm,
+        detailJob, setDetailJob, detailLoading, jobLog, setJobLog,
+        pageNo, setPageNo, pageSize, statusFilter, setStatusFilter, finishedJobStates,
+        fetchJobs, handleCancelJob, handleViewDetail,
+        filteredJobs, totalPages, paginatedJobs
+    } = useJobManager(currentEngine);
 
     const getEngineIcon = (type: string) => {
         switch (type) {
@@ -167,55 +45,8 @@ export const JobManager: React.FC<JobManagerProps> = ({
         }
     };
 
-    // 未选择引擎时显示引擎列表
     if (!currentEngine) {
-        return (
-            <div className="h-full flex flex-col">
-                <div className="flex justify-between items-center mb-6 pt-1.5">
-                    <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center">
-                        <ListTodo className="mr-3 text-cyan-600" size={24} />
-                        {t('seatunnel.jobManager')}
-                    </h2>
-                </div>
-                
-                <div className="flex-1 overflow-y-auto pb-4 custom-scrollbar">
-                <div className="flex flex-wrap gap-6 pt-2">
-                        {configs.map(config => (
-                            <div
-                                key={config.id}
-                                onClick={() => onSelectEngine(config)}
-                                className="group relative bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border-2 border-slate-200 dark:border-slate-700 hover:border-cyan-400 dark:hover:border-cyan-500 hover:shadow-2xl hover:shadow-cyan-500/20 hover:-translate-y-2 transition-all duration-300 cursor-pointer overflow-hidden w-[288px] h-[200px] flex-shrink-0 flex flex-col"
-                            >
-                                <div className="flex items-start justify-between mb-4">
-                                    <div className="p-3 rounded-lg bg-cyan-100 dark:bg-cyan-900/30 text-2xl">
-                                        {getEngineIcon(config.engineType)}
-                                    </div>
-                                </div>
-                                <h3 className="font-bold text-lg text-slate-800 dark:text-white mb-2 truncate">{config.name}</h3>
-                                <div className="space-y-1.5">
-                                    <div className="flex items-center text-sm text-slate-500 dark:text-slate-400">
-                                        <span className="w-16 text-xs font-bold uppercase opacity-70">Engine</span>
-                                        <span className="truncate capitalize">{config.engineType}</span>
-                                    </div>
-                                    <div className="flex items-center text-sm text-slate-500 dark:text-slate-400">
-                                        <span className="w-16 text-xs font-bold uppercase opacity-70">URL</span>
-                                        <span className="truncate font-mono text-xs">{config.baseUrl}</span>
-                                    </div>
-                                </div>
-                                <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-cyan-500 to-blue-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
-                            </div>
-                        ))}
-                    </div>
-                </div>
-                
-                {configs.length === 0 && (
-                    <div className="flex-1 flex flex-col items-center justify-center text-slate-400 mt-8">
-                        <ListTodo size={48} className="mb-4 opacity-20" />
-                        <p className="text-sm">{t('seatunnel.noEnginesConfiguredPlease')}</p>
-                    </div>
-                )}
-            </div>
-        );
+        return <EngineListView configs={configs} onSelectEngine={onSelectEngine} />;
     }
 
     return (
@@ -231,12 +62,20 @@ export const JobManager: React.FC<JobManagerProps> = ({
                 type="danger"
             />
 
+            <JobDetailModal
+                detailJob={detailJob}
+                detailLoading={detailLoading}
+                jobLog={jobLog}
+                setDetailJob={setDetailJob}
+                setJobLog={setJobLog}
+            />
+
             {/* 头部 */}
             <div className="flex justify-between items-center mb-6 pt-1.5">
                 <div className="flex items-center space-x-3">
                     <button
                         onClick={() => onSelectEngine(null)}
-                        className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors text-slate-500"
+                        className="p-2 hover:bg-slate-100 dark:bg-slate-800 rounded-lg transition-colors text-slate-500"
                         title={t('seatunnel.backToEngines')}
                     >
                         <ArrowLeft size={20} />
@@ -297,7 +136,7 @@ export const JobManager: React.FC<JobManagerProps> = ({
             
             {/* 表格 */}
             <div className="flex-1 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col">
-                {loading && jobs.length === 0 ? (
+                {loading && filteredJobs.length === 0 ? (
                     <div className="flex-1 flex items-center justify-center">
                         <Loader2 size={32} className="animate-spin text-cyan-500" />
                     </div>
@@ -338,7 +177,7 @@ export const JobManager: React.FC<JobManagerProps> = ({
                                             </button>
                                             <p className="text-xs text-slate-400 font-mono truncate max-w-xs">{job.jobId}</p>
                                         </td>
-                                        <td className="px-4 py-3 text-center">{renderStatusTag(job.jobStatus)}</td>
+                                        <td className="px-4 py-3 text-center"><StatusTag status={job.jobStatus} /></td>
                                         <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-xs text-center">
                                             {job.createTime && job.finishTime ? (() => {
                                                 const duration = new Date(job.finishTime).getTime() - new Date(job.createTime).getTime();
@@ -412,132 +251,6 @@ export const JobManager: React.FC<JobManagerProps> = ({
                     </div>
                 )}
             </div>
-
-            {/* 作业详情 Modal */}
-            {detailJob && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-                    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden border border-slate-200 dark:border-slate-700">
-                        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800/80">
-                            <h3 className="font-bold text-lg text-slate-800 dark:text-white">
-                                {t('seatunnel.jobDetails')}
-                            </h3>
-                            <button onClick={() => setDetailJob(null)} className="text-slate-400 hover:text-slate-600">×</button>
-                        </div>
-                        <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="text-xs text-slate-500 uppercase font-bold">{t('seatunnel.jobName')}</label>
-                                    <p className="text-slate-800 dark:text-white font-medium">{detailJob.jobName}</p>
-                                </div>
-                                <div>
-                                    <label className="text-xs text-slate-500 uppercase font-bold">{t('seatunnel.status')}</label>
-                                    <p>{renderStatusTag(detailJob.jobStatus)}</p>
-                                </div>
-                                <div>
-                                    <label className="text-xs text-slate-500 uppercase font-bold">Job ID</label>
-                                    <p className="text-slate-600 dark:text-slate-300 font-mono text-sm break-all">{detailJob.jobId}</p>
-                                </div>
-                                <div>
-                                    <label className="text-xs text-slate-500 uppercase font-bold">{t('seatunnel.engine')}</label>
-                                    <p className="text-slate-600 dark:text-slate-300 capitalize">{detailJob.engineType}</p>
-                                </div>
-                                <div>
-                                    <label className="text-xs text-slate-500 uppercase font-bold">{t('seatunnel.created')}</label>
-                                    <p className="text-slate-600 dark:text-slate-300 text-sm">{detailJob.createTime ? new Date(detailJob.createTime).toLocaleString() : '-'}</p>
-                                </div>
-                                <div>
-                                    <label className="text-xs text-slate-500 uppercase font-bold">{t('seatunnel.finished')}</label>
-                                    <p className="text-slate-600 dark:text-slate-300 text-sm">{detailJob.finishTime ? new Date(detailJob.finishTime).toLocaleString() : '-'}</p>
-                                </div>
-                                <div>
-                                    <label className="text-xs text-slate-500 uppercase font-bold">{t('seatunnel.duration')}</label>
-                                    <p className="text-slate-600 dark:text-slate-300 text-sm font-medium">
-                                        {detailJob.createTime && detailJob.finishTime ? (() => {
-                                            const duration = new Date(detailJob.finishTime).getTime() - new Date(detailJob.createTime).getTime();
-                                            const seconds = Math.floor(duration / 1000);
-                                            if (seconds < 60) return `${seconds} ${t('seatunnel.unit_seconds')}`;
-                                            const minutes = Math.floor(seconds / 60);
-                                            const secs = seconds % 60;
-                                            if (minutes < 60) return `${minutes} ${t('seatunnel.unit_minutes')} ${secs} ${t('seatunnel.unit_seconds')}`;
-                                            const hours = Math.floor(minutes / 60);
-                                            const mins = minutes % 60;
-                                            return `${hours} ${t('seatunnel.unit_hours')} ${mins} ${t('seatunnel.unit_minutes')}`;
-                                        })() : detailJob.jobStatus === 'RUNNING' ? t('seatunnel.running') || '运行中...' : '-'}
-                                    </p>
-                                </div>
-                            </div>
-                            {detailJob.metrics && (
-                                <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
-                                    <label className="text-xs text-slate-500 uppercase font-bold mb-2 block">{t('seatunnel.metrics')}</label>
-                                    <div className="grid grid-cols-4 gap-2">
-                                        <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-lg text-center">
-                                            <p className="text-lg font-bold text-cyan-600">{detailJob.metrics.readRowCount?.toLocaleString() || 0}</p>
-                                            <p className="text-xs text-slate-500">{t('seatunnel.readRows')}</p>
-                                        </div>
-                                        <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-lg text-center">
-                                            <p className="text-lg font-bold text-green-600">{detailJob.metrics.writeRowCount?.toLocaleString() || 0}</p>
-                                            <p className="text-xs text-slate-500">{t('seatunnel.writeRows')}</p>
-                                        </div>
-                                        <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-lg text-center">
-                                            <p className="text-lg font-bold text-blue-600">{((detailJob.metrics.readBytes || 0) / 1024 / 1024).toFixed(2)} MB</p>
-                                            <p className="text-xs text-slate-500">{t('seatunnel.readBytes')}</p>
-                                        </div>
-                                        <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-lg text-center">
-                                            <p className="text-lg font-bold text-purple-600">{((detailJob.metrics.writeBytes || 0) / 1024 / 1024).toFixed(2)} MB</p>
-                                            <p className="text-xs text-slate-500">{t('seatunnel.writeBytes')}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                            {detailJob.errorMsg && (
-                                <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
-                                    <label className="text-xs text-red-500 uppercase font-bold mb-2 block">{t('seatunnel.errorMessage')}</label>
-                                    <pre className="bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 p-3 rounded-lg text-xs overflow-auto max-h-40 whitespace-pre-wrap">{detailJob.errorMsg}</pre>
-                                </div>
-                            )}
-                            {detailJob.jobDag && (
-                                <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
-                                    <label className="text-xs text-slate-500 uppercase font-bold mb-2 block">{t('seatunnel.jobDAG')}</label>
-                                    <DagVisualizer dagData={detailJob.jobDag} />
-                                </div>
-                            )}
-                            {detailLoading && (
-                                <div className="flex items-center justify-center py-4">
-                                    <Loader2 size={20} className="animate-spin text-cyan-600 mr-2" />
-                                    <span className="text-sm text-slate-500">{t('seatunnel.loadingDetails')}</span>
-                                </div>
-                            )}
-                        </div>
-                        <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 flex justify-between bg-slate-50 dark:bg-slate-800/50">
-                            <button 
-                                onClick={() => {
-                                    toast({ 
-                                        title: t('seatunnel.featureNotAvailable'),
-                                        description: t('seatunnel.seaTunnelZetaRESTAPIDoesN'),
-                                        variant: 'default' 
-                                    });
-                                }}
-                                className="flex items-center px-3 py-2 text-sm text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
-                            >
-                                <FileText size={14} className="mr-1" />
-                                {t('seatunnel.viewLogs')}
-                            </button>
-                            <button onClick={() => { setDetailJob(null); setJobLog(null); }} className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg">
-                                {t('seatunnel.close')}
-                            </button>
-                        </div>
-                        {jobLog && (
-                            <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-900">
-                                <div className="flex justify-between items-center mb-2">
-                                    <label className="text-xs text-green-400 uppercase font-bold">作业日志</label>
-                                    <button onClick={() => setJobLog(null)} className="text-xs text-slate-400 hover:text-white">关闭</button>
-                                </div>
-                                <pre className="text-xs text-green-400 font-mono overflow-auto max-h-64 whitespace-pre-wrap">{jobLog}</pre>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
         </div>
     );
 };

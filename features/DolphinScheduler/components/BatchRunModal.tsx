@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { PlayCircle, XCircle, Search, Loader2 } from 'lucide-react';
 import { httpFetch } from '../../../utils/http';
+import { getExecutorStartPath, getWorkflowCodeParamName } from '../utils';
 import { useToast } from '../../common/Toast';
 import { Language, ProcessDefinition } from '../types';
+import { DolphinSchedulerApiVersion } from '../../../types';
 import { useTranslation } from "react-i18next";
 
 interface BatchRunModalProps {
@@ -11,11 +13,12 @@ interface BatchRunModalProps {
     projectCode: string;
     baseUrl: string;
     token: string;
+    apiVersion?: DolphinSchedulerApiVersion;
     onClose: () => void;
     onSuccess: () => void;
 }
 
-export const BatchRunModal: React.FC<BatchRunModalProps> = ({show, processes, projectCode, baseUrl, token, onClose, onSuccess }) => {
+export const BatchRunModal: React.FC<BatchRunModalProps> = ({show, processes, projectCode, baseUrl, token, apiVersion, onClose, onSuccess }) => {
     const { t, i18n } = useTranslation();
     const { toast } = useToast();
     const [running, setRunning] = useState(false);
@@ -46,24 +49,23 @@ export const BatchRunModal: React.FC<BatchRunModalProps> = ({show, processes, pr
         
         for (const code of selectedCodes) {
             try {
-                const url = `${baseUrl}/projects/${projectCode}/executors/start-process-instance`;
-                const params = new URLSearchParams({
-                    processDefinitionCode: String(code),
-                    failureStrategy: 'CONTINUE',
-                    warningType: 'NONE',
-                    scheduleTime: '',
-                    startNodeList: '',
-                    taskDependType: 'TASK_POST',
-                    execType: 'START_PROCESS',
-                    runMode: 'RUN_MODE_SERIAL',
-                    processInstancePriority: 'MEDIUM',
-                    workerGroup: 'default',
-                    environmentCode: '',
-                    startParams: '',
-                    expectedParallelismNumber: '',
-                    dryRun: '0',
-                    complementDependentMode: 'OFF_MODE'
-                });
+                const url = `${baseUrl}/projects/${projectCode}/executors/${getExecutorStartPath(apiVersion)}`;
+                const params = new URLSearchParams();
+                params.append(getWorkflowCodeParamName(apiVersion), String(code));
+                params.append('scheduleTime', '');
+                params.append('startNodeList', '');
+                params.append('startParams', '');
+                params.append('failureStrategy', 'CONTINUE');
+                params.append('warningType', 'NONE');
+                params.append('warningGroupId', '0');
+                params.append('taskDependType', 'TASK_POST');
+                params.append('runMode', 'RUN_MODE_SERIAL');
+                params.append('processInstancePriority', 'MEDIUM');
+                params.append('workerGroup', 'default');
+                params.append('tenantCode', 'default');
+                params.append('dryRun', '0');
+                params.append('testFlag', '0');
+                params.append('complementDependentMode', 'OFF_MODE');
                 const response = await httpFetch(url, {
                     method: 'POST',
                     headers: { 'token': token, 'Content-Type': 'application/x-www-form-urlencoded' },
