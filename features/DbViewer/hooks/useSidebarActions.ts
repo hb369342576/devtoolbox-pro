@@ -111,6 +111,24 @@ export const useSidebarActions = () => {
         setExportModal({ isOpen: true, type, tableName });
     };
 
+    const downloadContentAsFile = async (fileName: string, content: string) => {
+        if (isTauri) {
+            await writeTextFile(fileName, content);
+        } else {
+            // 在 Web 端，filePath 实质上只是我们传入的一个默认文件名
+            const defaultName = fileName.split('\\').pop() || fileName.split('/').pop() || 'export.sql';
+            const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), content], { type: 'text/sql;charset=utf-8;' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = defaultName;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+        }
+    };
+
     const handleExport = async (filePath: string, onProgress: (message: string) => void) => {
         if (!selectedConnection || !selectedDatabase || !exportModal.type) return;
         const { type, tableName } = exportModal;
@@ -125,7 +143,7 @@ export const useSidebarActions = () => {
                 const detail = await DatabaseService.getTableSchema(selectedConnection, selectedDatabase, table.name);
                 allDdl += `-- Table: ${table.name}\n${detail.ddl}\n\n`;
             }
-            await writeTextFile(filePath, allDdl);
+            await downloadContentAsFile(filePath, allDdl);
         } else if (type === 'db-data') {
             onProgress(t('dbViewer.DatabaseSelectedDatabase'));
             onProgress(t('dbViewer.TotalTablesLengthTables'));
@@ -151,13 +169,13 @@ export const useSidebarActions = () => {
                     onProgress(t('dbViewer.TableNameNoData'));
                 }
             }
-            await writeTextFile(filePath, allData);
+            await downloadContentAsFile(filePath, allData);
         } else if (type === 'table-structure' && tableName) {
             onProgress(t('dbViewer.TableTableName'));
             onProgress(t('dbViewer.FetchingTableStructure'));
             const detail = await DatabaseService.getTableSchema(selectedConnection, selectedDatabase, tableName);
             const content = `-- Table: ${tableName}\n-- Export Time: ${new Date().toLocaleString()}\n\n${detail.ddl}`;
-            await writeTextFile(filePath, content);
+            await downloadContentAsFile(filePath, content);
         } else if (type === 'table-data' && tableName) {
             onProgress(t('dbViewer.TableTableName'));
             onProgress(t('dbViewer.QueryingData'));
@@ -173,7 +191,7 @@ export const useSidebarActions = () => {
                 const vals = Object.values(row).map(v => v === null ? 'NULL' : `'${String(v).replace(/'/g, "''")}'`).join(', ');
                 content += `INSERT INTO \`${tableName}\` (${cols}) VALUES (${vals});\n`;
             }
-            await writeTextFile(filePath, content);
+            await downloadContentAsFile(filePath, content);
         }
     };
 
@@ -218,7 +236,7 @@ export const useSidebarActions = () => {
             }
 
             setConvertModal(prev => ({ ...prev, progress: t('dbViewer.savingFile') }));
-            await writeTextFile(filePath, convertedContent);
+            await downloadContentAsFile(filePath, convertedContent);
 
             setConvertModal(prev => ({ ...prev, isConverting: false, progress: t('dbViewer.conversionCompletedFileSa') }));
             showToast(t('dbViewer.conversionSuccessful'), 'success');

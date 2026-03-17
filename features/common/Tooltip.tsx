@@ -1,5 +1,6 @@
 /** 通用 Tooltip 文字提示组件 */
 import React, { useState, useRef, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 
 interface TooltipProps {
   content: React.ReactNode;
@@ -47,7 +48,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
           break;
       }
 
-      setCoords({ top: top + window.scrollY, left: left + window.scrollX });
+      setCoords({ top, left });
     }
   };
 
@@ -84,7 +85,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
       onMouseLeave={hideTooltip}
     >
       {children}
-      {isVisible && (
+      {isVisible && ReactDOM.createPortal(
         <div 
           ref={tooltipRef}
           className="fixed z-[9999] px-3 py-1.5 text-[11px] font-bold text-white bg-slate-900 dark:bg-slate-800 rounded-lg shadow-xl shadow-black/20 animate-in zoom-in-95 backdrop-blur-md border border-white/10"
@@ -99,7 +100,8 @@ export const Tooltip: React.FC<TooltipProps> = ({
               'left-[-4px] top-1/2 -translate-y-1/2 border-t-0 border-r-0'
             }`}
           />
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

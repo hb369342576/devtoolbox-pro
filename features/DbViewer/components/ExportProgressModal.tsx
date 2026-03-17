@@ -45,8 +45,11 @@ export const ExportProgressModal: React.FC<ExportProgressModalProps> = ({
         setProgress(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${message}`]);
     };
 
+    const isTauri = typeof window !== 'undefined' && (!!(window as any).__TAURI_INTERNALS__ || !!(window as any).__TAURI__);
+
     // 选择文件夹
     const handleSelectFolder = async () => {
+        if (!isTauri) return;
         try {
             const selectedPath = await open({
                 directory: true,
@@ -65,7 +68,7 @@ export const ExportProgressModal: React.FC<ExportProgressModalProps> = ({
     };
 
     const handleStart = async () => {
-        if (!filePath.trim()) {
+        if (isTauri && !filePath.trim()) {
             addProgress(t('dbViewer.PleaseEnterFilePath'));
             return;
         }
@@ -117,32 +120,34 @@ export const ExportProgressModal: React.FC<ExportProgressModalProps> = ({
                 {/* Body */}
                 <div className="p-6 space-y-4">
                     {/* File Path Input */}
-                    <div>
-                        <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2">
-                            {t('dbViewer.exportPath')}
-                        </label>
-                        <div className="flex space-x-2">
-                            <input
-                                type="text"
-                                value={filePath}
-                                onChange={(e) => setFilePath(e.target.value)}
-                                disabled={isExporting}
-                                placeholder={t('dbViewer.enterFullFilePath')}
-                                className="flex-1 px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                            />
-                            <button
-                                onClick={handleSelectFolder}
-                                disabled={isExporting}
-                                className="px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-1"
-                                title={t('dbViewer.selectFolder')}
-                            >
-                                <Folder size={16} />
-                            </button>
+                    {isTauri && (
+                        <div>
+                            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2">
+                                {t('dbViewer.exportPath')}
+                            </label>
+                            <div className="flex space-x-2">
+                                <input
+                                    type="text"
+                                    value={filePath}
+                                    onChange={(e) => setFilePath(e.target.value)}
+                                    disabled={isExporting}
+                                    placeholder={t('dbViewer.enterFullFilePath')}
+                                    className="flex-1 px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                                />
+                                <button
+                                    onClick={handleSelectFolder}
+                                    disabled={isExporting}
+                                    className="px-3 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-1"
+                                    title={t('dbViewer.selectFolder')}
+                                >
+                                    <Folder size={16} />
+                                </button>
+                            </div>
+                            <p className="mt-1 text-xs text-slate-500">
+                                {t('dbViewer.eGDDownloadsDatabaseexpor')}
+                            </p>
                         </div>
-                        <p className="mt-1 text-xs text-slate-500">
-                            {t('dbViewer.eGDDownloadsDatabaseexpor')}
-                        </p>
-                    </div>
+                    )}
 
                     {/* Progress Log */}
                     <div>

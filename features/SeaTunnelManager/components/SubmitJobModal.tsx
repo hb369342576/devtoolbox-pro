@@ -99,28 +99,61 @@ export const SubmitJobModal: React.FC<SubmitJobModalProps> = ({
     };
 
     const handleFileSelect = async () => {
-        try {
-            // 使用 Tauri 文件选择对话框
-            const { open } = await import('@tauri-apps/plugin-dialog');
-            const selected = await open({
-                multiple: false,
-                filters: [{ name: 'SeaTunnel Config', extensions: ['conf', 'hocon', 'json'] }]
-            });
-            
-            if (selected && typeof selected === 'string') {
-                const { readTextFile } = await import('@tauri-apps/plugin-fs');
-                const content = await readTextFile(selected);
-                handleConfigChange(content);
+        const isTauri = typeof window !== 'undefined' && (!!(window as any).__TAURI_INTERNALS__ || !!(window as any).__TAURI__);
+
+        if (isTauri) {
+            try {
+                // 使用 Tauri 文件选择对话框
+                const { open } = await import('@tauri-apps/plugin-dialog');
+                const selected = await open({
+                    multiple: false,
+                    filters: [{ name: 'SeaTunnel Config', extensions: ['conf', 'hocon', 'json'] }]
+                });
                 
-                // 从文件名提取作业名
-                const fileName = selected.split(/[/\\]/).pop()?.replace(/\.(conf|hocon|json)$/, '') || '';
-                if (!jobName && fileName) {
-                    setJobName(fileName);
+                if (selected && typeof selected === 'string') {
+                    const { readTextFile } = await import('@tauri-apps/plugin-fs');
+                    const content = await readTextFile(selected);
+                    handleConfigChange(content);
+                    
+                    // 从文件名提取作业名
+                    const fileName = selected.split(/[/\\]/).pop()?.replace(/\.(conf|hocon|json)$/, '') || '';
+                    if (!jobName && fileName) {
+                        setJobName(fileName);
+                    }
                 }
+            } catch (err: any) {
+                console.error('File select error:', err);
+                toast({ title: t('seatunnel.failedToReadFile'), description: err.message, variant: 'destructive' });
             }
-        } catch (err: any) {
-            console.error('File select error:', err);
-            toast({ title: t('seatunnel.failedToReadFile'), description: err.message, variant: 'destructive' });
+        } else {
+            // Web 模式：使用原生 input 文件选择
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.conf,.hocon,.json';
+            input.onchange = async (e: any) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+
+                try {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const content = event.target?.result as string;
+                        if (content) {
+                            handleConfigChange(content);
+                            
+                            const fileName = file.name.replace(/\.(conf|hocon|json)$/, '');
+                            if (!jobName && fileName) {
+                                setJobName(fileName);
+                            }
+                        }
+                    };
+                    reader.readAsText(file);
+                } catch (err: any) {
+                    console.error('File read error:', err);
+                    toast({ title: t('seatunnel.failedToReadFile'), description: err.message, variant: 'destructive' });
+                }
+            };
+            input.click();
         }
     };
 

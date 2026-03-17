@@ -39,8 +39,10 @@ export const ExportModal: React.FC<ExportModalProps> = ({show, processes, projec
         }
     }, [show, projectName, apiVersion]);
     
-    // 选择目标文件夹
+    const isTauri = typeof window !== 'undefined' && (!!(window as any).__TAURI_INTERNALS__ || !!(window as any).__TAURI__);
+
     const handleSelectFolder = async () => {
+        if (!isTauri) return;
         try {
             const selected = await open({
                 directory: true,
@@ -73,7 +75,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({show, processes, projec
             return;
         }
         
-        if (!targetDir) {
+        if (isTauri && !targetDir) {
             toast({ title: t('dolphinScheduler.selectExportDir'), variant: 'destructive' });
             return;
         }
@@ -130,25 +132,27 @@ export const ExportModal: React.FC<ExportModalProps> = ({show, processes, projec
                             className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 outline-none" 
                         />
                     </div>
-                    <div>
-                        <label className="text-xs font-medium text-slate-500 block mb-1">{t('dolphinScheduler.exportDirectory')}</label>
-                        <div className="flex items-center space-x-2">
-                            <input 
-                                type="text" 
-                                value={targetDir} 
-                                readOnly
-                                className="flex-1 px-3 py-2 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-600 dark:text-slate-400 cursor-default" 
-                                placeholder={t('dolphinScheduler.clickToSelectFolder')}
-                            />
-                            <button
-                                onClick={handleSelectFolder}
-                                className="px-3 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg text-sm font-medium flex items-center transition-colors"
-                            >
-                                <FolderOpen size={16} className="mr-1" />
-                                {t('common.search').replace('...', '')}
-                            </button>
+                    {isTauri && (
+                        <div>
+                            <label className="text-xs font-medium text-slate-500 block mb-1">{t('dolphinScheduler.exportDirectory')}</label>
+                            <div className="flex items-center space-x-2">
+                                <input 
+                                    type="text" 
+                                    value={targetDir} 
+                                    readOnly
+                                    className="flex-1 px-3 py-2 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-600 dark:text-slate-400 cursor-default" 
+                                    placeholder={t('dolphinScheduler.clickToSelectFolder')}
+                                />
+                                <button
+                                    onClick={handleSelectFolder}
+                                    className="px-3 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg text-sm font-medium flex items-center transition-colors"
+                                >
+                                    <FolderOpen size={16} className="mr-1" />
+                                    {t('common.search').replace('...', '')}
+                                </button>
+                            </div>
                         </div>
-                    </div>
+                    )}
                     <div>
                         <label className="text-xs font-medium text-slate-500 block mb-1">{t('dolphinScheduler.projectFolderName')}</label>
                         <input 

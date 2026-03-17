@@ -133,20 +133,40 @@ export const useTableViewer = (queryColumns: string[], sortedResults: any[], pag
         
         const csv = [headers, ...rows].join('\n');
         
-        try {
-            const { save } = await import('@tauri-apps/plugin-dialog');
-            const filePath = await save({
-                defaultPath: `query_result_${Date.now()}.csv`,
-                filters: [{ name: 'CSV', extensions: ['csv'] }]
-            });
-            
-            if (filePath) {
-                const { writeTextFile } = await import('@tauri-apps/plugin-fs');
-                await writeTextFile(filePath, csv);
-                showToast(t('db_viewer.exportSuccessful'), 'success');
+        const isTauri = typeof window !== 'undefined' && (!!(window as any).__TAURI_INTERNALS__ || !!(window as any).__TAURI__);
+
+        if (isTauri) {
+            try {
+                const { save } = await import('@tauri-apps/plugin-dialog');
+                const filePath = await save({
+                    defaultPath: `query_result_${Date.now()}.csv`,
+                    filters: [{ name: 'CSV', extensions: ['csv'] }]
+                });
+                
+                if (filePath) {
+                    const { writeTextFile } = await import('@tauri-apps/plugin-fs');
+                    await writeTextFile(filePath, csv);
+                    showToast(t('db_viewer.exportSuccessful'), 'success');
+                }
+            } catch (err: any) {
+                showToast(`${t('db_viewer.exportFailed')}: ${err}`, 'error');
             }
-        } catch (err: any) {
-            showToast(`${t('db_viewer.exportFailed')}: ${err}`, 'error');
+        } else {
+            // Web 模式下载 CSV
+            try {
+                const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csv], { type: 'text/csv;charset=utf-8;' }); // 带 BOM 使得 Excel 打开不乱码
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `query_result_${Date.now()}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+                showToast(t('db_viewer.exportSuccessful'), 'success');
+            } catch (err: any) {
+                showToast(`${t('db_viewer.exportFailed')}: ${err}`, 'error');
+            }
         }
     };
 

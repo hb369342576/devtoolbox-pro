@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { ListTodo, ArrowLeft, Plus, Folder, Calendar, CheckCircle2, RefreshCw, Settings, Search, Download, Upload, PlayCircle, ToggleRight, Eye } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useToast } from '../../common/Toast';
+import { Tooltip } from '../../common/Tooltip';
 import { useTaskManagerData } from './useTaskManagerData';
 import { WorkflowDefinitionTab } from './WorkflowDefinitionTab';
 import { WorkflowInstanceTab } from './WorkflowInstanceTab';
@@ -52,16 +53,47 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ currentProject, config
                 body: `releaseState=${action === 'online' ? 'ONLINE' : 'OFFLINE'}`
             });
             const text = await resp.text();
-            if (!text.startsWith('{')) { toast({ title: 'API路径错误', description: text.substring(0, 100), variant: 'destructive' }); return; }
+            if (!text.startsWith('{')) { toast({ title: t('dolphinScheduler.apiPathError'), description: text.substring(0, 100), variant: 'destructive' }); return; }
             const result = JSON.parse(text);
             if (result.code === 0) {
-                toast({ title: action === 'online' ? '上线成功' : '下线成功', variant: 'success' });
+                toast({ title: action === 'online' ? t('dolphinScheduler.onlineSuccess') : t('dolphinScheduler.offlineSuccess'), variant: 'success' });
                 handleRefresh();
             } else {
-                toast({ title: '操作失败', description: result.msg, variant: 'destructive' });
+                toast({ title: t('dolphinScheduler.operationFailed'), description: result.msg, variant: 'destructive' });
             }
         } catch (err: any) {
-            toast({ title: '操作失败', description: err.message, variant: 'destructive' });
+            toast({ title: t('dolphinScheduler.operationFailed'), description: err.message, variant: 'destructive' });
+        }
+    }, [currentProject, resolvedProjectCode, handleRefresh]);
+
+    // 复制工作流
+    const handleCopyWorkflow = useCallback(async (process: any) => {
+        try {
+            const defPath = getWorkflowApiPath(currentProject?.apiVersion);
+            const code = resolvedProjectCode || currentProject?.projectCode;
+            const url = `${currentProject?.baseUrl}/projects/${code}/${defPath}/batch-copy`;
+            const params = new URLSearchParams();
+            params.append('codes', String(process.code));
+            params.append('targetProjectCode', String(code));
+            const resp = await httpFetch(url, {
+                method: 'POST',
+                headers: { 'token': currentProject?.token || '', 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: params.toString()
+            });
+            const text = await resp.text();
+            if (!text.startsWith('{')) {
+                toast({ title: 'API路径错误', description: text.substring(0, 100), variant: 'destructive' });
+                return;
+            }
+            const result = JSON.parse(text);
+            if (result.code === 0) {
+                toast({ title: t('dolphinScheduler.copySuccess'), description: `${process.name}`, variant: 'success' });
+                handleRefresh();
+            } else {
+                toast({ title: t('dolphinScheduler.copyWorkflow'), description: result.msg, variant: 'destructive' });
+            }
+        } catch (err: any) {
+            toast({ title: t('dolphinScheduler.copyWorkflow'), description: err.message, variant: 'destructive' });
         }
     }, [currentProject, resolvedProjectCode, handleRefresh]);
 
@@ -185,29 +217,43 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ currentProject, config
                 <div className="flex items-center space-x-1 pr-2">
                     {activeTab === 'workflow-definition' && (
                         <>
-                            <button onClick={() => setShowBatchPublish(true)} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200" title={t('dolphinScheduler.batchPublishUnpublish')}>
-                                <ToggleRight size={16} />
-                            </button>
-                            <button onClick={() => setShowExport(true)} className="p-1.5 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded transition-colors text-blue-600" title={t('dolphinScheduler.exportWorkflow')}>
-                                <Download size={16} />
-                            </button>
-                            <button onClick={() => setShowImport(true)} className="p-1.5 hover:bg-cyan-100 dark:hover:bg-cyan-900/30 rounded transition-colors text-cyan-600" title={t('dolphinScheduler.importWorkflow')}>
-                                <Upload size={16} />
-                            </button>
-                            <button onClick={() => setShowBatchRun(true)} className="p-1.5 hover:bg-orange-100 dark:hover:bg-orange-900/30 rounded transition-colors text-orange-600" title={t('dolphinScheduler.batchRunWorkflows')}>
-                                <PlayCircle size={16} />
-                            </button>
+                            <Tooltip content={t('dolphinScheduler.batchPublishUnpublish')} position="bottom">
+                                <button onClick={() => setShowBatchPublish(true)} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200">
+                                    <ToggleRight size={16} />
+                                </button>
+                            </Tooltip>
+                            <Tooltip content={t('dolphinScheduler.exportWorkflow')} position="bottom">
+                                <button onClick={() => setShowExport(true)} className="p-1.5 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded transition-colors text-blue-600">
+                                    <Download size={16} />
+                                </button>
+                            </Tooltip>
+                            <Tooltip content={t('dolphinScheduler.importWorkflow')} position="bottom">
+                                <button onClick={() => setShowImport(true)} className="p-1.5 hover:bg-cyan-100 dark:hover:bg-cyan-900/30 rounded transition-colors text-cyan-600">
+                                    <Upload size={16} />
+                                </button>
+                            </Tooltip>
+                            <Tooltip content={t('dolphinScheduler.batchRunWorkflows')} position="bottom">
+                                <button onClick={() => setShowBatchRun(true)} className="p-1.5 hover:bg-orange-100 dark:hover:bg-orange-900/30 rounded transition-colors text-orange-600">
+                                    <PlayCircle size={16} />
+                                </button>
+                            </Tooltip>
                         </>
                     )}
-                    <button onClick={handleRefresh} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200" title={t('common.refresh')}>
-                        <RefreshCw size={16} className={loading || instanceLoading ? 'animate-spin' : ''} />
-                    </button>
-                    <button onClick={() => setViewLogTaskId(0)} className="p-1.5 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded transition-colors text-purple-600" title={t('dolphinScheduler.runLogs')}>
-                        <Eye size={16} />
-                    </button>
-                    <button onClick={() => setShowConfigModal(true)} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200" title={t('dolphinScheduler.globalSettings.title')}>
-                        <Settings size={16} />
-                    </button>
+                    <Tooltip content={t('dolphinScheduler.refresh')} position="bottom">
+                        <button onClick={handleRefresh} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200">
+                            <RefreshCw size={16} className={loading || instanceLoading ? 'animate-spin' : ''} />
+                        </button>
+                    </Tooltip>
+                    <Tooltip content={t('dolphinScheduler.runLogs')} position="bottom">
+                        <button onClick={() => setViewLogTaskId(0)} className="p-1.5 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded transition-colors text-purple-600">
+                            <Eye size={16} />
+                        </button>
+                    </Tooltip>
+                    <Tooltip content={t('dolphinScheduler.globalSettings.title')} position="bottom">
+                        <button onClick={() => setShowConfigModal(true)} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200">
+                            <Settings size={16} />
+                        </button>
+                    </Tooltip>
                 </div>
             </div>
 
@@ -227,8 +273,9 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ currentProject, config
                             selectedProcesses={selectedProcesses}
                             setSelectedProcesses={setSelectedProcesses}
                             onEdit={setEditProcess}
+                            onCopy={handleCopyWorkflow}
                             onRun={(p: any) => setRunProcess(p)}
-                            onSchedule={() => toast({ title: '定时功能', description: '请到工作流定时Tab中查看和管理定时配置', variant: 'default' })}
+                            onSchedule={() => toast({ title: t('dolphinScheduler.schedule'), description: t('dolphinScheduler.workflowSchedule'), variant: 'default' })}
                             onToggleOnline={handleToggleOnline}
                         />
                     )}

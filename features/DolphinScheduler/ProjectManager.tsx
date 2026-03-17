@@ -97,6 +97,17 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({
             return;
         }
 
+        const isTauri = typeof window !== 'undefined' && (!!(window as any).__TAURI_INTERNALS__ || !!(window as any).__TAURI__);
+        if (!isTauri) {
+            setTestStatus('failed');
+            setTestErrorMsg('需要安装后台');
+            setTimeout(() => {
+                setTestStatus('none');
+                setTestErrorMsg('');
+            }, 3000);
+            return;
+        }
+
         setTestStatus('testing');
         setTestErrorMsg('');
 

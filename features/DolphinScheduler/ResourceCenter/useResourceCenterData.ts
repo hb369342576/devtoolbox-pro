@@ -232,22 +232,45 @@ export const useResourceCenterData = (connection: DolphinSchedulerConnection | n
     // 下载/上传核心能力
     const handleDownloadSingle = async (resource: DSResource) => {
         if (!connection || resource.directory) return;
-        try {
-            const savePath = await save({ defaultPath: resource.alias });
-            if (!savePath) return;
+        
+        const isTauri = typeof window !== 'undefined' && (!!(window as any).__TAURI_INTERNALS__ || !!(window as any).__TAURI__);
+        const downloadUrl = resource.id != null
+            ? `${connection.baseUrl}/resources/${resource.id}/download`
+            : `${connection.baseUrl}/resources/download?fullName=${encodeURIComponent(resource.fullName)}`;
 
-            setDownloading(true);
-            const downloadUrl = resource.id != null
-                ? `${connection.baseUrl}/resources/${resource.id}/download`
-                : `${connection.baseUrl}/resources/download?fullName=${encodeURIComponent(resource.fullName)}`;
-            
-            const base64Data: string = await invoke('http_download', { url: downloadUrl, headers: { 'token': connection.token } });
-            await writeFile(savePath, base64ToUint8Array(base64Data));
-            toast({ title: t('dolphinScheduler.downloadedSuccessfully'), variant: 'success' });
-        } catch (err: any) {
-            toast({ title: t('dolphinScheduler.downloadFailed'), description: err.message, variant: 'destructive' });
-        } finally {
-            setDownloading(false);
+        setDownloading(true);
+        if (isTauri) {
+            try {
+                const savePath = await save({ defaultPath: resource.alias });
+                if (!savePath) return;
+
+                const base64Data: string = await invoke('http_download', { url: downloadUrl, headers: { 'token': connection.token } });
+                await writeFile(savePath, base64ToUint8Array(base64Data));
+                toast({ title: t('dolphinScheduler.downloadedSuccessfully'), variant: 'success' });
+            } catch (err: any) {
+                toast({ title: t('dolphinScheduler.downloadFailed'), description: err.message, variant: 'destructive' });
+            } finally {
+                setDownloading(false);
+            }
+        } else {
+            try {
+                const response = await fetch(downloadUrl, { headers: { 'token': connection.token } });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = resource.alias;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+                toast({ title: t('dolphinScheduler.downloadedSuccessfully'), variant: 'success' });
+            } catch (err: any) {
+                toast({ title: t('dolphinScheduler.downloadFailed'), description: err.message, variant: 'destructive' });
+            } finally {
+                setDownloading(false);
+            }
         }
     };
 
@@ -259,114 +282,260 @@ export const useResourceCenterData = (connection: DolphinSchedulerConnection | n
             return;
         }
 
-        try {
-            const savePath = await open({ directory: true });
-            if (!savePath) return;
+        const isTauri = typeof window !== 'undefined' && (!!(window as any).__TAURI_INTERNALS__ || !!(window as any).__TAURI__);
 
+        if (isTauri) {
+            try {
+                const savePath = await open({ directory: true });
+                if (!savePath) return;
+
+                setDownloading(true);
+                let successCount = 0;
+                for (const res of resourcesToDownload) {
+                    try {
+                        const downloadUrl = res.id != null
+                            ? `${connection.baseUrl}/resources/${res.id}/download`
+                            : `${connection.baseUrl}/resources/download?fullName=${encodeURIComponent(res.fullName)}`;
+                        const base64Data: string = await invoke('http_download', { url: downloadUrl, headers: { 'token': connection.token } });
+                        await writeFile(`${savePath}/${res.alias}`, base64ToUint8Array(base64Data));
+                        successCount++;
+                    } catch (err) {}
+                }
+                if (successCount > 0) toast({ title: t('dolphinScheduler.downloadedSuccessCountFil', { successCount }), variant: 'success' });
+            } catch (err: any) {
+                toast({ title: t('dolphinScheduler.downloadFailed'), description: err.message, variant: 'destructive' });
+            } finally {
+                setDownloading(false);
+            }
+        } else {
+            // Web 模式：遍历触发下载
             setDownloading(true);
             let successCount = 0;
-            for (const res of resourcesToDownload) {
-                try {
+            try {
+                for (const res of resourcesToDownload) {
                     const downloadUrl = res.id != null
                         ? `${connection.baseUrl}/resources/${res.id}/download`
                         : `${connection.baseUrl}/resources/download?fullName=${encodeURIComponent(res.fullName)}`;
-                    const base64Data: string = await invoke('http_download', { url: downloadUrl, headers: { 'token': connection.token } });
-                    await writeFile(`${savePath}/${res.alias}`, base64ToUint8Array(base64Data));
-                    successCount++;
-                } catch (err) {}
+                    
+                    try {
+                        const response = await fetch(downloadUrl, { headers: { 'token': connection.token } });
+                        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                        const blob = await response.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = res.alias;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        window.URL.revokeObjectURL(url);
+                        
+                        successCount++;
+                        // 稍微停顿，防止浏览器拦截过多并发下载
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                    } catch (err) {
+                        console.error(`Failed to download ${res.alias}`, err);
+                    }
+                }
+                if (successCount > 0) {
+                    toast({ title: t('dolphinScheduler.downloadedSuccessCountFil', { successCount }), variant: 'success' });
+                }
+            } finally {
+                setDownloading(false);
             }
-            if (successCount > 0) toast({ title: t('dolphinScheduler.downloadedSuccessCountFil', { successCount }), variant: 'success' });
-        } catch (err: any) {
-            toast({ title: t('dolphinScheduler.downloadFailed'), description: err.message, variant: 'destructive' });
-        } finally {
-            setDownloading(false);
         }
     };
 
     const handleUpload = async () => {
         if (!connection) return;
-        try {
-            const files = await open({ multiple: true });
-            if (!files || (Array.isArray(files) && files.length === 0)) return;
-            
-            setUploading(true);
-            const fileList = Array.isArray(files) ? files : [files];
-            let successCount = 0;
-            
-            for (const filePath of fileList) {
-                try {
-                    const fileName = filePath.split(/[/\\]/).pop() || 'file';
-                    const content = await readFile(filePath);
-                    const fileData = Array.from(content);
-                    
-                    const existing = resources.find(r => r.alias === fileName && !r.directory);
-                    if (existing) {
-                        try {
-                            const deleteUrl = existing.id
-                                ? `${connection.baseUrl}/resources/${existing.id}`
-                                : `${connection.baseUrl}/resources?fullName=${encodeURIComponent(existing.fullName)}`;
-                            await httpFetch(deleteUrl, { method: 'DELETE', headers: { 'token': connection.token } });
-                        } catch (e) {}
-                    }
-                    
-                    const url = `${connection.baseUrl}/resources`;
-                    const result: any = await invoke('http_upload', {
-                        url, headers: { 'token': connection.token }, fileName, fileData,
-                        formFields: { type: 'FILE', name: fileName, currentDir: currentPath || '' }
-                    });
-                    const parsed = JSON.parse(result.body);
-                    
-                    if (parsed.code === 0) successCount++;
-                    else toast({ title: `${fileName} ${t('dolphinScheduler.uploadFailed')}`, description: parsed.msg, variant: 'destructive' });
-                } catch (err) {}
+        const isTauri = typeof window !== 'undefined' && (!!(window as any).__TAURI_INTERNALS__ || !!(window as any).__TAURI__);
+        
+        if (isTauri) {
+            try {
+                const files = await open({ multiple: true });
+                if (!files || (Array.isArray(files) && files.length === 0)) return;
+                
+                setUploading(true);
+                const fileList = Array.isArray(files) ? files : [files];
+                let successCount = 0;
+                
+                for (const filePath of fileList) {
+                    try {
+                        const fileName = filePath.split(/[/\\]/).pop() || 'file';
+                        const content = await readFile(filePath);
+                        const fileData = Array.from(content);
+                        
+                        const existing = resources.find(r => r.alias === fileName && !r.directory);
+                        if (existing) {
+                            try {
+                                const deleteUrl = existing.id
+                                    ? `${connection.baseUrl}/resources/${existing.id}`
+                                    : `${connection.baseUrl}/resources?fullName=${encodeURIComponent(existing.fullName)}`;
+                                await httpFetch(deleteUrl, { method: 'DELETE', headers: { 'token': connection.token } });
+                            } catch (e) {}
+                        }
+                        
+                        const url = `${connection.baseUrl}/resources`;
+                        const result: any = await invoke('http_upload', {
+                            url, headers: { 'token': connection.token }, fileName, fileData,
+                            formFields: { type: 'FILE', name: fileName, currentDir: currentPath || '' }
+                        });
+                        const parsed = JSON.parse(result.body);
+                        
+                        if (parsed.code === 0) successCount++;
+                        else toast({ title: `${fileName} ${t('dolphinScheduler.uploadFailed')}`, description: parsed.msg, variant: 'destructive' });
+                    } catch (err) {}
+                }
+                
+                if (successCount > 0) {
+                    toast({ title: t('dolphinScheduler.uploadedSuccessCountFiles', { successCount }), variant: 'success' });
+                    fetchResources();
+                }
+            } catch (err: any) {
+                toast({ title: t('dolphinScheduler.uploadFailed'), description: err.message, variant: 'destructive' });
+            } finally {
+                setUploading(false);
             }
-            
-            if (successCount > 0) {
-                toast({ title: t('dolphinScheduler.uploadedSuccessCountFiles', { successCount }), variant: 'success' });
-                fetchResources();
-            }
-        } catch (err: any) {
-            toast({ title: t('dolphinScheduler.uploadFailed'), description: err.message, variant: 'destructive' });
-        } finally {
-            setUploading(false);
+        } else {
+            // Web 模式下使用 input file
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.multiple = true;
+            input.onchange = async (e: any) => {
+                const files = e.target.files;
+                if (!files || files.length === 0) return;
+                
+                setUploading(true);
+                let successCount = 0;
+                
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    try {
+                        const fileName = file.name;
+                        
+                        const existing = resources.find(r => r.alias === fileName && !r.directory);
+                        if (existing) {
+                            try {
+                                const deleteUrl = existing.id
+                                    ? `${connection.baseUrl}/resources/${existing.id}`
+                                    : `${connection.baseUrl}/resources?fullName=${encodeURIComponent(existing.fullName)}`;
+                                await httpFetch(deleteUrl, { method: 'DELETE', headers: { 'token': connection.token } });
+                            } catch (e) {}
+                        }
+                        
+                        const formData = new FormData();
+                        formData.append('type', 'FILE');
+                        formData.append('name', fileName);
+                        formData.append('currentDir', currentPath || '');
+                        formData.append('file', file);
+
+                        const response = await fetch(`${connection.baseUrl}/resources`, {
+                            method: 'POST',
+                            headers: { 'token': connection.token },
+                            body: formData
+                        });
+                        const parsed = await response.json();
+                        
+                        if (parsed.code === 0) successCount++;
+                        else toast({ title: `${fileName} ${t('dolphinScheduler.uploadFailed')}`, description: parsed.msg, variant: 'destructive' });
+                    } catch (err) {}
+                }
+                
+                if (successCount > 0) {
+                    toast({ title: t('dolphinScheduler.uploadedSuccessCountFiles', { successCount }), variant: 'success' });
+                    fetchResources();
+                }
+                setUploading(false);
+            };
+            input.click();
         }
     };
 
     const handleUploadSingle = async (resource: DSResource) => {
         if (!connection) return;
-        try {
-            const files = await open({ multiple: false });
-            if (!files) return;
-            
-            setUploading(true);
-            const filePath = Array.isArray(files) ? files[0] : files;
-            const content = await readFile(filePath);
-            const fileData = Array.from(content);
-            
+        const isTauri = typeof window !== 'undefined' && (!!(window as any).__TAURI_INTERNALS__ || !!(window as any).__TAURI__);
+        
+        if (isTauri) {
             try {
-                const deleteUrl = resource.id != null
-                    ? `${connection.baseUrl}/resources/${resource.id}`
-                    : `${connection.baseUrl}/resources?fullName=${encodeURIComponent(resource.fullName)}`;
-                await httpFetch(deleteUrl, { method: 'DELETE', headers: { 'token': connection.token } });
-            } catch (e) {}
-            
-            const url = `${connection.baseUrl}/resources`;
-            const result: any = await invoke('http_upload', {
-                url, headers: { 'token': connection.token }, fileName: resource.alias, fileData,
-                formFields: { type: 'FILE', name: resource.alias, currentDir: currentPath || '' }
-            });
-            const parsed = JSON.parse(result.body);
-            
-            if (parsed.code === 0) {
-                toast({ title: t('dolphinScheduler.uploadedSuccessfully'), variant: 'success' });
-                fetchResources();
-            } else {
-                toast({ title: t('dolphinScheduler.uploadFailed'), description: parsed.msg, variant: 'destructive' });
+                const files = await open({ multiple: false });
+                if (!files) return;
+                
+                setUploading(true);
+                const filePath = Array.isArray(files) ? files[0] : files;
+                const content = await readFile(filePath);
+                const fileData = Array.from(content);
+                
+                try {
+                    const deleteUrl = resource.id != null
+                        ? `${connection.baseUrl}/resources/${resource.id}`
+                        : `${connection.baseUrl}/resources?fullName=${encodeURIComponent(resource.fullName)}`;
+                    await httpFetch(deleteUrl, { method: 'DELETE', headers: { 'token': connection.token } });
+                } catch (e) {}
+                
+                const url = `${connection.baseUrl}/resources`;
+                const result: any = await invoke('http_upload', {
+                    url, headers: { 'token': connection.token }, fileName: resource.alias, fileData,
+                    formFields: { type: 'FILE', name: resource.alias, currentDir: currentPath || '' }
+                });
+                const parsed = JSON.parse(result.body);
+                
+                if (parsed.code === 0) {
+                    toast({ title: t('dolphinScheduler.uploadedSuccessfully'), variant: 'success' });
+                    fetchResources();
+                } else {
+                    toast({ title: t('dolphinScheduler.uploadFailed'), description: parsed.msg, variant: 'destructive' });
+                }
+            } catch (err: any) {
+                toast({ title: t('dolphinScheduler.uploadFailed'), description: err.message, variant: 'destructive' });
+            } finally {
+                setUploading(false);
             }
-        } catch (err: any) {
-            toast({ title: t('dolphinScheduler.uploadFailed'), description: err.message, variant: 'destructive' });
-        } finally {
-            setUploading(false);
+        } else {
+            // Web 模式下单文件覆盖上传
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.multiple = false;
+            input.onchange = async (e: any) => {
+                const files = e.target.files;
+                if (!files || files.length === 0) return;
+                
+                setUploading(true);
+                const file = files[0];
+                try {
+                    try {
+                        const deleteUrl = resource.id != null
+                            ? `${connection.baseUrl}/resources/${resource.id}`
+                            : `${connection.baseUrl}/resources?fullName=${encodeURIComponent(resource.fullName)}`;
+                        await httpFetch(deleteUrl, { method: 'DELETE', headers: { 'token': connection.token } });
+                    } catch (e) {}
+                    
+                    const formData = new FormData();
+                    formData.append('type', 'FILE');
+                    formData.append('name', resource.alias);
+                    formData.append('currentDir', currentPath || '');
+                    formData.append('file', file, resource.alias);
+
+                    const response = await fetch(`${connection.baseUrl}/resources`, {
+                        method: 'POST',
+                        headers: { 'token': connection.token },
+                        body: formData
+                    });
+                    const parsed = await response.json();
+                    
+                    if (parsed.code === 0) {
+                        toast({ title: t('dolphinScheduler.uploadedSuccessfully'), variant: 'success' });
+                        fetchResources();
+                    } else {
+                        toast({ title: t('dolphinScheduler.uploadFailed'), description: parsed.msg, variant: 'destructive' });
+                    }
+                } catch (err: any) {
+                    toast({ title: t('dolphinScheduler.uploadFailed'), description: err.message, variant: 'destructive' });
+                } finally {
+                    setUploading(false);
+                }
+            };
+            input.click();
         }
     };
 

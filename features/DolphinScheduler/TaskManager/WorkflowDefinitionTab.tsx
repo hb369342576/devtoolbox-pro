@@ -1,6 +1,6 @@
 import React, { useRef, useCallback } from 'react';
 import {
-    ChevronLeft, ChevronRight, Loader2, AlertCircle, ListTodo, Copy,
+    ChevronLeft, ChevronRight, Loader2, AlertCircle, ListTodo, Copy, CopyPlus,
     Edit, PlayCircle, Timer, Power, ToggleRight
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -27,13 +27,14 @@ interface WorkflowDefinitionTabProps {
     onDetail: (p: ProcessDefinition) => void;
     onEdit: (p: ProcessDefinition) => void;
     onRun: (p: ProcessDefinition) => void;
+    onCopy: (p: ProcessDefinition) => void;
     onSchedule: (p: ProcessDefinition) => void;
     onToggleOnline: (p: ProcessDefinition) => void;
 }
 
 export const WorkflowDefinitionTab: React.FC<WorkflowDefinitionTabProps> = ({
     loading, error, processes, total, pageNo, pageSize, setPageNo, setPageSize,
-    selectedProcesses, setSelectedProcesses, onDetail, onEdit, onRun, onSchedule, onToggleOnline
+    selectedProcesses, setSelectedProcesses, onDetail, onEdit, onCopy, onRun, onSchedule, onToggleOnline
 }) => {
     const { t } = useTranslation();
     const { toast } = useToast();
@@ -187,6 +188,9 @@ export const WorkflowDefinitionTab: React.FC<WorkflowDefinitionTabProps> = ({
                                     <div className="flex items-center justify-center space-x-1">
                                         <Tooltip content={t('dolphinScheduler.edit')} position="top">
                                             <button onClick={() => onEdit(process)} className="p-1.5 hover:bg-cyan-100 dark:hover:bg-cyan-900/30 rounded text-cyan-600"><Edit size={16} /></button>
+                                        </Tooltip>
+                                        <Tooltip content={t('dolphinScheduler.copyWorkflow')} position="top">
+                                            <button onClick={() => onCopy(process)} className="p-1.5 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 rounded text-indigo-600"><CopyPlus size={16} /></button>
                                         </Tooltip>
                                         <Tooltip content={t('dolphinScheduler.run')} position="top">
                                             <button onClick={() => onRun(process)} disabled={process.releaseState !== 'ONLINE'} className="p-1.5 hover:bg-orange-100 dark:hover:bg-orange-900/30 rounded text-orange-600 disabled:opacity-30"><PlayCircle size={16} /></button>

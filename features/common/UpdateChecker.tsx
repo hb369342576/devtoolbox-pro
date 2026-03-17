@@ -29,6 +29,10 @@ export const UpdateChecker: React.FC<UpdateCheckerProps> = ({}) => {
   const { toast } = useToast();
 
   const checkForUpdates = async (silent = true) => {
+    // 非 Tauri 环境（Web 模式）不执行更新检查
+    const isTauri = !!(window as any).__TAURI_INTERNALS__ || !!(window as any).__TAURI__;
+    if (!isTauri) return;
+
     try {
       if (!silent) setChecking(true);
       const update = await check();

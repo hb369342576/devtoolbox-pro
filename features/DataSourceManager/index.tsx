@@ -148,7 +148,7 @@ export const DataSourceManager: React.FC<{
     } else {
       setTimeout(() => {
         setTestStatus('failed');
-        setAlertState({ isOpen: true, title: t('common.webMode'), message: t('common.webModeConnMsg'), type: 'error' });
+        setAlertState({ isOpen: true, title: t('common.webMode'), message: '需要安装后台', type: 'error' });
         setTimeout(() => setTestStatus('none'), 3000);
       }, 800);
     }

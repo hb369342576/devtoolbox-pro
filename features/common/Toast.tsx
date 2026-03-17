@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import ReactDOM from 'react-dom';
 import { CheckCircle2, XCircle, AlertCircle, Info, X, Copy, Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -79,10 +80,8 @@ export const ToastProvider: React.FC<{ children?: React.ReactNode }> = ({ childr
     info: 'bg-blue-50 border-blue-100 dark:bg-blue-950/30 dark:border-blue-900/50'
   };
 
-  return (
-    <>
-      {children}
-      <div className="fixed bottom-6 right-6 z-[9999] flex flex-col-reverse space-y-reverse space-y-3 pointer-events-none min-w-[320px] max-w-md">
+  const toastContainer = (
+    <div className="fixed bottom-6 right-6 z-[9999] flex flex-col-reverse space-y-reverse space-y-3 pointer-events-none min-w-[320px] max-w-md">
       {toasts.map((t_msg) => (
         <div 
           key={t_msg.id}
@@ -139,6 +138,12 @@ export const ToastProvider: React.FC<{ children?: React.ReactNode }> = ({ childr
         </div>
       ))}
       </div>
+  );
+
+  return (
+    <>
+      {children}
+      {ReactDOM.createPortal(toastContainer, document.body)}
     </>
   );
 };

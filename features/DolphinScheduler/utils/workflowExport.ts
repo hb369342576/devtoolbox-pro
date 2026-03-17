@@ -2,6 +2,7 @@ import { mkdir, writeTextFile } from '@tauri-apps/plugin-fs';
 import { httpFetch } from '../../../utils/http';
 import { DolphinSchedulerApiVersion } from '../../../types';
 import { getWorkflowApiPath } from './common';
+import JSZip from 'jszip';
 
 export const exportWorkflowsToLocal = async (
     items: { code: number, name: string }[],
@@ -19,17 +20,29 @@ export const exportWorkflowsToLocal = async (
     const apiPath = getWorkflowApiPath(apiVersion);
     const targetVersion = exportVersion || apiVersion || 'v3.2';
     
+    // 环境检测
+    const isTauri = typeof window !== 'undefined' && (!!(window as any).__TAURI_INTERNALS__ || !!(window as any).__TAURI__);
+    
     const normalizePath = (path: string) => path.replace(/\//g, '\\');
     const joinPath = (...parts: string[]) => normalizePath(parts.join('/'));
 
-    if (isBatch && batchName) {
-        const batchDir = joinPath(baseDir, batchName);
-        try {
-            await mkdir(batchDir, { recursive: true });
-            console.log('[Export] Created batch directory:', batchDir);
-        } catch (e) {
-            console.log('[Export] Create batch dir result:', e);
+    let zip: JSZip | null = null;
+    let baseZipFolder: JSZip | null = null;
+    
+    if (isTauri) {
+        if (isBatch && batchName) {
+            const batchDir = joinPath(baseDir, batchName);
+            try {
+                await mkdir(batchDir, { recursive: true });
+                console.log('[Export] Created batch directory:', batchDir);
+            } catch (e) {
+                console.log('[Export] Create batch dir result:', e);
+            }
         }
+    } else {
+        // Web 模式：初始化 JSZip
+        zip = new JSZip();
+        baseZipFolder = isBatch && batchName ? zip.folder(batchName) : zip;
     }
 
     for (let i = 0; i < items.length; i++) {
@@ -47,14 +60,21 @@ export const exportWorkflowsToLocal = async (
             const definitionData = workflowData.workflowDefinition || workflowData.processDefinition;
             const workflowName = definitionData?.name || item.name;
 
-            const workflowDir = isBatch 
-                ? joinPath(baseDir, batchName, workflowName)
-                : joinPath(baseDir, workflowName);
+            let workflowDir = '';
+            let workflowZipFolder: JSZip | null = null;
+            
+            if (isTauri) {
+                workflowDir = isBatch 
+                    ? joinPath(baseDir, batchName, workflowName)
+                    : joinPath(baseDir, workflowName);
 
-            try {
-                await mkdir(workflowDir, { recursive: true });
-            } catch (e) {
-                console.log('[Export] mkdir result:', e);
+                try {
+                    await mkdir(workflowDir, { recursive: true });
+                } catch (e) {
+                    console.log('[Export] mkdir result:', e);
+                }
+            } else if (baseZipFolder) {
+                workflowZipFolder = baseZipFolder.folder(workflowName);
             }
 
             console.log(`[Export][${item.name}] workflowData keys:`, Object.keys(workflowData));
@@ -132,16 +152,26 @@ export const exportWorkflowsToLocal = async (
 
                 if (taskType === 'SQL' && taskParams.sql) {
                     const sqlFileName = `${taskName}.sql`;
-                    const sqlFilePath = joinPath(workflowDir, sqlFileName);
-                    await writeTextFile(sqlFilePath, taskParams.sql);
+                    
+                    if (isTauri) {
+                        const sqlFilePath = joinPath(workflowDir, sqlFileName);
+                        await writeTextFile(sqlFilePath, taskParams.sql);
+                    } else if (workflowZipFolder) {
+                        workflowZipFolder.file(sqlFileName, taskParams.sql);
+                    }
                     
                     taskCopy.sqlFile = sqlFileName;
                     taskParams.sql = `Ref: ${sqlFileName}`;
                 }
                 else if (taskType === 'SEATUNNEL' && taskParams.rawScript) {
                     const confFileName = `${taskName}.conf`;
-                    const confFilePath = joinPath(workflowDir, confFileName);
-                    await writeTextFile(confFilePath, taskParams.rawScript);
+                    
+                    if (isTauri) {
+                        const confFilePath = joinPath(workflowDir, confFileName);
+                        await writeTextFile(confFilePath, taskParams.rawScript);
+                    } else if (workflowZipFolder) {
+                        workflowZipFolder.file(confFileName, taskParams.rawScript);
+                    }
                     
                     taskCopy.configFile = confFileName;
                     taskParams.rawScript = `Ref: ${confFileName}`;
@@ -150,13 +180,37 @@ export const exportWorkflowsToLocal = async (
                 simplifiedWorkflow.tasks.push(taskCopy);
             }
 
-            const workflowJsonPath = joinPath(workflowDir, 'workflow.json');
-            await writeTextFile(workflowJsonPath, JSON.stringify(simplifiedWorkflow, null, 2));
+            const workflowJsonStr = JSON.stringify(simplifiedWorkflow, null, 2);
+            if (isTauri) {
+                const workflowJsonPath = joinPath(workflowDir, 'workflow.json');
+                await writeTextFile(workflowJsonPath, workflowJsonStr);
+            } else if (workflowZipFolder) {
+                workflowZipFolder.file('workflow.json', workflowJsonStr);
+            }
 
             successCount++;
         } catch (err) {
             console.error(`Export ${item.name} failed:`, err);
         }
     }
+    
+    // 如果是 Web 模式，导出压缩包并下载
+    if (!isTauri && zip) {
+        try {
+            const blob = await zip.generateAsync({ type: 'blob' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = batchName ? `${batchName}.zip` : 'workflows_export.zip';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error('[Export] Generate zip failed:', err);
+            throw new Error(`Failed to generate Zip file: ${(err as Error).message}`);
+        }
+    }
+    
     return successCount;
 };

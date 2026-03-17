@@ -32,7 +32,10 @@ export const ConvertDdlModal: React.FC<ConvertDdlModalProps> = ({
         }
     }, [isOpen, defaultFileName]);
 
+    const isTauri = typeof window !== 'undefined' && (!!(window as any).__TAURI_INTERNALS__ || !!(window as any).__TAURI__);
+
     const handleBrowseFolder = async () => {
+        if (!isTauri) return;
         try {
             const selected = await open({
                 directory: true,
@@ -77,35 +80,37 @@ export const ConvertDdlModal: React.FC<ConvertDdlModalProps> = ({
                 {/* Body */}
                 <div className="p-6 space-y-6">
                     {/* File Path Input */}
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block">
-                            {t('dbViewer.savePath')}
-                        </label>
-                        <div className="flex space-x-2">
-                            <div className="relative flex-1">
-                                <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={16} />
-                                <input
-                                    type="text"
-                                    value={filePath}
-                                    onChange={(e) => setFilePath(e.target.value)}
-                                    className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white"
-                                    placeholder={t('dbViewer.enterOrSelectSavePath')}
+                    {isTauri && (
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block">
+                                {t('dbViewer.savePath')}
+                            </label>
+                            <div className="flex space-x-2">
+                                <div className="relative flex-1">
+                                    <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={16} />
+                                    <input
+                                        type="text"
+                                        value={filePath}
+                                        onChange={(e) => setFilePath(e.target.value)}
+                                        className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white"
+                                        placeholder={t('dbViewer.enterOrSelectSavePath')}
+                                        disabled={isConverting}
+                                    />
+                                </div>
+                                <button
+                                    onClick={handleBrowseFolder}
                                     disabled={isConverting}
-                                />
+                                    className="px-3 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 rounded border border-slate-300 dark:border-slate-600 transition-colors"
+                                    title={t('dbViewer.selectFolder')}
+                                >
+                                    <FolderOpen size={18} />
+                                </button>
                             </div>
-                            <button
-                                onClick={handleBrowseFolder}
-                                disabled={isConverting}
-                                className="px-3 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 rounded border border-slate-300 dark:border-slate-600 transition-colors"
-                                title={t('dbViewer.selectFolder')}
-                            >
-                                <FolderOpen size={18} />
-                            </button>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                {t('dbViewer.allTableDDLsWillBeConvert')}
+                            </p>
                         </div>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                            {t('dbViewer.allTableDDLsWillBeConvert')}
-                        </p>
-                    </div>
+                    )}
 
                     {/* Progress Display */}
                     {(isConverting || progress) && (

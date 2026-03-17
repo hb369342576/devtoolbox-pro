@@ -41,56 +41,109 @@ export const ImportModal: React.FC<ImportModalProps> = ({show, projectCode, base
     
     // 选择目录并读取 workflow.json 文件
     const handleSelectDir = async () => {
-        try {
-            const dirPath = await open({
-                directory: true,
-                multiple: false,
-                title: t('dolphinScheduler.selectImportDir')
-            });
-            
-            if (!dirPath) return;
-            
-            setImportDir(dirPath as string);
-            
-            // 读取目录内容，查找 workflow.json 或子目录中的 workflow.json
-            const loadedWorkflows: any[] = [];
-            
+        const isTauri = typeof window !== 'undefined' && (!!(window as any).__TAURI_INTERNALS__ || !!(window as any).__TAURI__);
+
+        if (isTauri) {
             try {
-                // 尝试读取当前目录的 workflow.json
-                const workflow = await readWorkflowFromDir(dirPath as string);
-                workflow._dir = dirPath;
-                loadedWorkflows.push(workflow);
-            } catch {
-                // 不是单个工作流目录，尝试读取子目录
+                const dirPath = await open({
+                    directory: true,
+                    multiple: false,
+                    title: t('dolphinScheduler.selectImportDir')
+                });
+                
+                if (!dirPath) return;
+                
+                setImportDir(dirPath as string);
+                
+                // 读取目录内容，查找 workflow.json 或子目录中的 workflow.json
+                const loadedWorkflows: any[] = [];
+                
                 try {
-                    const entries = await readDir(dirPath as string);
-                    for (const entry of entries) {
-                        if (entry.isDirectory) {
-                            try {
-                                const workflow = await readWorkflowFromDir(`${dirPath}/${entry.name}`);
-                                workflow._dir = `${dirPath}/${entry.name}`;
-                                loadedWorkflows.push(workflow);
-                            } catch {
-                                // 子目录没有 workflow.json，跳过
+                    // 尝试读取当前目录的 workflow.json
+                    const workflow = await readWorkflowFromDir(dirPath as string);
+                    workflow._dir = dirPath;
+                    loadedWorkflows.push(workflow);
+                } catch {
+                    // 不是单个工作流目录，尝试读取子目录
+                    try {
+                        const entries = await readDir(dirPath as string);
+                        for (const entry of entries) {
+                            if (entry.isDirectory) {
+                                try {
+                                    const workflow = await readWorkflowFromDir(`${dirPath}/${entry.name}`);
+                                    workflow._dir = `${dirPath}/${entry.name}`;
+                                    loadedWorkflows.push(workflow);
+                                } catch {
+                                    // 子目录没有 workflow.json，跳过
+                                }
                             }
                         }
+                    } catch (e) {
+                        console.error('[Import] Read dir error:', e);
                     }
-                } catch (e) {
-                    console.error('[Import] Read dir error:', e);
                 }
+                
+                if (loadedWorkflows.length === 0) {
+                    toast({ title: t('dolphinScheduler.noWorkflowJsonFound'), variant: 'destructive' });
+                    return;
+                }
+                
+                setWorkflows(loadedWorkflows);
+                setSelectedIndices(loadedWorkflows.map((_, i) => i));
+                toast({ title: t('dolphinScheduler.foundWorkflows').replace('{total}', String(loadedWorkflows.length)), variant: 'success' });
+            } catch (err: any) {
+                console.error('[Import] Select dir error:', err);
+                toast({ title: t('dolphinScheduler.readDirFailed'), description: err.message, variant: 'destructive' });
             }
-            
-            if (loadedWorkflows.length === 0) {
-                toast({ title: t('dolphinScheduler.noWorkflowJsonFound'), variant: 'destructive' });
-                return;
-            }
-            
-            setWorkflows(loadedWorkflows);
-            setSelectedIndices(loadedWorkflows.map((_, i) => i));
-            toast({ title: t('dolphinScheduler.foundWorkflows').replace('{total}', String(loadedWorkflows.length)), variant: 'success' });
-        } catch (err: any) {
-            console.error('[Import] Select dir error:', err);
-            toast({ title: t('dolphinScheduler.readDirFailed'), description: err.message, variant: 'destructive' });
+        } else {
+            // Web 模式：使用原生 input 选择文件夹或多选文件
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.multiple = true;
+            input.webkitdirectory = true;
+            (input as any).directory = true;
+
+            input.onchange = async (e: any) => {
+                const files = e.target.files;
+                if (!files || files.length === 0) return;
+
+                const loadedWorkflows: any[] = [];
+                let commonDir = '';
+                
+                if (files[0].webkitRelativePath) {
+                    const parts = files[0].webkitRelativePath.split('/');
+                    if (parts.length > 0) commonDir = parts[0];
+                } else {
+                    commonDir = 'Web Upload';
+                }
+                setImportDir(commonDir);
+
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    if (file.name === 'workflow.json') {
+                        try {
+                            const text = await file.text();
+                            const workflow = JSON.parse(text);
+                            // 用相对路径来区分不同子目录的工作流
+                            let dirName = file.webkitRelativePath ? file.webkitRelativePath.split('/').slice(0, -1).join('/') : 'unknown';
+                            workflow._dir = dirName;
+                            loadedWorkflows.push(workflow);
+                        } catch (err) {
+                            console.error('[Import] Parse JSON error:', err);
+                        }
+                    }
+                }
+
+                if (loadedWorkflows.length === 0) {
+                    toast({ title: t('dolphinScheduler.noWorkflowJsonFound'), variant: 'destructive' });
+                    return;
+                }
+
+                setWorkflows(loadedWorkflows);
+                setSelectedIndices(loadedWorkflows.map((_, i) => i));
+                toast({ title: t('dolphinScheduler.foundWorkflows').replace('{total}', String(loadedWorkflows.length)), variant: 'success' });
+            };
+            input.click();
         }
     };
     
