@@ -90,7 +90,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({show, projectCode, base
                 
                 setWorkflows(loadedWorkflows);
                 setSelectedIndices(loadedWorkflows.map((_, i) => i));
-                toast({ title: t('dolphinScheduler.foundWorkflows').replace('{total}', String(loadedWorkflows.length)), variant: 'success' });
+                toast({ title: t('dolphinScheduler.foundWorkflows', { count: loadedWorkflows.length }), variant: 'success' });
             } catch (err: any) {
                 console.error('[Import] Select dir error:', err);
                 toast({ title: t('dolphinScheduler.readDirFailed'), description: err.message, variant: 'destructive' });
@@ -141,7 +141,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({show, projectCode, base
 
                 setWorkflows(loadedWorkflows);
                 setSelectedIndices(loadedWorkflows.map((_, i) => i));
-                toast({ title: t('dolphinScheduler.foundWorkflows').replace('{total}', String(loadedWorkflows.length)), variant: 'success' });
+                toast({ title: t('dolphinScheduler.foundWorkflows', { count: loadedWorkflows.length }), variant: 'success' });
             };
             input.click();
         }
@@ -185,7 +185,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({show, projectCode, base
                 }
                 
                 toast({ 
-                    title: t('dolphinScheduler.importingWorkflow').replace('{name}', workflow.name), 
+                    title: t('dolphinScheduler.importingWorkflow', { name: workflow.name }), 
                     variant: 'default' 
                 });
                 
@@ -205,7 +205,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({show, projectCode, base
                         failCount++;
                         console.error(`[Import] Failed: ${workflow.name}:`, result.msg);
                         toast({
-                            title: t('dolphinScheduler.importFailedWithName').replace('{name}', workflow.name),
+                            title: t('dolphinScheduler.importFailedWithName', { name: workflow.name }),
                             description: result.msg,
                             variant: 'destructive'
                         });
@@ -214,17 +214,18 @@ export const ImportModal: React.FC<ImportModalProps> = ({show, projectCode, base
                     failCount++;
                     console.error(`[Import] Error for ${workflow.name}:`, err);
                     toast({
-                        title: t('dolphinScheduler.importErrorWithName').replace('{name}', workflow.name),
+                        title: t('dolphinScheduler.importErrorWithName', { name: workflow.name }),
                         description: err.message,
                         variant: 'destructive'
                     });
                 }
             }
             
-            const summary = t('dolphinScheduler.importDone')
-                .replace('{success}', String(successCount))
-                .replace('{skip}', String(skipCount))
-                .replace('{fail}', String(failCount));
+            const summary = t('dolphinScheduler.importDone', {
+                success: successCount,
+                skip: skipCount,
+                fail: failCount
+            });
             
             toast({ 
                 title: summary, 
@@ -278,12 +279,15 @@ export const ImportModal: React.FC<ImportModalProps> = ({show, projectCode, base
                                     type="text" 
                                     placeholder={t('dolphinScheduler.searchWorkflows')} 
                                     value={searchTerm} 
-                                    onChange={e => setSearchTerm(e.target.value)} 
+                                    onChange={e => {
+                                        setSearchTerm(e.target.value);
+                                        setSelectedIndices([]);
+                                    }} 
                                     className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 outline-none" 
                                 />
                             </div>
                             <div className="flex items-center justify-between">
-                                <span className="text-xs text-slate-500">{t('dolphinScheduler.foundWorkflows').replace('{total}', String(workflows.length))}</span>
+                                <span className="text-xs text-slate-500">{t('dolphinScheduler.foundWorkflows', { count: workflows.length })}</span>
                                 <button onClick={handleSelectAll} className="text-xs text-purple-500 hover:text-purple-600">
                                     {selectedIndices.length === filteredWorkflows.length && filteredWorkflows.length > 0 ? t('dolphinScheduler.deselectAll') : t('dolphinScheduler.selectAll')}
                                 </button>
@@ -304,7 +308,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({show, projectCode, base
                 )}
                 
                 <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 flex justify-between items-center">
-                    <span className="text-sm text-slate-500">{workflows.length > 0 ? t('dolphinScheduler.selectedCount').replace('{count}', String(selectedIndices.length)) : ''}</span>
+                    <span className="text-sm text-slate-500">{workflows.length > 0 ? t('dolphinScheduler.selectedCount', { count: selectedIndices.length }) : ''}</span>
                     <div className="flex space-x-3">
                         <button onClick={onClose} className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg">{t('common.cancel')}</button>
                         <button onClick={handleImport} disabled={importing || workflows.length === 0 || selectedIndices.length === 0} className="px-6 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg font-medium disabled:opacity-50 flex items-center">

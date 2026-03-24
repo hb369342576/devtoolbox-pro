@@ -126,7 +126,7 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({
                 toast({ title: t('dolphinScheduler.connectSuccess'), variant: 'success' });
             } else if (result.code === 10018) {
                 setTestStatus('failed');
-                setTestErrorMsg(t('dolphinScheduler.projectNotFound').replace('{{projectName}}', editingConfig.projectName || ''));
+                setTestErrorMsg(t('dolphinScheduler.projectNotFound', { projectName: editingConfig.projectName || '' }));
             } else {
                 setTestStatus('failed');
                 setTestErrorMsg(result.msg || t('dolphinScheduler.connectFailed'));

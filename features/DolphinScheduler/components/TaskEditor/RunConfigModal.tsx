@@ -109,7 +109,7 @@ export const RunConfigModal: React.FC<RunConfigModalProps> = ({
                     {runType === 'NODE' && (
                         <div>
                             <label className="block text-sm font-medium text-blue-600 dark:text-blue-400 mb-2 bg-blue-50 dark:bg-blue-900/20 inline-block px-2 py-0.5 rounded">
-                                节点执行
+                                {t('dolphinScheduler.editor.nodeExecution')}
                             </label>
                             <div className="flex items-center space-x-6 h-9">
                                 <label className="flex items-center space-x-2 text-sm text-slate-700 dark:text-slate-300 cursor-pointer">
@@ -121,7 +121,7 @@ export const RunConfigModal: React.FC<RunConfigModalProps> = ({
                                         onChange={(e) => setConfig({...config, taskDependType: e.target.value})}
                                         className="text-blue-500 focus:ring-blue-500"
                                     />
-                                    <span>向后执行</span>
+                                    <span>{t('dolphinScheduler.editor.taskPost')}</span>
                                 </label>
                                 <label className="flex items-center space-x-2 text-sm text-slate-700 dark:text-slate-300 cursor-pointer">
                                     <input 
@@ -132,7 +132,7 @@ export const RunConfigModal: React.FC<RunConfigModalProps> = ({
                                         onChange={(e) => setConfig({...config, taskDependType: e.target.value})}
                                         className="text-blue-500 focus:ring-blue-500"
                                     />
-                                    <span>向前执行</span>
+                                    <span>{t('dolphinScheduler.editor.taskPre')}</span>
                                 </label>
                                 <label className="flex items-center space-x-2 text-sm text-slate-700 dark:text-slate-300 cursor-pointer">
                                     <input 
@@ -265,7 +265,7 @@ export const RunConfigModal: React.FC<RunConfigModalProps> = ({
                                     className="text-sm text-blue-500 hover:text-blue-600 font-medium flex items-center space-x-1"
                                     onClick={() => setStartParamsList([...startParamsList, { prop: '', value: '' }])}
                                 >
-                                    <span>+ 添加参数</span>
+                                    <span>+ {t('dolphinScheduler.editor.addParam')}</span>
                                 </button>
                             </div>
                         </div>

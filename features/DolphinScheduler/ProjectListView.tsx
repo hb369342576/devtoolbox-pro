@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import {
     ArrowLeft, Search, Folder, RefreshCw, Loader2,
-    FolderKanban, HardDrive, ListTodo, FolderOpen, Database
+    FolderKanban, HardDrive, ListTodo, FolderOpen, Database,
+    LayoutDashboard, List, Calendar, CheckCircle2, XCircle, RotateCcw
 } from 'lucide-react';
+import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Language, DolphinSchedulerConnection, DSProject, DolphinSchedulerApiVersion } from '../../types';
 import { httpFetch } from '../../utils/http';
 import { useToast } from '../common/Toast';
@@ -37,9 +39,171 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
     const [total, setTotal] = useState(0);
     const pageSize = 20;
 
+    // Overview Stats States
+    const [activeTab, setActiveTab] = useState<'overview' | 'list'>('overview');
+    const [overviewLoading, setOverviewLoading] = useState(false);
+    const [overviewStats, setOverviewStats] = useState<{success: number, failure: number, total: number}>({ success: 0, failure: 0, total: 0 });
+    const [chartData, setChartData] = useState<{name: string, value: number, state: string}[]>([]);
+    
+    // State labels for charts
+    const stateLabels: Record<string, string> = {
+        'SUCCESS': t('dolphinScheduler.stateSuccess', '成功'),
+        'SUBMITTED_SUCCESS': t('dolphinScheduler.stateSubmittedSuccess', '提交成功'),
+        'RUNNING_EXECUTION': t('dolphinScheduler.stateRunningExecution', '正在运行'),
+        'PAUSE': t('dolphinScheduler.statePause', '暂停'),
+        'FAILURE': t('dolphinScheduler.stateFailure', '失败'),
+        'NEED_FAULT_TOLERANCE': t('dolphinScheduler.stateNeedFaultTolerance', '需要容错'),
+        'KILL': t('dolphinScheduler.stateKill', 'KILL'),
+        'DELAY_EXECUTION': t('dolphinScheduler.stateDelayExecution', '延时执行'),
+        'FORCED_SUCCESS': t('dolphinScheduler.stateForcedSuccess', '强制成功'),
+        'DISPATCH': t('dolphinScheduler.stateDispatch', '派发')
+    };
+
+    const stateColors: Record<string, string> = {
+        'SUCCESS': '#10b981',
+        'SUBMITTED_SUCCESS': '#3b82f6',
+        'RUNNING_EXECUTION': '#8b5cf6',
+        'PAUSE': '#f59e0b',
+        'FAILURE': '#ef4444',
+        'NEED_FAULT_TOLERANCE': '#f97316',
+        'KILL': '#dc2626',
+        'DELAY_EXECUTION': '#a855f7',
+        'FORCED_SUCCESS': '#059669',
+        'DISPATCH': '#06b6d4'
+    };
+    
+    // Default dates (today 00:00:00 to current time)
+    const today = new Date();
+    const todayStart = new Date(today);
+    todayStart.setHours(0, 0, 0, 0);
+    
+    const formatDateTimeStr = (d: Date) => {
+        const pad = (n: number) => n < 10 ? '0' + n : n;
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    };
+    
+    // Replace 'T' with ' ' for DolphinScheduler API later
+    const [startDate, setStartDate] = useState(formatDateTimeStr(todayStart));
+    const [endDate, setEndDate] = useState(formatDateTimeStr(today));
+    const [selectedProjectCode, setSelectedProjectCode] = useState<string>('');
+    const [allProjectsList, setAllProjectsList] = useState<DSProject[]>([]);
+
     useEffect(() => {
-        fetchProjects();
-    }, [connection, pageNo]);
+        if (activeTab === 'list') {
+            fetchProjects();
+        }
+    }, [connection, pageNo, activeTab]);
+
+    useEffect(() => {
+        if (activeTab === 'overview') {
+            if (allProjectsList.length === 0) fetchAllProjects();
+            fetchOverviewStats();
+        }
+    }, [activeTab, connection]);
+
+    const handleQuery = () => {
+        const start = new Date(startDate).getTime();
+        const end = new Date(endDate).getTime();
+        
+        if (isNaN(start) || isNaN(end)) {
+            toast({ title: t('dolphinScheduler.invalidDate', '无效的日期格式'), variant: 'destructive' });
+            return;
+        }
+        if (start > end) {
+            toast({ title: t('dolphinScheduler.dateRangeError', '开始时间不能晚于结束时间'), variant: 'destructive' });
+            return;
+        }
+        fetchOverviewStats();
+    };
+
+    const handleReset = () => {
+        const now = new Date();
+        const start = new Date(now);
+        start.setHours(0, 0, 0, 0);
+        const newStart = formatDateTimeStr(start);
+        const newEnd = formatDateTimeStr(now);
+        
+        setStartDate(newStart);
+        setEndDate(newEnd);
+        setSelectedProjectCode('');
+        
+        fetchOverviewStats(newStart, newEnd, '');
+    };
+
+    const fetchAllProjects = async () => {
+        try {
+            const url = `${connection.baseUrl}/projects?pageNo=1&pageSize=10000`;
+            const response = await httpFetch(url, { headers: { 'token': connection.token } });
+            const result = await response.json();
+            if (result.code === 0) {
+                setAllProjectsList(result.data?.totalList || []);
+            }
+        } catch(err) {}
+    };
+
+    const fetchOverviewStats = async (overrideStart?: string, overrideEnd?: string, overrideProject?: string) => {
+        setOverviewLoading(true);
+        try {
+            // Transform 2024-01-01T12:00 to 2024-01-01 12:00:00
+            const formatForApi = (dt: string) => {
+                const parts = dt.replace('T', ' ').split(':');
+                if (parts.length === 2) return dt.replace('T', ' ') + ':00';
+                if (parts.length === 3) return dt.replace('T', ' ');
+                return dt + ' 00:00:00';
+            };
+            
+            const s = overrideStart !== undefined ? overrideStart : startDate;
+            const e = overrideEnd !== undefined ? overrideEnd : endDate;
+            const p = overrideProject !== undefined ? overrideProject : selectedProjectCode;
+            
+            const start = formatForApi(s);
+            const end = formatForApi(e);
+
+            let url = `${connection.baseUrl}/projects/analysis/task-state-count?startDate=${encodeURIComponent(start)}&endDate=${encodeURIComponent(end)}`;
+            if (p) {
+                url += `&projectCode=${p}`;
+            }
+            
+            const response = await httpFetch(url, { headers: { 'token': connection.token } });
+            const result = await response.json();
+            console.log('Task state API response:', result); // for debugging why it's empty
+            
+            if (result.code === 0) {
+                const dtos = result.data?.taskCountDtos || result.data?.taskInstanceStatusCounts || result.data || [];
+                let successCount = 0;
+                let failureCount = 0;
+                let totalCount = 0;
+                const items = Array.isArray(dtos) ? dtos : [];
+                
+                const newChartData: {name: string, value: number, state: string}[] = [];
+                
+                items.forEach((item: any) => {
+                    const count = item.count || 0;
+                    totalCount += count;
+                    const state = item.taskStateType || item.state || 'UNKNOWN';
+                    
+                    if (state === 'SUCCESS') successCount += count;
+                    else if (state === 'FAILURE') failureCount += count;
+                    
+                    if (count > 0) {
+                        newChartData.push({
+                            name: state, // Store raw state, translate on render
+                            value: count,
+                            state: state
+                        });
+                    }
+                });
+                setOverviewStats({ success: successCount, failure: failureCount, total: totalCount });
+                setChartData(newChartData);
+            } else {
+                toast({ title: t('common.loadFailed'), description: result.msg, variant: 'destructive' });
+            }
+        } catch(err: any) {
+            console.error(err);
+        } finally {
+            setOverviewLoading(false);
+        }
+    };
 
     const fetchProjects = async () => {
         setLoading(true);
@@ -95,21 +259,178 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                         <p className="text-xs text-slate-500 font-mono">{connection.baseUrl}</p>
                     </div>
                 </div>
-                <div className="flex items-center space-x-3">
-                    <ViewModeToggle />
-                    <Tooltip content={t('common.refresh')} position="bottom">
+                <div className="flex items-center space-x-2">
+                    {activeTab === 'list' && <ViewModeToggle />}
+                    {activeTab === 'overview' && (
+                        <>
+                            <Tooltip content={t('dolphinScheduler.reset', '重置')} position="bottom">
+                                <button
+                                    onClick={handleReset}
+                                    disabled={overviewLoading}
+                                    className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors disabled:opacity-50"
+                                >
+                                    <RotateCcw size={16} className="text-slate-500 dark:text-slate-400" />
+                                </button>
+                            </Tooltip>
+                            <Tooltip content={t('dolphinScheduler.query', '查询')} position="bottom">
+                                <button
+                                    onClick={handleQuery}
+                                    disabled={overviewLoading}
+                                    className="p-1.5 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors disabled:opacity-50"
+                                >
+                                    <Search size={16} className="text-blue-500 dark:text-blue-400" />
+                                </button>
+                            </Tooltip>
+                        </>
+                    )}
+                    <Tooltip content={t('common.refresh', '刷新')} position="bottom">
                         <button
-                            onClick={fetchProjects}
-                            disabled={loading}
-                            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors disabled:opacity-50"
+                            onClick={activeTab === 'overview' ? () => fetchOverviewStats() : fetchProjects}
+                            disabled={activeTab === 'overview' ? overviewLoading : loading}
+                            className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors disabled:opacity-50"
                         >
-                            <RefreshCw size={18} className={`text-slate-600 dark:text-slate-400 ${loading ? 'animate-spin' : ''}`} />
+                            <RefreshCw size={16} className={`text-slate-600 dark:text-slate-400 ${(activeTab === 'overview' ? overviewLoading : loading) ? 'animate-spin' : ''}`} />
                         </button>
                     </Tooltip>
                 </div>
             </div>
 
-            {/* 搜索栏和操作按钮 */}
+            {/* Tabs Navigation */}
+            <div className="flex items-center space-x-1 mb-6 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl w-fit">
+                <button
+                    onClick={() => setActiveTab('overview')}
+                    className={`px-5 py-2 rounded-lg font-bold text-sm flex items-center transition-all duration-200 ${activeTab === 'overview' ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-md transform scale-105' : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'}`}
+                >
+                    <LayoutDashboard size={18} className="mr-2" />
+                    {t('dolphinScheduler.projectOverview', '项目概览')}
+                </button>
+                <button
+                    onClick={() => setActiveTab('list')}
+                    className={`px-5 py-2 rounded-lg font-bold text-sm flex items-center transition-all duration-200 ${activeTab === 'list' ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-md transform scale-105' : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'}`}
+                >
+                    <List size={18} className="mr-2" />
+                    {t('dolphinScheduler.projectList', '项目列表')}
+                </button>
+            </div>
+
+            {activeTab === 'overview' ? (
+                <div className="flex-1 flex flex-col space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500 overflow-y-auto custom-scrollbar pr-2">
+                    {/* Compact Filter Box */}
+                    <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                        <div className="flex flex-wrap items-center gap-4">
+                            <div className="flex items-center space-x-2">
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">{t('common.startDate', 'Start Date')}</label>
+                                <input 
+                                    type="datetime-local"
+                                    step="1"
+                                    value={startDate}
+                                    onChange={e => setStartDate(e.target.value)}
+                                    className="pl-2 pr-2 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md text-sm focus:ring-2 focus:ring-blue-500 outline-none w-[210px] [color-scheme:light] dark:[color-scheme:dark] text-blue-600 dark:text-blue-400 font-medium"
+                                />
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">{t('common.endDate', 'End Date')}</label>
+                                <input 
+                                    type="datetime-local"
+                                    step="1"
+                                    value={endDate}
+                                    onChange={e => setEndDate(e.target.value)}
+                                    className="pl-2 pr-2 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md text-sm focus:ring-2 focus:ring-blue-500 outline-none w-[210px] [color-scheme:light] dark:[color-scheme:dark] text-blue-600 dark:text-blue-400 font-medium"
+                                />
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">{t('dolphinScheduler.selectProject', 'Select Project')}</label>
+                                <select
+                                    value={selectedProjectCode}
+                                    onChange={e => setSelectedProjectCode(e.target.value)}
+                                    className="pl-2 pr-6 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md text-sm focus:ring-2 focus:ring-blue-500 outline-none text-blue-600 dark:text-blue-400 font-medium min-w-[160px]"
+                                >
+                                    <option value="">{t('common.allProjects', 'All Projects')}</option>
+                                    {allProjectsList.map(p => (
+                                        <option key={p.code} value={p.code}>{p.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Chart Container */}
+                    <div className="flex flex-col lg:flex-row gap-6">
+                        {/* Left: Pie Chart */}
+                        <div className="w-[500px] shrink-0 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5 h-[360px] flex flex-col">
+                            <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">{t('dolphinScheduler.taskStatusDistribution', '任务状态分布')}</h3>
+                            {chartData.length > 0 ? (
+                                <div className="flex-1">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <PieChart>
+                                            <Pie
+                                                data={chartData.map(d => ({ ...d, name: stateLabels[d.state] || d.state }))}
+                                                cx="45%"
+                                                cy="50%"
+                                                innerRadius={65}
+                                                outerRadius={105}
+                                                paddingAngle={2}
+                                                dataKey="value"
+                                            >
+                                                {chartData.map((entry, index) => (
+                                                    <Cell key={`cell-${index}`} fill={stateColors[entry.state] || '#94a3b8'} />
+                                                ))}
+                                            </Pie>
+                                            <RechartsTooltip 
+                                                formatter={(value, name) => [value, name]}
+                                                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                            />
+                                            <Legend 
+                                                layout="vertical" 
+                                                verticalAlign="middle" 
+                                                align="right"
+                                                iconType="circle"
+                                                wrapperStyle={{ fontSize: '12px', color: '#64748b' }}
+                                            />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            ) : (
+                                <div className="flex-1 flex items-center justify-center text-slate-400 text-sm italic">
+                                    {overviewLoading ? t('common.loading', '加载中...') : t('common.noData', '暂无数据')}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Right: Summary Cards */}
+                        <div className="w-[320px] shrink-0 flex flex-col gap-4">
+                            <div className="bg-gradient-to-br from-blue-500 to-indigo-600 p-5 rounded-xl shadow-md relative overflow-hidden group h-[110px] flex flex-col justify-center">
+                                <div className="absolute right-0 top-0 w-24 h-24 bg-white/10 rounded-full blur-xl -mr-8 -mt-8 group-hover:bg-white/20 transition-all duration-500" />
+                                <h3 className="text-white/80 font-medium text-sm mb-1 z-10">{t('dolphinScheduler.totalTasks', '任务总数')}</h3>
+                                <div className="flex items-end justify-between z-10">
+                                    <span className="text-3xl font-bold text-white">{overviewStats.total}</span>
+                                    <ListTodo size={24} className="text-white/40 mb-1" />
+                                </div>
+                            </div>
+
+                            <div className="bg-gradient-to-br from-emerald-400 to-green-600 p-5 rounded-xl shadow-md relative overflow-hidden group h-[110px] flex flex-col justify-center">
+                                <div className="absolute right-0 top-0 w-24 h-24 bg-white/10 rounded-full blur-xl -mr-8 -mt-8 group-hover:bg-white/20 transition-all duration-500" />
+                                <h3 className="text-white/80 font-medium text-sm mb-1 z-10">{t('dolphinScheduler.successTasks', '成功任务数')}</h3>
+                                <div className="flex items-end justify-between z-10">
+                                    <span className="text-3xl font-bold text-white">{overviewStats.success}</span>
+                                    <CheckCircle2 size={24} className="text-white/40 mb-1" />
+                                </div>
+                            </div>
+
+                            <div className="bg-gradient-to-br from-red-400 to-rose-600 p-5 rounded-xl shadow-md relative overflow-hidden group h-[110px] flex flex-col justify-center">
+                                <div className="absolute right-0 top-0 w-24 h-24 bg-white/10 rounded-full blur-xl -mr-8 -mt-8 group-hover:bg-white/20 transition-all duration-500" />
+                                <h3 className="text-white/80 font-medium text-sm mb-1 z-10">{t('dolphinScheduler.failedTasks', '失败任务数')}</h3>
+                                <div className="flex items-end justify-between z-10">
+                                    <span className="text-3xl font-bold text-white">{overviewStats.failure}</span>
+                                    <XCircle size={24} className="text-white/40 mb-1" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            ) : (
+                <>
+                    {/* 搜索栏和操作按钮 */}
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center space-x-3">
                     <div className="relative">
@@ -250,6 +571,8 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                         {t('dolphinScheduler.next')}
                     </button>
                 </div>
+            )}
+                </>
             )}
         </div>
     );

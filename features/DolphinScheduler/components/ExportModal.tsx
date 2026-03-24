@@ -3,7 +3,8 @@ import { Download, XCircle, Search, Loader2, FolderOpen } from 'lucide-react';
 import { useToast } from '../../common/Toast';
 import { Tooltip } from '../../common/Tooltip';
 import { open } from '@tauri-apps/plugin-dialog';
-import { exportWorkflowsToLocal } from '../utils';
+import { exportWorkflowsToLocal, getWorkflowApiPath } from '../utils';
+import { httpFetch } from '../../../utils/http';
 import { Language, ProcessDefinition } from '../types';
 import { DolphinSchedulerApiVersion } from '../../../types';
 import { useTranslation } from "react-i18next";
@@ -28,6 +29,8 @@ export const ExportModal: React.FC<ExportModalProps> = ({show, processes, projec
     const [fileName, setFileName] = useState(projectName || 'workflows_export');
     const [targetDir, setTargetDir] = useState<string>('');
     const [exportVersion, setExportVersion] = useState<DolphinSchedulerApiVersion>(apiVersion || 'v3.2');
+    const [allProcesses, setAllProcesses] = useState<ProcessDefinition[]>([]);
+    const [loading, setLoading] = useState(false);
     
     useEffect(() => {
         if (show) {
@@ -36,8 +39,27 @@ export const ExportModal: React.FC<ExportModalProps> = ({show, processes, projec
             setFileName(projectName || 'workflows_export');
             setTargetDir('');
             setExportVersion(apiVersion || 'v3.2');
+            
+            const fetchAll = async () => {
+                setLoading(true);
+                try {
+                    const apiPath = getWorkflowApiPath(apiVersion);
+                    const url = `${baseUrl}/projects/${projectCode}/${apiPath}?pageNo=1&pageSize=9999`;
+                    const response = await httpFetch(url, { headers: { token } });
+                    const json = await response.json();
+                    if (json.code === 0) {
+                        const list = json.data?.totalList || (Array.isArray(json.data) ? json.data : []);
+                        setAllProcesses(list);
+                    }
+                } catch (e) {
+                    console.error('Fetch all processes failed:', e);
+                } finally {
+                    setLoading(false);
+                }
+            };
+            fetchAll();
         }
-    }, [show, projectName, apiVersion]);
+    }, [show, projectName, apiVersion, baseUrl, projectCode, token]);
     
     const isTauri = typeof window !== 'undefined' && (!!(window as any).__TAURI_INTERNALS__ || !!(window as any).__TAURI__);
 
@@ -59,7 +81,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({show, processes, projec
     
     if (!show) return null;
     
-    const filteredProcesses = processes.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    const filteredProcesses = allProcesses.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
     
     const handleSelectAll = () => {
         if (selectedCodes.length === filteredProcesses.length) {
@@ -83,7 +105,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({show, processes, projec
         setExporting(true);
         try {
             const items = selectedCodes.map(code => {
-                const process = processes.find(p => p.code === code);
+                const process = allProcesses.find(p => p.code === code);
                 return { code, name: process?.name || `workflow_${code}` };
             });
 
@@ -101,7 +123,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({show, processes, projec
                 exportVersion
             );
             
-            toast({ title: t('dolphinScheduler.exportSuccessWithCount').replace('{count}', String(count)), variant: 'success' });
+            toast({ title: t('dolphinScheduler.exportSuccessWithCount', { count }), variant: 'success' });
             onClose();
         } catch (err: any) {
             console.error('[Export] Error:', err);
@@ -128,7 +150,10 @@ export const ExportModal: React.FC<ExportModalProps> = ({show, processes, projec
                             type="text" 
                             placeholder={t('dolphinScheduler.searchWorkflows')} 
                             value={searchTerm} 
-                            onChange={e => setSearchTerm(e.target.value)} 
+                            onChange={e => {
+                                setSearchTerm(e.target.value);
+                                setSelectedCodes([]);
+                            }} 
                             className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 outline-none" 
                         />
                     </div>
@@ -180,7 +205,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({show, processes, projec
                         </p>
                     </div>
                     <div className="flex items-center justify-between">
-                        <span className="text-xs text-slate-500">{t('dolphinScheduler.foundWorkflows').replace('{total}', String(processes.length))}</span>
+                        <span className="text-xs text-slate-500">{t('dolphinScheduler.foundWorkflows', { count: allProcesses.length })}</span>
                         <button onClick={handleSelectAll} className="text-xs text-purple-500 hover:text-purple-600">
                             {selectedCodes.length === filteredProcesses.length && filteredProcesses.length > 0 ? t('dolphinScheduler.deselectAll') : t('dolphinScheduler.selectAll')}
                         </button>
@@ -188,18 +213,23 @@ export const ExportModal: React.FC<ExportModalProps> = ({show, processes, projec
                 </div>
                 <div className="p-4 h-[250px] overflow-y-auto">
                     <div className="space-y-1">
-                        {filteredProcesses.map(p => (
-                            <label key={p.code} className="flex items-center p-2 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-lg cursor-pointer">
-                                <input type="checkbox" checked={selectedCodes.includes(p.code)} onChange={e => setSelectedCodes(e.target.checked ? [...selectedCodes, p.code] : selectedCodes.filter(c => c !== p.code))} className="mr-3 accent-purple-500" />
-                                <span className="text-slate-700 dark:text-slate-300 text-sm flex-1">{p.name}</span>
-                                <span className={`text-xs px-2 py-0.5 rounded ${p.releaseState === 'ONLINE' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>{p.releaseState}</span>
-                            </label>
-                        ))}
-                        {filteredProcesses.length === 0 && <p className="text-slate-400 text-center py-4 text-sm">{t('dolphinScheduler.noMatchingWorkflows')}</p>}
+                        {loading ? (
+                            <div className="flex justify-center py-10"><Loader2 className="animate-spin text-purple-500" size={24} /></div>
+                        ) : filteredProcesses.length === 0 ? (
+                            <p className="text-slate-400 text-center py-4 text-sm">{t('dolphinScheduler.noMatchingWorkflows')}</p>
+                        ) : (
+                            filteredProcesses.map(p => (
+                                <label key={p.code} className="flex items-center p-2 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-lg cursor-pointer">
+                                    <input type="checkbox" checked={selectedCodes.includes(p.code)} onChange={e => setSelectedCodes(e.target.checked ? [...selectedCodes, p.code] : selectedCodes.filter(c => c !== p.code))} className="mr-3 accent-purple-500" />
+                                    <span className="text-slate-700 dark:text-slate-300 text-sm flex-1">{p.name}</span>
+                                    <span className={`text-xs px-2 py-0.5 rounded ${p.releaseState === 'ONLINE' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>{p.releaseState}</span>
+                                </label>
+                            ))
+                        )}
                     </div>
                 </div>
                 <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 flex justify-between items-center">
-                    <span className="text-sm text-slate-500">{t('dolphinScheduler.selectedCount').replace('{count}', String(selectedCodes.length))}</span>
+                    <span className="text-sm text-slate-500">{t('dolphinScheduler.selectedCount', { count: selectedCodes.length })}</span>
                     <div className="flex space-x-3">
                         <button onClick={onClose} className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg">{t('common.cancel')}</button>
                         <button onClick={handleExport} disabled={exporting || selectedCodes.length === 0} className="px-6 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg font-medium disabled:opacity-50 flex items-center">

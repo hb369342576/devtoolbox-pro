@@ -25,21 +25,42 @@ export const BatchPublishModal: React.FC<BatchPublishModalProps> = ({show, proce
     const [selectedCodes, setSelectedCodes] = useState<number[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [action, setAction] = useState<'ONLINE' | 'OFFLINE'>('ONLINE');
+    const [allProcesses, setAllProcesses] = useState<ProcessDefinition[]>([]);
+    const [loading, setLoading] = useState(false);
     
     useEffect(() => {
         if (show) {
             setSelectedCodes([]);
             setSearchTerm('');
             setAction('ONLINE');
+            
+            const fetchAll = async () => {
+                setLoading(true);
+                try {
+                    const apiPath = getWorkflowApiPath(apiVersion);
+                    const url = `${baseUrl}/projects/${projectCode}/${apiPath}?pageNo=1&pageSize=9999`;
+                    const response = await httpFetch(url, { headers: { token } });
+                    const json = await response.json();
+                    if (json.code === 0) {
+                        const list = json.data?.totalList || (Array.isArray(json.data) ? json.data : []);
+                        setAllProcesses(list);
+                    }
+                } catch (e) {
+                    console.error('Fetch all processes failed:', e);
+                } finally {
+                    setLoading(false);
+                }
+            };
+            fetchAll();
         }
-    }, [show, processes]);
+    }, [show, baseUrl, projectCode, token, apiVersion]);
     
     if (!show) return null;
     
     // 根据操作类型过滤工作流
     const targetProcesses = action === 'ONLINE' 
-        ? processes.filter(p => p.releaseState === 'OFFLINE')
-        : processes.filter(p => p.releaseState === 'ONLINE');
+        ? allProcesses.filter(p => p.releaseState === 'OFFLINE')
+        : allProcesses.filter(p => p.releaseState === 'ONLINE');
     const filteredProcesses = targetProcesses.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
     
     const handleSelectAll = () => {
@@ -75,10 +96,11 @@ export const BatchPublishModal: React.FC<BatchPublishModalProps> = ({show, proce
         
         setProcessing(false);
         const actionText = action === 'ONLINE' ? t('dolphinScheduler.states.online') : t('dolphinScheduler.states.offline');
-        const summary = t('dolphinScheduler.batchActionComplete')
-            .replace('{action}', actionText)
-            .replace('{success}', String(success))
-            .replace('{fail}', String(failed));
+        const summary = t('dolphinScheduler.batchActionComplete', {
+            action: actionText,
+            success,
+            fail: failed
+        });
             
         toast({ title: summary, variant: failed > 0 ? 'destructive' : 'success' });
         onSuccess();
@@ -117,15 +139,18 @@ export const BatchPublishModal: React.FC<BatchPublishModalProps> = ({show, proce
                             type="text" 
                             placeholder={t('dolphinScheduler.searchWorkflows')} 
                             value={searchTerm} 
-                            onChange={e => setSearchTerm(e.target.value)} 
+                            onChange={e => {
+                                setSearchTerm(e.target.value);
+                                setSelectedCodes([]);
+                            }} 
                             className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none" 
                         />
                     </div>
                     <div className="flex items-center justify-between">
                         <span className="text-xs text-slate-500">
                             {action === 'ONLINE' 
-                                ? t('dolphinScheduler.canOnlineCount').replace('{total}', String(targetProcesses.length))
-                                : t('dolphinScheduler.canOfflineCount').replace('{total}', String(targetProcesses.length))}
+                                ? t('dolphinScheduler.canOnlineCount', { count: targetProcesses.length })
+                                : t('dolphinScheduler.canOfflineCount', { count: targetProcesses.length })}
                         </span>
                         <button onClick={handleSelectAll} className="text-xs text-green-500 hover:text-green-600">
                             {selectedCodes.length === filteredProcesses.length && filteredProcesses.length > 0 ? t('dolphinScheduler.deselectAll') : t('dolphinScheduler.selectAll')}
@@ -134,18 +159,23 @@ export const BatchPublishModal: React.FC<BatchPublishModalProps> = ({show, proce
                 </div>
                 <div className="p-4 h-[300px] overflow-y-auto">
                     <div className="space-y-1">
-                        {filteredProcesses.map(p => (
-                            <label key={p.code} className="flex items-center p-2 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-lg cursor-pointer">
-                                <input type="checkbox" checked={selectedCodes.includes(p.code)} onChange={e => setSelectedCodes(e.target.checked ? [...selectedCodes, p.code] : selectedCodes.filter(c => c !== p.code))} className="mr-3 accent-green-500" />
-                                <span className="text-slate-700 dark:text-slate-300 text-sm flex-1">{p.name}</span>
-                                <span className={`text-xs px-2 py-0.5 rounded ${p.releaseState === 'ONLINE' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>{p.releaseState}</span>
-                            </label>
-                        ))}
-                        {filteredProcesses.length === 0 && <p className="text-slate-400 text-center py-4 text-sm">{searchTerm ? t('dolphinScheduler.noMatchingWorkflows') : (action === 'ONLINE' ? t('dolphinScheduler.noOfflineWorkflows') : t('dolphinScheduler.noOnlineWorkflows'))}</p>}
+                        {loading ? (
+                            <div className="flex justify-center py-10"><Loader2 className="animate-spin text-green-500" size={24} /></div>
+                        ) : filteredProcesses.length === 0 ? (
+                            <p className="text-slate-400 text-center py-4 text-sm">{searchTerm ? t('dolphinScheduler.noMatchingWorkflows') : (action === 'ONLINE' ? t('dolphinScheduler.noOfflineWorkflows') : t('dolphinScheduler.noOnlineWorkflows'))}</p>
+                        ) : (
+                            filteredProcesses.map(p => (
+                                <label key={p.code} className="flex items-center p-2 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-lg cursor-pointer">
+                                    <input type="checkbox" checked={selectedCodes.includes(p.code)} onChange={e => setSelectedCodes(e.target.checked ? [...selectedCodes, p.code] : selectedCodes.filter(c => c !== p.code))} className="mr-3 accent-green-500" />
+                                    <span className="text-slate-700 dark:text-slate-300 text-sm flex-1">{p.name}</span>
+                                    <span className={`text-xs px-2 py-0.5 rounded ${p.releaseState === 'ONLINE' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>{p.releaseState}</span>
+                                </label>
+                            ))
+                        )}
                     </div>
                 </div>
                 <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 flex justify-between items-center">
-                    <span className="text-sm text-slate-500">{t('dolphinScheduler.selectedCount').replace('{count}', String(selectedCodes.length))}</span>
+                    <span className="text-sm text-slate-500">{t('dolphinScheduler.selectedCount', { count: selectedCodes.length })}</span>
                     <div className="flex space-x-3">
                         <button onClick={onClose} className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg">{t('common.cancel')}</button>
                         <button onClick={handleBatchPublish} disabled={processing || selectedCodes.length === 0} className={`px-6 py-2 text-white rounded-lg font-medium disabled:opacity-50 flex items-center ${action === 'ONLINE' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}`}>

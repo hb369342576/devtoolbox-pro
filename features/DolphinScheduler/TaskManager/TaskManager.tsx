@@ -272,6 +272,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ currentProject, config
                             setPageSize={setPageSize}
                             selectedProcesses={selectedProcesses}
                             setSelectedProcesses={setSelectedProcesses}
+                            onDetail={setEditProcess}
                             onEdit={setEditProcess}
                             onCopy={handleCopyWorkflow}
                             onRun={(p: any) => setRunProcess(p)}
