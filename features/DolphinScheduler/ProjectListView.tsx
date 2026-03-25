@@ -47,16 +47,16 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
     
     // State labels for charts
     const stateLabels: Record<string, string> = {
-        'SUCCESS': t('dolphinScheduler.stateSuccess', '成功'),
-        'SUBMITTED_SUCCESS': t('dolphinScheduler.stateSubmittedSuccess', '提交成功'),
-        'RUNNING_EXECUTION': t('dolphinScheduler.stateRunningExecution', '正在运行'),
-        'PAUSE': t('dolphinScheduler.statePause', '暂停'),
-        'FAILURE': t('dolphinScheduler.stateFailure', '失败'),
-        'NEED_FAULT_TOLERANCE': t('dolphinScheduler.stateNeedFaultTolerance', '需要容错'),
-        'KILL': t('dolphinScheduler.stateKill', 'KILL'),
-        'DELAY_EXECUTION': t('dolphinScheduler.stateDelayExecution', '延时执行'),
-        'FORCED_SUCCESS': t('dolphinScheduler.stateForcedSuccess', '强制成功'),
-        'DISPATCH': t('dolphinScheduler.stateDispatch', '派发')
+        'SUCCESS': t('dolphinScheduler.stateSuccess'),
+        'SUBMITTED_SUCCESS': t('dolphinScheduler.stateSubmittedSuccess'),
+        'RUNNING_EXECUTION': t('dolphinScheduler.stateRunningExecution'),
+        'PAUSE': t('dolphinScheduler.statePause'),
+        'FAILURE': t('dolphinScheduler.stateFailure'),
+        'NEED_FAULT_TOLERANCE': t('dolphinScheduler.stateNeedFaultTolerance'),
+        'KILL': t('dolphinScheduler.stateKill'),
+        'DELAY_EXECUTION': t('dolphinScheduler.stateDelayExecution'),
+        'FORCED_SUCCESS': t('dolphinScheduler.stateForcedSuccess'),
+        'DISPATCH': t('dolphinScheduler.stateDispatch')
     };
 
     const stateColors: Record<string, string> = {
@@ -106,11 +106,11 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
         const end = new Date(endDate).getTime();
         
         if (isNaN(start) || isNaN(end)) {
-            toast({ title: t('dolphinScheduler.invalidDate', '无效的日期格式'), variant: 'destructive' });
+            toast({ title: t('dolphinScheduler.invalidDate'), variant: 'destructive' });
             return;
         }
         if (start > end) {
-            toast({ title: t('dolphinScheduler.dateRangeError', '开始时间不能晚于结束时间'), variant: 'destructive' });
+            toast({ title: t('dolphinScheduler.dateRangeError'), variant: 'destructive' });
             return;
         }
         fetchOverviewStats();
@@ -263,7 +263,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                     {activeTab === 'list' && <ViewModeToggle />}
                     {activeTab === 'overview' && (
                         <>
-                            <Tooltip content={t('dolphinScheduler.reset', '重置')} position="bottom">
+                            <Tooltip content={t('dolphinScheduler.reset')} position="bottom">
                                 <button
                                     onClick={handleReset}
                                     disabled={overviewLoading}
@@ -272,7 +272,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                                     <RotateCcw size={16} className="text-slate-500 dark:text-slate-400" />
                                 </button>
                             </Tooltip>
-                            <Tooltip content={t('dolphinScheduler.query', '查询')} position="bottom">
+                            <Tooltip content={t('dolphinScheduler.query')} position="bottom">
                                 <button
                                     onClick={handleQuery}
                                     disabled={overviewLoading}
@@ -283,7 +283,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                             </Tooltip>
                         </>
                     )}
-                    <Tooltip content={t('common.refresh', '刷新')} position="bottom">
+                    <Tooltip content={t('common.refresh')} position="bottom">
                         <button
                             onClick={activeTab === 'overview' ? () => fetchOverviewStats() : fetchProjects}
                             disabled={activeTab === 'overview' ? overviewLoading : loading}
@@ -302,14 +302,14 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                     className={`px-5 py-2 rounded-lg font-bold text-sm flex items-center transition-all duration-200 ${activeTab === 'overview' ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-md transform scale-105' : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'}`}
                 >
                     <LayoutDashboard size={18} className="mr-2" />
-                    {t('dolphinScheduler.projectOverview', '项目概览')}
+                    {t('dolphinScheduler.projectOverview')}
                 </button>
                 <button
                     onClick={() => setActiveTab('list')}
                     className={`px-5 py-2 rounded-lg font-bold text-sm flex items-center transition-all duration-200 ${activeTab === 'list' ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-md transform scale-105' : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'}`}
                 >
                     <List size={18} className="mr-2" />
-                    {t('dolphinScheduler.projectList', '项目列表')}
+                    {t('dolphinScheduler.projectList')}
                 </button>
             </div>
 
@@ -319,7 +319,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                     <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
                         <div className="flex flex-wrap items-center gap-4">
                             <div className="flex items-center space-x-2">
-                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">{t('common.startDate', 'Start Date')}</label>
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">{t('common.startDate')}</label>
                                 <input 
                                     type="datetime-local"
                                     step="1"
@@ -329,7 +329,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                                 />
                             </div>
                             <div className="flex items-center space-x-2">
-                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">{t('common.endDate', 'End Date')}</label>
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">{t('common.endDate')}</label>
                                 <input 
                                     type="datetime-local"
                                     step="1"
@@ -339,13 +339,13 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                                 />
                             </div>
                             <div className="flex items-center space-x-2">
-                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">{t('dolphinScheduler.selectProject', 'Select Project')}</label>
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">{t('dolphinScheduler.selectProject')}</label>
                                 <select
                                     value={selectedProjectCode}
                                     onChange={e => setSelectedProjectCode(e.target.value)}
                                     className="pl-2 pr-6 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md text-sm focus:ring-2 focus:ring-blue-500 outline-none text-blue-600 dark:text-blue-400 font-medium min-w-[160px]"
                                 >
-                                    <option value="">{t('common.allProjects', 'All Projects')}</option>
+                                    <option value="">{t('common.allProjects')}</option>
                                     {allProjectsList.map(p => (
                                         <option key={p.code} value={p.code}>{p.name}</option>
                                     ))}
@@ -358,7 +358,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                     <div className="flex flex-col lg:flex-row gap-6">
                         {/* Left: Pie Chart */}
                         <div className="w-[500px] shrink-0 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5 h-[360px] flex flex-col">
-                            <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">{t('dolphinScheduler.taskStatusDistribution', '任务状态分布')}</h3>
+                            <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">{t('dolphinScheduler.taskStatusDistribution')}</h3>
                             {chartData.length > 0 ? (
                                 <div className="flex-1">
                                     <ResponsiveContainer width="100%" height="100%">
@@ -392,7 +392,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                                 </div>
                             ) : (
                                 <div className="flex-1 flex items-center justify-center text-slate-400 text-sm italic">
-                                    {overviewLoading ? t('common.loading', '加载中...') : t('common.noData', '暂无数据')}
+                                    {overviewLoading ? t('common.loading') : t('common.noData')}
                                 </div>
                             )}
                         </div>
@@ -401,7 +401,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                         <div className="w-[320px] shrink-0 flex flex-col gap-4">
                             <div className="bg-gradient-to-br from-blue-500 to-indigo-600 p-5 rounded-xl shadow-md relative overflow-hidden group h-[110px] flex flex-col justify-center">
                                 <div className="absolute right-0 top-0 w-24 h-24 bg-white/10 rounded-full blur-xl -mr-8 -mt-8 group-hover:bg-white/20 transition-all duration-500" />
-                                <h3 className="text-white/80 font-medium text-sm mb-1 z-10">{t('dolphinScheduler.totalTasks', '任务总数')}</h3>
+                                <h3 className="text-white/80 font-medium text-sm mb-1 z-10">{t('dolphinScheduler.totalTasks')}</h3>
                                 <div className="flex items-end justify-between z-10">
                                     <span className="text-3xl font-bold text-white">{overviewStats.total}</span>
                                     <ListTodo size={24} className="text-white/40 mb-1" />
@@ -410,7 +410,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
 
                             <div className="bg-gradient-to-br from-emerald-400 to-green-600 p-5 rounded-xl shadow-md relative overflow-hidden group h-[110px] flex flex-col justify-center">
                                 <div className="absolute right-0 top-0 w-24 h-24 bg-white/10 rounded-full blur-xl -mr-8 -mt-8 group-hover:bg-white/20 transition-all duration-500" />
-                                <h3 className="text-white/80 font-medium text-sm mb-1 z-10">{t('dolphinScheduler.successTasks', '成功任务数')}</h3>
+                                <h3 className="text-white/80 font-medium text-sm mb-1 z-10">{t('dolphinScheduler.successTasks')}</h3>
                                 <div className="flex items-end justify-between z-10">
                                     <span className="text-3xl font-bold text-white">{overviewStats.success}</span>
                                     <CheckCircle2 size={24} className="text-white/40 mb-1" />
@@ -419,7 +419,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
 
                             <div className="bg-gradient-to-br from-red-400 to-rose-600 p-5 rounded-xl shadow-md relative overflow-hidden group h-[110px] flex flex-col justify-center">
                                 <div className="absolute right-0 top-0 w-24 h-24 bg-white/10 rounded-full blur-xl -mr-8 -mt-8 group-hover:bg-white/20 transition-all duration-500" />
-                                <h3 className="text-white/80 font-medium text-sm mb-1 z-10">{t('dolphinScheduler.failedTasks', '失败任务数')}</h3>
+                                <h3 className="text-white/80 font-medium text-sm mb-1 z-10">{t('dolphinScheduler.failedTasks')}</h3>
                                 <div className="flex items-end justify-between z-10">
                                     <span className="text-3xl font-bold text-white">{overviewStats.failure}</span>
                                     <XCircle size={24} className="text-white/40 mb-1" />

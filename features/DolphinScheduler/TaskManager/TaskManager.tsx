@@ -11,7 +11,9 @@ import { TaskInstanceTab } from './TaskInstanceTab';
 import { TaskManagerProps, TabType } from './types';
 import { TaskEditor, GlobalSettingsModal, BatchRunModal, BatchPublishModal, ExportModal, ImportModal, LogModal } from '../components';
 import { CreateK8sDialog } from './CreateK8sDialog';
+import { CreateWorkflowDialog } from './CreateWorkflowDialog';
 import { RunWorkflowModal } from './RunWorkflowModal';
+import { NODE_TYPES } from '../components/TaskEditor/types';
 import { httpFetch } from '../../../utils/http';
 import { getWorkflowApiPath, getExecutorStartPath, getWorkflowCodeParamName } from '../utils';
 
@@ -26,7 +28,8 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ currentProject, config
         activeTab, setActiveTab, resolvedProjectCode, handleRefresh
     } = useTaskManagerData(currentProject);
 
-    const [showCreateK8s, setShowCreateK8s] = useState(false);
+    const [createNodeType, setCreateNodeType] = useState<string | null>(null);
+    const [showCreateDropdown, setShowCreateDropdown] = useState(false);
     const [showBatchRun, setShowBatchRun] = useState(false);
     const [showBatchPublish, setShowBatchPublish] = useState(false);
     const [showExport, setShowExport] = useState(false);
@@ -199,9 +202,35 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ currentProject, config
                 <div className="flex justify-between items-center px-6 mb-4">
                     <div className="flex items-center space-x-3">
                         {activeTab === 'workflow-definition' && (
-                            <button onClick={() => setShowCreateK8s(true)} className="p-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 shadow-sm transition-all" title={t('dolphinScheduler.newK8sWorkflow')}>
-                                <Plus size={18} />
-                            </button>
+                            <div className="relative">
+                                <button
+                                    onClick={() => setShowCreateDropdown(v => !v)}
+                                    className="p-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 shadow-sm transition-all flex items-center"
+                                    title={t('dolphinScheduler.newWorkflow', { defaultValue: '新建工作流' })}
+                                >
+                                    <Plus size={18} />
+                                </button>
+                                {showCreateDropdown && (
+                                    <>
+                                        <div className="fixed inset-0 z-40" onClick={() => setShowCreateDropdown(false)} />
+                                        <div className="absolute top-full left-0 mt-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg rounded-lg py-1 z-50 min-w-[160px]">
+                                            {NODE_TYPES.map(type => (
+                                                <button
+                                                    key={type.id}
+                                                    onClick={() => {
+                                                        setShowCreateDropdown(false);
+                                                        setCreateNodeType(type.id);
+                                                    }}
+                                                    className="w-full text-left px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center text-sm text-slate-700 dark:text-slate-200 transition-colors"
+                                                >
+                                                    <type.icon size={16} className="mr-3" style={{ color: type.color }} />
+                                                    {t(`dolphinScheduler.nodeTypeMap.${type.id}`, { defaultValue: type.name })}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </>
+                                )}
+                            </div>
                         )}
                         <div className="relative group">
                             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
@@ -324,7 +353,14 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ currentProject, config
             </div>
 
             {/* 各类弹窗 */}
-            {showCreateK8s && <CreateK8sDialog currentProject={currentProject} onClose={() => setShowCreateK8s(false)} onSuccess={handleRefresh} />}
+            {createNodeType && currentProject && (
+                <CreateWorkflowDialog
+                    currentProject={currentProject}
+                    nodeType={createNodeType}
+                    onClose={() => setCreateNodeType(null)}
+                    onSuccess={handleRefresh}
+                />
+            )}
             <GlobalSettingsModal show={showConfigModal} onClose={() => setShowConfigModal(false)} onSave={() => {}} />
 
             {/* 运行配置弹窗 */}

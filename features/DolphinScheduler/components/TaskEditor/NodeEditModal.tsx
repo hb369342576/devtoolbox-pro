@@ -2,6 +2,7 @@ import React from 'react';
 import { X, Settings, Coffee, Database, Workflow, Terminal, FileCode, GitBranch } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { TaskNode, getNodeType, NODE_TYPES } from './types';
+import { SqlNodeForm, JavaNodeForm, PythonNodeForm, ShellNodeForm, SeaTunnelNodeForm, DependentNodeForm, K8sNodeForm } from '../nodes';
 
 interface NodeEditModalProps {
     editingNode: TaskNode;
@@ -13,6 +14,7 @@ interface NodeEditModalProps {
     environments: { code: number; name: string }[];
     datasources: { id: number; name: string; type: string }[];
     workflowName: string;
+    projectConfig?: any;
 }
 
 export const NodeEditModal: React.FC<NodeEditModalProps> = ({
@@ -24,7 +26,8 @@ export const NodeEditModal: React.FC<NodeEditModalProps> = ({
     workerGroups,
     environments,
     datasources,
-    workflowName
+    workflowName,
+    projectConfig
 }) => {
     const { t } = useTranslation();
 
@@ -133,156 +136,70 @@ export const NodeEditModal: React.FC<NodeEditModalProps> = ({
                         
                         {/* SQL 节点配置 */}
                         {editingNode.taskType.toLowerCase() === 'sql' && (
-                            <div className="space-y-3">
-                                <div>
-                                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                        {t('dolphinScheduler.editor.datasource')}
-                                    </label>
-                                    <select
-                                        value={editingNode.taskParams?.datasource || ''}
-                                        onChange={(e) => {
-                                            const dsId = parseInt(e.target.value);
-                                            const ds = datasources.find(d => d.id === dsId);
-                                            setEditingNode({ 
-                                                ...editingNode, 
-                                                taskParams: { 
-                                                    ...editingNode.taskParams, 
-                                                    datasource: dsId,
-                                                    datasourceName: ds?.name || '',
-                                                    dbType: ds?.type || editingNode.taskParams?.dbType
-                                                }
-                                            });
-                                        }}
-                                        className="w-full px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
-                                    >
-                                        <option value="">{t('dolphinScheduler.editor.selectDatasource')}</option>
-                                        {datasources.map(ds => (
-                                            <option key={ds.id} value={ds.id}>{ds.name} ({ds.type})</option>
-                                        ))}
-                                    </select>
-                                </div>
-                                
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                            {t('dolphinScheduler.editor.dbType')}
-                                        </label>
-                                        <select
-                                            value={editingNode.taskParams?.dbType || 'MYSQL'}
-                                            onChange={(e) => setEditingNode({ 
-                                                ...editingNode, 
-                                                taskParams: { ...editingNode.taskParams, dbType: e.target.value }
-                                            })}
-                                            className="w-full px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
-                                        >
-                                            <option value="MYSQL">MySQL</option>
-                                            <option value="DORIS">Doris</option>
-                                            <option value="POSTGRESQL">PostgreSQL</option>
-                                            <option value="ORACLE">Oracle</option>
-                                            <option value="SQLSERVER">SQL Server</option>
-                                            <option value="HIVE">Hive</option>
-                                            <option value="SPARK">Spark</option>
-                                            <option value="CLICKHOUSE">ClickHouse</option>
-                                            <option value="STARROCKS">StarRocks</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                            SQL {t('dolphinScheduler.editor.sqlType')}
-                                        </label>
-                                        <select
-                                            value={editingNode.taskParams?.sqlType || '1'}
-                                            onChange={(e) => setEditingNode({ 
-                                                ...editingNode, 
-                                                taskParams: { ...editingNode.taskParams, sqlType: e.target.value }
-                                            })}
-                                            className="w-full px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
-                                        >
-                                            <option value="0">{t('dolphinScheduler.editor.query')}</option>
-                                            <option value="1">{t('dolphinScheduler.editor.nonQuery')}</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                
-                                <div>
-                                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                        SQL {t('dolphinScheduler.editor.sqlStatement')}
-                                    </label>
-                                    <textarea
-                                        value={editingNode.taskParams?.sql || ''}
-                                        onChange={(e) => setEditingNode({ 
-                                            ...editingNode, 
-                                            taskParams: { ...editingNode.taskParams, sql: e.target.value }
-                                        })}
-                                        placeholder="SELECT * FROM ..."
-                                        rows={8}
-                                        className="w-full px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-white font-mono"
-                                    />
-                                </div>
-                            </div>
+                            <SqlNodeForm
+                                data={editingNode.taskParams}
+                                onChange={(data) => setEditingNode({ ...editingNode, taskParams: data })}
+                                datasources={datasources}
+                                readOnly={isReadOnly}
+                            />
                         )}
 
                         {/* Java 节点配置 */}
                         {editingNode.taskType.toLowerCase() === 'java' && (
-                            <div className="space-y-3">
-                                <div>
-                                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">{t('dolphinScheduler.editor.jarPath')}</label>
-                                    <input type="text" value={editingNode.taskParams?.mainJar?.resourceName || ''} onChange={(e) => setEditingNode({ ...editingNode, taskParams: { ...editingNode.taskParams, mainJar: { resourceName: e.target.value } } })} className="w-full px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-white" />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">{t('dolphinScheduler.editor.mainClass')}</label>
-                                    <input type="text" value={editingNode.taskParams?.mainClass || ''} onChange={(e) => setEditingNode({ ...editingNode, taskParams: { ...editingNode.taskParams, mainClass: e.target.value } })} className="w-full px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-white" />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">{t('dolphinScheduler.editor.arguments')}</label>
-                                    <input type="text" value={editingNode.taskParams?.mainArgs || ''} onChange={(e) => setEditingNode({ ...editingNode, taskParams: { ...editingNode.taskParams, mainArgs: e.target.value } })} className="w-full px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-white" />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">JVM Args</label>
-                                    <input type="text" value={editingNode.taskParams?.jvmArgs || ''} onChange={(e) => setEditingNode({ ...editingNode, taskParams: { ...editingNode.taskParams, jvmArgs: e.target.value } })} className="w-full px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-white" />
-                                </div>
-                            </div>
+                            <JavaNodeForm
+                                data={editingNode.taskParams}
+                                onChange={(data) => setEditingNode({ ...editingNode, taskParams: data })}
+                                readOnly={isReadOnly}
+                                projectConfig={projectConfig}
+                            />
                         )}
 
+                        {/* Shell 节点配置 */}
                         {editingNode.taskType.toLowerCase() === 'shell' && (
-                            <div>
-                                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">{t('dolphinScheduler.editor.scriptContent')}</label>
-                                <textarea value={editingNode.taskParams?.rawScript || ''} onChange={(e) => setEditingNode({ ...editingNode, taskParams: { ...editingNode.taskParams, rawScript: e.target.value } })} rows={8} className="w-full px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-white font-mono" />
-                            </div>
+                            <ShellNodeForm
+                                data={editingNode.taskParams}
+                                onChange={(data) => setEditingNode({ ...editingNode, taskParams: data })}
+                                readOnly={isReadOnly}
+                                projectConfig={projectConfig}
+                            />
                         )}
 
+                        {/* Python 节点配置 */}
                         {editingNode.taskType.toLowerCase() === 'python' && (
-                            <div className="space-y-3">
-                                <div>
-                                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">{t('dolphinScheduler.editor.pythonPath')}</label>
-                                    <input type="text" value={editingNode.taskParams?.pythonPath || ''} onChange={(e) => setEditingNode({ ...editingNode, taskParams: { ...editingNode.taskParams, pythonPath: e.target.value } })} className="w-full px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-white" />
-                                </div>
-                                <textarea value={editingNode.taskParams?.rawScript || ''} onChange={(e) => setEditingNode({ ...editingNode, taskParams: { ...editingNode.taskParams, rawScript: e.target.value } })} rows={8} className="w-full px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-white font-mono" />
-                            </div>
+                            <PythonNodeForm
+                                data={editingNode.taskParams}
+                                onChange={(data) => setEditingNode({ ...editingNode, taskParams: data })}
+                                readOnly={isReadOnly}
+                                projectConfig={projectConfig}
+                            />
                         )}
 
+                        {/* SeaTunnel 节点配置 */}
                         {editingNode.taskType.toLowerCase() === 'seatunnel' && (
-                            <div className="space-y-3">
-                                <div className="grid grid-cols-2 gap-3">
-                                    <input type="text" value={editingNode.taskParams?.deployMode || 'local'} onChange={(e) => setEditingNode({ ...editingNode, taskParams: { ...editingNode.taskParams, deployMode: e.target.value } })} placeholder="deployMode" className="px-3 py-1.5 text-sm border rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-white" />
-                                    <input type="text" value={editingNode.taskParams?.configFile || ''} onChange={(e) => setEditingNode({ ...editingNode, taskParams: { ...editingNode.taskParams, configFile: e.target.value } })} placeholder="configFile" className="px-3 py-1.5 text-sm border rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-white" />
-                                </div>
-                                <textarea value={editingNode.taskParams?.rawScript || ''} onChange={(e) => setEditingNode({ ...editingNode, taskParams: { ...editingNode.taskParams, rawScript: e.target.value } })} rows={8} className="w-full px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-white font-mono" />
-                            </div>
+                            <SeaTunnelNodeForm
+                                data={editingNode.taskParams}
+                                onChange={(data) => setEditingNode({ ...editingNode, taskParams: data })}
+                                readOnly={isReadOnly}
+                            />
                         )}
                         
+                        {/* Dependent 节点配置 */}
                         {editingNode.taskType.toLowerCase() === 'dependent' && (
-                             <div className="text-sm text-slate-500 bg-amber-50 dark:bg-amber-900/20 p-3 rounded border border-amber-200 dark:border-amber-800">
-                                {t('dolphinScheduler.editor.dependentTip')}
-                            </div>
+                            <DependentNodeForm
+                                data={editingNode.taskParams}
+                                onChange={(data) => setEditingNode({ ...editingNode, taskParams: data })}
+                                readOnly={isReadOnly}
+                                projectConfig={projectConfig}
+                            />
                         )}
 
+                        {/* K8S 节点配置 */}
                         {editingNode.taskType.toLowerCase() === 'k8s' && (
-                            <div className="space-y-3">
-                                <input type="text" value={editingNode.taskParams?.namespace || 'default'} onChange={(e) => setEditingNode({ ...editingNode, taskParams: { ...editingNode.taskParams, namespace: e.target.value } })} placeholder="namespace" className="w-full px-3 py-1.5 text-sm border rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-white" />
-                                <input type="text" value={editingNode.taskParams?.image || ''} onChange={(e) => setEditingNode({ ...editingNode, taskParams: { ...editingNode.taskParams, image: e.target.value } })} placeholder="image" className="w-full px-3 py-1.5 text-sm border rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-white" />
-                                <input type="text" value={editingNode.taskParams?.command || ''} onChange={(e) => setEditingNode({ ...editingNode, taskParams: { ...editingNode.taskParams, command: e.target.value } })} placeholder="command" className="w-full px-3 py-1.5 text-sm border rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-white" />
-                            </div>
+                            <K8sNodeForm
+                                data={editingNode.taskParams}
+                                onChange={(data) => setEditingNode({ ...editingNode, taskParams: data })}
+                                readOnly={isReadOnly}
+                            />
                         )}
                     </div>
                     

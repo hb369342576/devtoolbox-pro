@@ -40,7 +40,7 @@ export const FieldMappingTool: React.FC<{
             onMouseUp={handleGlobalMouseUp}
          >
             {!activeProfile ? (
-               <div className="p-6 h-full"> 
+               <div className="h-full"> 
                    <MappingProjectList 
                       profiles={profiles}
                       setActiveProfile={setActiveProfile}
