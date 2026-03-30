@@ -25,9 +25,14 @@ interface ApiDoc {
   }[];
 }
 
-export const ApiDocAndTest: React.FC = () => {
+interface ApiDocAndTestProps {
+  preSelectedId?: string | null;
+  onIdChange?: (id: string | null) => void;
+}
+
+export const ApiDocAndTest: React.FC<ApiDocAndTestProps> = ({ preSelectedId, onIdChange }) => {
   const { t } = useTranslation();
-  const { showToast } = useToast();
+  const { toast } = useToast();
   
   const [apiList, setApiList] = useState<any[]>([]);
   const [selectedApiId, setSelectedApiId] = useState<string | null>(null);
@@ -40,20 +45,25 @@ export const ApiDocAndTest: React.FC = () => {
 
   const loadApiList = async () => {
     try {
-      const res: any = await dataServiceApi.post('/manage/api/list', {});
+      const res: any = await dataServiceApi.post('/manage/api/page', { pageNum: 1, pageSize: 500 });
       if (res && res.code === 200) {
-        setApiList(res.data || []);
-        if (res.data.length > 0 && !selectedApiId) {
-            setSelectedApiId(res.data[0].id);
+        // Only show published APIs (status === 1)
+        const published = (res.data?.rows || []).filter((a: any) => a.status === 1);
+        setApiList(published);
+        
+        // Use preSelectedId if available, otherwise default to first API
+        const targetId = preSelectedId || (published.length > 0 ? published[0].id : null);
+        if (targetId) {
+            setSelectedApiId(targetId);
         }
       } else {
           // Mock
-          const mock = [{ id: '1', apiName: '用户信息查询', apiPath: '/user/info' }];
+          const mock = [{ id: '1', apiName: '用户信息查询', apiPath: '/user/info', status: 1 }];
           setApiList(mock);
           setSelectedApiId('1');
       }
     } catch (e) {
-        setApiList([{ id: '1', apiName: '用户信息查询', apiPath: '/user/info' }]);
+        setApiList([{ id: '1', apiName: '用户信息查询', apiPath: '/user/info', status: 1 }]);
         setSelectedApiId('1');
     }
   };
@@ -104,7 +114,7 @@ export const ApiDocAndTest: React.FC = () => {
     navigator.clipboard.writeText(text);
     setCopied(type);
     setTimeout(() => setCopied(null), 2000);
-    showToast('复制成功', 'success');
+    toast({ message: t('common.copySuccess'), type: 'success' });
   };
 
   const runTest = async () => {
@@ -147,14 +157,17 @@ export const ApiDocAndTest: React.FC = () => {
           <div className="p-4 border-b border-slate-100 dark:border-slate-800">
               <div className="relative">
                   <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-                  <input type="text" placeholder="搜索接口..." className="w-full pl-8 pr-3 py-1.5 bg-slate-50 dark:bg-slate-800 rounded-md text-xs outline-none focus:ring-1 focus:ring-blue-500" />
+                  <input type="text" placeholder={t('common.searchApi')} className="w-full pl-8 pr-3 py-1.5 bg-slate-50 dark:bg-slate-800 rounded-md text-xs outline-none focus:ring-1 focus:ring-blue-500" />
               </div>
           </div>
           <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
               {apiList.map(api => (
                   <button 
                     key={api.id}
-                    onClick={() => setSelectedApiId(api.id)}
+                    onClick={() => {
+                        setSelectedApiId(api.id);
+                        if (onIdChange) onIdChange(api.id);
+                    }}
                     className={`w-full text-left p-3 rounded-xl transition-all flex items-center group ${selectedApiId === api.id ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 border border-blue-100 dark:border-blue-900/30 shadow-sm' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50 text-slate-600 border border-transparent'}`}
                   >
                       <div className={`p-1.5 rounded-lg mr-3 ${selectedApiId === api.id ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-slate-800 group-hover:bg-white'} transition-colors`}>
@@ -217,7 +230,7 @@ export const ApiDocAndTest: React.FC = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {apiDoc.fields.map((f, idx) => (
+                                    {(apiDoc.fields || []).map((f, idx) => (
                                         <tr key={idx} className="border-b border-slate-50 dark:border-slate-800/50">
                                             <td className="px-4 py-3 font-mono font-bold text-blue-600 dark:text-blue-400">{f.fieldAlias}</td>
                                             <td className="px-4 py-3 font-mono opacity-60">{f.fieldType}</td>
@@ -238,9 +251,9 @@ export const ApiDocAndTest: React.FC = () => {
                         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 space-y-6 shadow-sm">
                             <div className="space-y-3">
                                 <label className="text-[10px] font-extrabold uppercase text-slate-400 block tracking-widest">查询参数 (Params JSON)</label>
-                                {apiDoc.fields.filter(f => f.isRequired === 1).length > 0 && (
+                                {(apiDoc.fields || []).filter(f => f.isRequired === 1).length > 0 && (
                                     <div className="space-y-3">
-                                        {apiDoc.fields.filter(f => f.isRequired === 1).map(f => (
+                                        {(apiDoc.fields || []).filter(f => f.isRequired === 1).map(f => (
                                             <div key={f.fieldName} className="flex items-center space-x-3">
                                                 <span className="text-xs font-mono w-20 truncate">{f.fieldAlias}:</span>
                                                 <input 

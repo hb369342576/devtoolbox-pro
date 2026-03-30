@@ -276,3 +276,13 @@ export interface DolphinSchedulerConfig {
   projectName?: string; // 项目名称
   apiVersion?: DolphinSchedulerApiVersion; // API 版本，默认 v3.2
 }
+
+// --- Data Service Types ---
+
+// 数据服务连接配置 (Data Service Connection)
+export interface DataServiceConnection {
+  id: string;
+  name: string;
+  baseUrl: string;    // API 地址，例如 http://localhost:18087/dataservice
+  token: string;      // 请求授权头信息，例如 AdminToken 
+}

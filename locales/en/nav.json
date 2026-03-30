@@ -41,5 +41,9 @@
   "profileTooltip": "Manage your profile and preferences",
   "settings": "Settings",
   "settingsTooltip": "System settings and preferences",
+  "dataService": "Data Service",
+  "dataServiceTooltip": "Data as a Service (DaaS)",
+  "dataServiceManage": "Service Management",
+  "dataServiceManageTooltip": "Data Service Management features",
   "unknown": "Unknown Page"
 }

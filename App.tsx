@@ -29,12 +29,24 @@ import i18n from './i18n';
 import { useTranslation } from "react-i18next";
 
 /* --- Home Dashboard --- */
-const Dashboard: React.FC<{ onNavigate: (id: string) => void }> = ({ onNavigate }) => {
+const Dashboard: React.FC<{ onNavigate: (id: string) => void, navItems: any[] }> = ({ onNavigate, navItems }) => {
     const { t, i18n } = useTranslation();
 
+  // Get all leaf nodes from navItems recursively, excluding dashboard
+  const getTools = (items: any[]): any[] => {
+    let tools: any[] = [];
+    items.forEach(item => {
+      if (item.id === 'dashboard') return;
+      if (item.children) {
+        tools = [...tools, ...getTools(item.children)];
+      } else if (item.visible) {
+        tools.push(item);
+      }
+    });
+    return tools;
+  };
 
-
-  const tools = NAV_ITEMS.filter(item => item.id !== 'dashboard');
+  const tools = getTools(navItems);
 
   return (
     <div className="flex flex-col items-center space-y-12 pt-8 pb-8">
@@ -91,16 +103,42 @@ export default function App() {
     const { i18n } = useTranslation();
   // Tabs State with persistence
   const [activeTab, setActiveTab] = useState(() => {
+    const savedMenu = localStorage.getItem('menu_config');
+    const menuCfg: Record<string, boolean> = savedMenu ? JSON.parse(savedMenu) : {};
+    const isAllowed = (id: string): boolean => {
+      if (id === 'dashboard' || id === 'settings') return true;
+      if (menuCfg[id]) return true;
+      // Check if it's a child of an enabled parent
+      for (const item of NAV_ITEMS) {
+        if (item.children?.some((c) => c.id === id)) {
+          return !!menuCfg[item.id] && !!menuCfg[id];
+        }
+      }
+      return false;
+    };
     const saved = localStorage.getItem('activeTab');
-    return saved || 'dashboard';
+    const id = saved || 'dashboard';
+    return isAllowed(id) ? id : 'dashboard';
   });
   const [openTabs, setOpenTabs] = useState<string[]>(() => {
-    const saved = localStorage.getItem('openTabs');
-    return saved ? JSON.parse(saved) : ['dashboard'];
+    const savedMenu = localStorage.getItem('menu_config');
+    const menuCfg: Record<string, boolean> = savedMenu ? JSON.parse(savedMenu) : {};
+    const savedTabs = localStorage.getItem('openTabs');
+    const tabs: string[] = savedTabs ? JSON.parse(savedTabs) : ['dashboard'];
+    return tabs.filter(id => {
+      if (id === 'dashboard' || id === 'settings') return true;
+      return menuCfg[id] === true;
+    });
   });
   const [visitedTabs, setVisitedTabs] = useState<string[]>(() => {
-    const saved = localStorage.getItem('visitedTabs');
-    return saved ? JSON.parse(saved) : ['dashboard'];
+    const savedMenu = localStorage.getItem('menu_config');
+    const menuCfg: Record<string, boolean> = savedMenu ? JSON.parse(savedMenu) : {};
+    const savedTabs = localStorage.getItem('visitedTabs');
+    const tabs: string[] = savedTabs ? JSON.parse(savedTabs) : ['dashboard'];
+    return tabs.filter(id => {
+      if (id === 'dashboard' || id === 'settings') return true;
+      return menuCfg[id] === true;
+    });
   });
 
   // App Settings with persistence
@@ -140,6 +178,41 @@ export default function App() {
     return saved ? JSON.parse(saved) : [];
   });
 
+  // Menu Configuration State
+  const [menuConfig, setMenuConfig] = useState<Record<string, boolean>>(() => {
+    const saved = localStorage.getItem('menu_config');
+    return saved ? JSON.parse(saved) : {};
+  });
+
+  const toggleMenu = (id: string, enabled: boolean) => {
+    const navItem = NAV_ITEMS.find(item => item.id === id);
+
+    // Build all changes in a single config object to avoid stale closure issues
+    const newConfig = { ...menuConfig, [id]: enabled };
+
+    // If disabling a parent, also disable all its children in one shot
+    if (!enabled && navItem?.children) {
+      navItem.children.forEach(c => {
+        if (c.id !== 'settings') {
+          newConfig[c.id] = false;
+        }
+      });
+    }
+
+    setMenuConfig(newConfig);
+    localStorage.setItem('menu_config', JSON.stringify(newConfig));
+
+    // Close any related open tabs
+    if (!enabled) {
+      const idsToClose = new Set<string>([id]);
+      if (navItem?.children) {
+        navItem.children.forEach(c => idsToClose.add(c.id));
+      }
+      setOpenTabs(prev => prev.filter(t => !idsToClose.has(t)));
+      setVisitedTabs(prev => prev.filter(t => !idsToClose.has(t)));
+      setActiveTab(prev => idsToClose.has(prev) ? 'dashboard' : prev);
+    }
+  };
   // DolphinScheduler State
   const [dolphinConfigs, setDolphinConfigs] = useState<DolphinSchedulerConfig[]>(() => {
     const saved = localStorage.getItem('dolphin_configs');
@@ -322,9 +395,16 @@ export default function App() {
     return <Login onLogin={handleLogin} />;
   }
 
+  // Visibility Helper
+  const isMenuVisible = (item: any): boolean => {
+    if (item.id === 'dashboard' || item.id === 'settings') return true;
+    // Check local config
+    return menuConfig[item.id] === true;
+  };
+
   const renderView = (id: string) => {
     switch (id) {
-      case 'dashboard': return <Dashboard onNavigate={handleNavigate} />;
+      case 'dashboard': return <Dashboard onNavigate={handleNavigate} navItems={filteredNavItems} />;
       case 'data-source-manager': return <DataSourceManager connections={connections} onAdd={handleAddConnection} onUpdate={handleUpdateConnection} onDelete={handleDeleteConnection} />;
       case 'db-viewer': return <DbViewer connections={connections} onNavigate={handleNavigate} />;
       case 'excel-import': return <ExcelImport connections={connections} />; // New Tool
@@ -347,10 +427,39 @@ export default function App() {
       case 'time-tools': return <TimeUtility />;
       case 'monitor': return <SystemMonitor enabled={monitorEnabled} />;
       case 'profile': return <UserProfile user={user} onUpdate={handleUserUpdate} />;
-      case 'settings': return <Settings onLangChange={(l: Language) => { setLang(l); i18n.changeLanguage(l); }} lang={lang} theme={theme} onThemeChange={setTheme} monitorEnabled={monitorEnabled} onMonitorToggle={setMonitorEnabled} />;
+      case 'settings': return <Settings onLangChange={(l: Language) => { setLang(l); i18n.changeLanguage(l); }} lang={lang} theme={theme} onThemeChange={setTheme} monitorEnabled={monitorEnabled} onMonitorToggle={setMonitorEnabled} menuConfig={menuConfig} onToggleMenuConfig={toggleMenu} />;
       default: return null;
     }
   };
+
+  // Filter NAV_ITEMS recursively
+  const getFilteredNavItems = (items: typeof NAV_ITEMS): any[] => {
+    return items.map(item => {
+      const visible = isMenuVisible(item);
+      if (item.children) {
+        const filteredChildren = getFilteredNavItems(item.children);
+        // A parent is visible if it's explicitly enabled OR if it has a mandatory child like 'settings'
+        // But for simplicity, we respect isMenuVisible(item) for top levels, 
+        // and ensure mandatory ones are always visible.
+        const hasMandatoryChild = item.children.some(c => c.id === 'settings');
+        return {
+          ...item,
+          visible: visible || hasMandatoryChild,
+          children: filteredChildren
+        };
+      }
+      return { ...item, visible };
+    }).filter(item => {
+        if (item.id === 'dashboard') return true;
+        if (item.children && item.children.length > 0) {
+            // Parent with visible children
+            return item.visible || item.children.some(c => c.visible);
+        }
+        return item.visible;
+    });
+  };
+
+  const filteredNavItems = getFilteredNavItems(NAV_ITEMS);
 
   return (
     <ToastProvider>
@@ -366,6 +475,7 @@ export default function App() {
         onLogout={handleLogout}
         expandedMenus={expandedMenus}
         onToggleMenu={handleToggleMenu}
+        navItems={filteredNavItems}
       >
         {visitedTabs.map(tabId => (
           <div

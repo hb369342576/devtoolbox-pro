@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { DolphinSchedulerConnection } from '../types';
+import { DolphinSchedulerConnection, DataServiceConnection } from '../types';
 
 /**
  * 全局应用状态Store
@@ -35,6 +35,12 @@ interface GlobalState {
     addDsConnection: (conn: Omit<DolphinSchedulerConnection, 'id'>) => void;
     updateDsConnection: (conn: DolphinSchedulerConnection) => void;
     deleteDsConnection: (id: string) => void;
+
+    // DataService 连接管理
+    dataServiceConnections: DataServiceConnection[];
+    addDataServiceConnection: (conn: Omit<DataServiceConnection, 'id'>) => void;
+    updateDataServiceConnection: (conn: DataServiceConnection) => void;
+    deleteDataServiceConnection: (id: string) => void;
 }
 
 export const useGlobalStore = create<GlobalState>()(
@@ -66,6 +72,18 @@ export const useGlobalStore = create<GlobalState>()(
             })),
             deleteDsConnection: (id) => set((state) => ({
                 dsConnections: state.dsConnections.filter(c => c.id !== id)
+            })),
+
+            // Data Service 连接操作
+            dataServiceConnections: [],
+            addDataServiceConnection: (conn) => set((state) => ({
+                dataServiceConnections: [...state.dataServiceConnections, { ...conn, id: crypto.randomUUID() }]
+            })),
+            updateDataServiceConnection: (conn) => set((state) => ({
+                dataServiceConnections: state.dataServiceConnections.map(c => c.id === conn.id ? conn : c)
+            })),
+            deleteDataServiceConnection: (id) => set((state) => ({
+                dataServiceConnections: state.dataServiceConnections.filter(c => c.id !== id)
             })),
         }),
         {

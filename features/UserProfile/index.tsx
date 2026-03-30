@@ -22,18 +22,25 @@ const COUNTRIES = [
 
 export const UserProfile: React.FC<UserProfileProps> = ({ user, onUpdate}) => {
     const { t, i18n } = useTranslation();
-  const [formData, setFormData] = useState<UserType>({
-    ...user,
-    gender: user.gender || 'male',
-    country: user.country || 'CN'
-  });
-  const [passwords, setPasswords] = useState({ current: '', new: '', confirm: '' });
-  const [activeTab, setActiveTab] = useState<'info' | 'security'>('info');
-  const [isSaving, setIsSaving] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+    
+    // Hooks must be at the top level and always called in the same order
+    const [formData, setFormData] = useState<UserType>(() => ({
+        ...(user || {} as UserType),
+        username: user?.username || '',
+        gender: user?.gender || 'male',
+        country: user?.country || 'CN'
+    }));
+    
+    const [passwords, setPasswords] = useState({ current: '', new: '', confirm: '' });
+    const [activeTab, setActiveTab] = useState<'info' | 'security'>('info');
+    const [isSaving, setIsSaving] = useState(false);
+    const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleInfoSubmit = (e: React.FormEvent) => {
+    // After all hooks, we can safely return if no user is present
+    if (!user) return <div className="p-8 text-center text-slate-500">Loading profile...</div>;
+
+    const handleInfoSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
     setTimeout(() => {

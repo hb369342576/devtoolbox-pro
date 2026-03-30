@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Database, Plus, Edit, Trash2, RefreshCw, Power, Server, Layers, X, HardDrive, CheckCircle, DatabaseZap } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Database, Plus, Edit, Trash2, RefreshCw, Power, Server, Layers, X, HardDrive, CheckCircle, DatabaseZap, Search } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { dataServiceApi } from '../api';
 import { useToast } from '../../common/Toast';
@@ -30,9 +31,10 @@ const getDbConfig = (type: string) => {
 
 export const DataSourceManage: React.FC = () => {
   const { t } = useTranslation();
-  const { showToast } = useToast();
+  const { toast } = useToast();
   
   const [dataSources, setDataSources] = useState<DataServiceDataSource[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editingConn, setEditingConn] = useState<Partial<DataServiceDataSource>>({});
@@ -42,9 +44,9 @@ export const DataSourceManage: React.FC = () => {
   const loadDataSources = async () => {
     setLoading(true);
     try {
-      const res: any = await dataServiceApi.post('/manage/datasource/list', {});
+      const res: any = await dataServiceApi.post('/manage/datasource/page', { pageNum: 1, pageSize: 500 });
       if (res && (res.code === 200 || res.code === 0)) {
-        setDataSources(res.data || []);
+        setDataSources(res.data?.rows || []);
       }
     } catch (e: any) {
       console.warn('Backend not available, using mock', e);
@@ -105,20 +107,20 @@ export const DataSourceManage: React.FC = () => {
       const endpoint = editingConn.id ? '/manage/datasource/update' : '/manage/datasource/add';
       const res: any = await dataServiceApi.post(endpoint, editingConn);
       if (res && res.code === 200) {
-        showToast(t('common.success'), 'success');
+        toast({ message: t('common.success'), type: 'success' });
         setShowModal(false);
         loadDataSources();
       } else {
         if (!editingConn.id) {
-          showToast('Mock Saved Success', 'success');
+          toast({ message: t('common.saveSuccess'), type: 'success' });
           setShowModal(false);
           loadDataSources();
         } else {
-          showToast(res?.msg || 'Save failed', 'error');
+          toast({ message: res?.msg || t('common.failed'), type: 'error' });
         }
       }
     } catch (e: any) {
-      showToast('Mock Saved Success (Backend Offline)', 'success');
+      toast({ message: t('common.saveSuccess'), type: 'success' });
       setShowModal(false);
       setDataSources((prev) => {
         if (editingConn.id) return prev.map(p => p.id === editingConn.id ? editingConn as DataServiceDataSource : p);
@@ -128,13 +130,22 @@ export const DataSourceManage: React.FC = () => {
   };
 
   const handleTest = async () => {
-    if (!editingConn.id) {
-      showToast('保存后才能测试连接', 'warning');
+    if (!editingConn.host || !editingConn.databaseName) {
+      toast({ message: t('common.plsFillData') || '请完善主机和数据库信息后再测试', type: 'warning' });
       return;
     }
+    
     setTestStatus('testing');
     try {
-      const res: any = await dataServiceApi.post(`/manage/datasource/test/${editingConn.id}`);
+      let res: any;
+      if (editingConn.id) {
+        // 已有记录测试（按 ID）
+        res = await dataServiceApi.post(`/manage/datasource/test/${editingConn.id}`);
+      } else {
+        // 新注册测试（不保存实体）
+        res = await dataServiceApi.post('/manage/datasource/test', editingConn);
+      }
+      
       if (res && res.code === 200) {
         setTestStatus('success');
       } else {
@@ -149,10 +160,10 @@ export const DataSourceManage: React.FC = () => {
   const handleConfirmDelete = async () => {
     try {
       const res: any = await dataServiceApi.post('/manage/datasource/delete', { id: confirmDelete.id });
-      if (res && res.code === 200) showToast(t('common.success'), 'success');
+      if (res && res.code === 200) toast({ message: t('common.success'), type: 'success' });
       loadDataSources();
     } catch (e: any) {
-      showToast('Deleted (Mock)', 'success');
+      toast({ message: t('common.deleteSuccess'), type: 'success' });
       setDataSources(prev => prev.filter(c => c.id !== confirmDelete.id));
     } finally {
       setConfirmDelete({ isOpen: false, id: '' });
@@ -160,7 +171,7 @@ export const DataSourceManage: React.FC = () => {
   };
 
   return (
-    <div className="p-8 h-full flex flex-col relative z-10 w-full overflow-hidden">
+    <div className="px-6 py-6 h-full flex flex-col relative z-10 w-full overflow-hidden">
       <ConfirmModal
         isOpen={confirmDelete.isOpen}
         title={t('common.confirmDelete')}
@@ -172,21 +183,22 @@ export const DataSourceManage: React.FC = () => {
         type="danger"
       />
 
-      <div className="flex justify-between items-end mb-8">
-        <div>
-          <h2 className="text-2xl font-extrabold text-slate-800 dark:text-white flex items-center tracking-tight">
-            <DatabaseZap className="mr-3 text-blue-600 dark:text-blue-500 w-7 h-7" />
-            数据源动态连接池
-          </h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 ml-10">
-            管理 DaaS 引擎底层的物理数据库连接，支持多租户隔离与动态平滑演进。
-          </p>
+      <div className="flex justify-between items-center mb-6">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <input 
+            type="text" 
+            placeholder="搜索数据源..." 
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            className="pl-9 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm w-64 focus:ring-2 focus:ring-blue-500 outline-none transition-all shadow-sm"
+          />
         </div>
         <button
           onClick={handleAddNew}
-          className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl font-bold flex items-center justify-center shadow-lg shadow-blue-500/25 transition-all hover:scale-105 active:scale-95 border border-white/10"
+          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium flex items-center shadow-sm transition-colors text-sm"
         >
-          <Plus size={18} className="mr-2" />新增核心数据源
+          <Plus size={16} className="mr-1.5" />新增核心数据源
         </button>
       </div>
 
@@ -201,67 +213,64 @@ export const DataSourceManage: React.FC = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 pb-6">
-            {dataSources.map(conn => {
+            {dataSources.filter(c => c.datasourceName.toLowerCase().includes(searchTerm.toLowerCase())).map(conn => {
               const style = getDbConfig(conn.datasourceType);
               return (
                 <div
                   key={conn.id}
-                  className="group relative bg-white/70 dark:bg-slate-800/60 backdrop-blur-md p-6 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none border border-slate-200/60 dark:border-slate-700/50 hover:border-blue-500/50 dark:hover:border-blue-500/50 hover:shadow-2xl hover:shadow-blue-500/10 dark:hover:shadow-blue-500/10 transition-all duration-500 cursor-pointer overflow-hidden flex flex-col h-[220px]"
+                  className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-5 hover:border-blue-500 dark:hover:border-blue-500 hover:shadow-md transition-all cursor-pointer flex flex-col h-[180px] group relative"
                   onClick={() => handleEdit(conn)}
                 >
-                  {/* Glowing background effect on hover */}
-                  <div className="absolute -inset-20 bg-gradient-to-br from-blue-500/0 via-blue-500/0 to-purple-500/0 group-hover:from-blue-500/5 group-hover:via-transparent group-hover:to-purple-500/5 transition-all duration-700 pointer-events-none rounded-full blur-3xl"></div>
-                  
-                  <div className="flex justify-between items-start mb-5 relative z-10 w-full">
-                    <div className={`w-14 h-14 rounded-2xl ${style.bg} flex items-center justify-center shadow-[inset_0_1px_4px_rgba(255,255,255,0.5)] dark:shadow-[inset_0_1px_4px_rgba(255,255,255,0.05)] border border-slate-100 dark:border-slate-800 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3`}>
-                      <style.icon size={28} className={`${style.color}`} />
+                  <div className="flex justify-between items-start mb-4 relative z-10 w-full">
+                    <div className="flex items-center space-x-3">
+                       <div className={`w-10 h-10 rounded-lg ${style.bg} flex items-center justify-center border border-slate-100 dark:border-slate-700/50`}>
+                          <style.icon size={20} className={`${style.color}`} />
+                       </div>
+                       <div>
+                          <h3 className="font-bold text-slate-800 dark:text-slate-100 line-clamp-1">{conn.datasourceName}</h3>
+                          <div className="flex items-center mt-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5"></span>
+                              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase">{conn.datasourceType}</span>
+                          </div>
+                       </div>
                     </div>
-                    <div className="flex space-x-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform translate-x-4 group-hover:translate-x-0">
-                      <button onClick={(e) => { e.stopPropagation(); handleEdit(conn); }} className="p-2 bg-white dark:bg-slate-700 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-slate-600 rounded-xl shadow-sm border border-slate-100 dark:border-slate-600 transition-all hover:scale-110"><Edit size={16} /></button>
-                      <button onClick={(e) => { e.stopPropagation(); setConfirmDelete({ isOpen: true, id: conn.id! }); }} className="p-2 bg-white dark:bg-slate-700 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-slate-600 rounded-xl shadow-sm border border-slate-100 dark:border-slate-600 transition-all hover:scale-110"><Trash2 size={16} /></button>
+                    <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                      <button onClick={(e) => { e.stopPropagation(); handleEdit(conn); }} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-slate-100 dark:hover:bg-slate-700 rounded transition-all"><Edit size={14} /></button>
+                      <button onClick={(e) => { e.stopPropagation(); setConfirmDelete({ isOpen: true, id: conn.id! }); }} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-slate-700 rounded transition-all"><Trash2 size={14} /></button>
                     </div>
                   </div>
                   
-                  <div className="relative z-10 flex-1">
-                    <h3 className="font-extrabold text-lg text-slate-800 dark:text-slate-100 mb-1.5 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{conn.datasourceName}</h3>
-                    
-                    <div className="flex items-center space-x-2 mb-4">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span>
-                        <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">{conn.datasourceType}</span>
-                    </div>
-
-                    <div className="bg-slate-50/50 dark:bg-slate-900/50 rounded-xl p-3 border border-slate-100/50 dark:border-slate-800/50">
-                        <div className="flex items-center justify-between text-xs mb-1.5">
-                            <span className="text-slate-400 font-medium">Host Address</span>
-                            <span className="font-mono font-bold text-slate-700 dark:text-slate-300">{conn.host}:{conn.port}</span>
-                        </div>
-                        <div className="flex items-center justify-between text-xs">
-                            <span className="text-slate-400 font-medium">Database Name</span>
-                            <span className="font-medium text-slate-700 dark:text-slate-300">{conn.databaseName}</span>
-                        </div>
-                    </div>
+                  <div className="mt-auto space-y-2 font-mono text-xs z-10">
+                      <div className="flex justify-between text-slate-500 dark:text-slate-400 border-b border-dashed border-slate-100 dark:border-slate-700/50 pb-2">
+                          <span>{t('dataService.dataSource.hostAddress')}</span>
+                          <span className="text-slate-700 dark:text-slate-300 font-bold">{conn.host}:{conn.port}</span>
+                      </div>
+                      <div className="flex justify-between text-slate-500 dark:text-slate-400 pt-1">
+                          <span>{t('dataService.dataSource.databaseName')}</span>
+                          <span className="text-slate-700 dark:text-slate-300 font-bold truncate max-w-[120px]">{conn.databaseName}</span>
+                      </div>
                   </div>
                 </div>
-              );
+              )
             })}
             
             {/* Add New Card Entry */}
             <button
                onClick={handleAddNew}
-               className="group bg-slate-50/50 dark:bg-slate-800/30 border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-500/50 rounded-3xl p-6 flex flex-col items-center justify-center h-[220px] transition-all duration-300 hover:bg-blue-50/30 dark:hover:bg-blue-900/10"
+               className="group bg-slate-50/50 dark:bg-slate-800/30 border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-500/50 rounded-xl p-6 flex flex-col items-center justify-center h-[180px] transition-all duration-300 hover:bg-blue-50/30 dark:hover:bg-blue-900/10"
             >
-               <div className="w-16 h-16 rounded-full bg-white dark:bg-slate-800 shadow-sm border border-slate-100 dark:border-slate-700 flex items-center justify-center text-slate-400 group-hover:text-blue-500 group-hover:scale-110 group-hover:shadow-md transition-all duration-300 mb-4">
-                   <Plus size={28} />
+               <div className="w-12 h-12 rounded-full bg-white dark:bg-slate-800 shadow-sm border border-slate-100 dark:border-slate-700 flex items-center justify-center text-slate-400 group-hover:text-blue-500 group-hover:scale-110 group-hover:shadow-md transition-all duration-300 mb-3">
+                   <Plus size={24} />
                </div>
-               <span className="font-bold text-slate-500 dark:text-slate-400 group-hover:text-blue-600 dark:group-hover:text-blue-400">配置新数据源</span>
+               <span className="font-bold text-slate-500 dark:text-slate-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 text-sm">配置新数据源</span>
             </button>
           </div>
         )}
       </div>
 
-      {showModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 dark:bg-black/60 backdrop-blur-md p-4 animate-in fade-in duration-300">
-          <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] w-full max-w-xl overflow-hidden border border-slate-200/50 dark:border-slate-700 flex flex-col max-h-[90vh]">
+      {showModal && createPortal(
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden border border-slate-200 dark:border-slate-700 animate-in fade-in zoom-in-95 duration-200 hide-scrollbar flex flex-col max-h-[90vh]">
             
             <div className="px-8 py-5 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/80 backdrop-blur-xl relative z-10">
               <div className="flex items-center space-x-3">
@@ -404,7 +413,8 @@ export const DataSourceManage: React.FC = () => {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

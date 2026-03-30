@@ -4,6 +4,7 @@ import { check, Update } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
 import { Language, Theme } from '../../types';
 import { useTranslation } from "react-i18next";
+import { NAV_ITEMS } from '../../constants';
 
 interface SettingsProps {
     lang: Language;
@@ -12,19 +13,26 @@ interface SettingsProps {
     onThemeChange: (theme: Theme) => void;
     monitorEnabled: boolean;
     onMonitorToggle: (enabled: boolean) => void;
+    menuConfig: Record<string, boolean>;
+    onToggleMenuConfig: (id: string, enabled: boolean) => void;
 }
 
 /**
  * Settings 系统设置页面
  * 简单工具，无需拆分组件
  */
-export const Settings: React.FC<SettingsProps> = ({ lang, onLangChange, theme, onThemeChange, monitorEnabled, onMonitorToggle }) => {
+export const Settings: React.FC<SettingsProps> = ({ 
+    lang, onLangChange, theme, onThemeChange, 
+    monitorEnabled, onMonitorToggle,
+    menuConfig, onToggleMenuConfig
+}) => {
     const { t, i18n } = useTranslation();
     const [checking, setChecking] = useState(false);
     const [updateInfo, setUpdateInfo] = useState<Update | null>(null);
     const [downloading, setDownloading] = useState(false);
     const [progress, setProgress] = useState(0);
     const [checkResult, setCheckResult] = useState<'none' | 'latest' | 'error' | null>(null);
+
 
     const handleCheckUpdate = async () => {
         setChecking(true);
@@ -214,6 +222,111 @@ export const Settings: React.FC<SettingsProps> = ({ lang, onLangChange, theme, o
                         >
                             <div className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow transition-transform ${monitorEnabled ? 'left-8' : 'left-1'}`} />
                         </button>
+                    </div>
+                </div>
+
+                {/* Menu Management Section */}
+                <div className="p-6 border-b border-slate-200 dark:border-slate-700">
+                    <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center space-x-3">
+                            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg">
+                                <Monitor size={20} />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold text-slate-800 dark:text-white">菜单管理</h3>
+                                <p className="text-xs text-slate-500 mt-0.5">控制侧边栏可见的功能模块，调整后将刷新页面生效</p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => {
+                                // Save is already done on toggle, just reload
+                                window.location.reload();
+                            }}
+                            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm"
+                        >
+                            <RefreshCw size={14} />
+                            <span>保存并刷新</span>
+                        </button>
+                    </div>
+
+                    <div className="space-y-2">
+                        {NAV_ITEMS.filter(item => item.id !== 'dashboard').map(item => {
+                            const isParent = !!(item.children && item.children.length > 0);
+                            const isMandatory = item.id === 'settings';
+                            const parentEnabled = isMandatory || !!menuConfig[item.id];
+                            const hasChildren = isParent;
+
+                            // For items directly under system-management that contain 'settings'
+                            const containsMandatoryChild = item.children?.some(c => c.id === 'settings');
+
+                            return (
+                                <div key={item.id} className="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                                    {/* Parent row */}
+                                    <div className={`flex items-center justify-between p-4 ${parentEnabled ? 'bg-white dark:bg-slate-800' : 'bg-slate-50 dark:bg-slate-900/50'}`}>
+                                        <div className="flex items-center space-x-3">
+                                            <div className={`p-1.5 rounded-lg ${parentEnabled ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'bg-slate-100 dark:bg-slate-700 text-slate-400'}`}>
+                                                <item.icon size={16} />
+                                            </div>
+                                            <div>
+                                                <p className={`font-semibold text-sm ${parentEnabled ? 'text-slate-800 dark:text-white' : 'text-slate-400 dark:text-slate-500'}`}>
+                                                    {t(item.label)}
+                                                </p>
+                                                {hasChildren && (
+                                                    <p className="text-xs text-slate-400 mt-0.5">{item.children!.length} 个子菜单</p>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <button
+                                            disabled={!!containsMandatoryChild}
+                                            onClick={() => {
+                                                if (containsMandatoryChild) return;
+                                                onToggleMenuConfig(item.id, !menuConfig[item.id]);
+                                            }}
+                                            className={`relative w-12 h-6 rounded-full transition-colors flex-shrink-0 ${containsMandatoryChild ? 'opacity-50 cursor-not-allowed bg-blue-500' : parentEnabled ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                                        >
+                                            <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all duration-200 ${(parentEnabled || containsMandatoryChild) ? 'left-6' : 'left-0.5'}`} />
+                                        </button>
+                                    </div>
+
+                                    {/* Children rows */}
+                                    {hasChildren && item.children!.map((child, idx) => {
+                                        const isMandatoryChild = child.id === 'settings';
+                                        const childEnabled = isMandatoryChild || !!menuConfig[child.id];
+                                        const parentIsEnabled = containsMandatoryChild || !!menuConfig[item.id];
+
+                                        return (
+                                            <div
+                                                key={child.id}
+                                                className={`flex items-center justify-between px-4 py-3 border-t border-slate-100 dark:border-slate-700/50 pl-12 transition-opacity ${!parentIsEnabled ? 'opacity-40' : ''} ${childEnabled && parentIsEnabled ? 'bg-blue-50/30 dark:bg-blue-900/10' : 'bg-slate-50/50 dark:bg-slate-900/30'}`}
+                                            >
+                                                <div className="flex items-center space-x-2.5">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600 flex-shrink-0" />
+                                                    <div className={`p-1 rounded ${childEnabled && parentIsEnabled ? 'text-blue-500 dark:text-blue-400' : 'text-slate-400'}`}>
+                                                        <child.icon size={14} />
+                                                    </div>
+                                                    <span className={`text-sm ${childEnabled && parentIsEnabled ? 'text-slate-700 dark:text-slate-200 font-medium' : 'text-slate-400 dark:text-slate-500'}`}>
+                                                        {t(child.label)}
+                                                    </span>
+                                                    {isMandatoryChild && (
+                                                        <span className="text-[10px] bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded font-medium">必选</span>
+                                                    )}
+                                                </div>
+                                                <button
+                                                    disabled={!parentIsEnabled || isMandatoryChild}
+                                                    onClick={() => {
+                                                        if (!parentIsEnabled || isMandatoryChild) return;
+                                                        onToggleMenuConfig(child.id, !menuConfig[child.id]);
+                                                    }}
+                                                    className={`relative w-10 h-5 rounded-full transition-colors flex-shrink-0 ${(!parentIsEnabled || isMandatoryChild) ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'} ${(childEnabled && parentIsEnabled) ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                                                >
+                                                    <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-200 ${(childEnabled && parentIsEnabled) ? 'left-5' : 'left-0.5'}`} />
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
 

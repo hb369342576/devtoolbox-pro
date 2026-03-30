@@ -251,6 +251,7 @@
     "settings": "Settings",
     "profile": "Profile",
     "dataService": "Data Service",
+    "dataServiceManage": "Service Management",
     "unknown": "Unknown"
   },
   "excelToSqlTemplate": "Excel to SQL Template",

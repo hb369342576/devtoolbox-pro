@@ -251,6 +251,7 @@
     "settings": "系统设置",
     "profile": "个人中心",
     "dataService": "数据服务",
+    "dataServiceManage": "服务管理",
     "unknown": "未知功能"
   },
   "excelToSqlTemplate": "Excel 转 SQL 模板",

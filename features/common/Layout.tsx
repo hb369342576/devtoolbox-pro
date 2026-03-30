@@ -18,6 +18,7 @@ interface LayoutProps {
   onLogout: () => void;
   expandedMenus: string[];
   onToggleMenu: (id: string) => void;
+  navItems: any[];
 }
 
 export const Layout: React.FC<LayoutProps> = ({
@@ -32,7 +33,8 @@ export const Layout: React.FC<LayoutProps> = ({
   user,
   onLogout,
   expandedMenus,
-  onToggleMenu
+  onToggleMenu,
+  navItems
 }) => {
     const { t, i18n } = useTranslation();
   const [collapsed, setCollapsed] = useState(false);
@@ -70,7 +72,7 @@ export const Layout: React.FC<LayoutProps> = ({
 
   // Helper to get tab info recursively
   const getTabInfo = (id: string) => {
-    const findItem = (items: typeof NAV_ITEMS): typeof NAV_ITEMS[0] | undefined => {
+    const findItem = (items: any[]): any | undefined => {
       for (const item of items) {
         if (item.id === id) return item;
         if (item.children) {
@@ -81,7 +83,7 @@ export const Layout: React.FC<LayoutProps> = ({
       return undefined;
     };
 
-    const navItem = findItem(NAV_ITEMS);
+    const navItem = findItem(navItems);
     if (navItem) return navItem;
 
     if (id === 'settings') {
@@ -105,8 +107,8 @@ export const Layout: React.FC<LayoutProps> = ({
     };
   };
 
-  const renderNavItem = (item: typeof NAV_ITEMS[0], level = 0) => {
-    const isParent = !!item.children;
+  const renderNavItem = (item: any, level = 0) => {
+    const isParent = !!item.children && item.children.length > 0;
     const isExpanded = expandedMenus.includes(item.id);
     const isActive = activeTab === item.id;
     const isChildActive = isParent && item.children?.some(c => c.id === activeTab);
@@ -198,7 +200,7 @@ export const Layout: React.FC<LayoutProps> = ({
         </div>
 
         <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-1 flex flex-col">
-          {NAV_ITEMS
+          {navItems
             .filter(item => item.visible)
             .sort((a, b) => a.order - b.order)
             .map((item) => renderNavItem(item))}

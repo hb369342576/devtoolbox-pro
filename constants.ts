@@ -90,13 +90,24 @@ export const NAV_ITEMS: NavItem[] = [
     ]
   },
   {
-    id: 'data-service',
+    id: 'data-service-group',
     label: 'nav.dataService',
-    tooltip: 'nav.dataService',
+    tooltip: 'nav.dataServiceTooltip',
     icon: Server,
     category: 'db',
     order: 5.5,
-    visible: true
+    visible: true,
+    children: [
+      {
+        id: 'data-service',
+        label: 'nav.dataServiceManage',
+        tooltip: 'nav.dataServiceManageTooltip',
+        icon: Server,
+        category: 'db',
+        order: 1,
+        visible: true
+      }
+    ]
   },
   {
     id: 'task-dev',

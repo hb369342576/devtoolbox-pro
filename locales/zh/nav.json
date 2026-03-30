@@ -41,5 +41,9 @@
   "profileTooltip": "管理个人资料和偏好设置",
   "settings": "系统设置",
   "settingsTooltip": "系统设置和偏好",
+  "dataService": "数据服务",
+  "dataServiceTooltip": "数据即服务 (DaaS)",
+  "dataServiceManage": "服务管理",
+  "dataServiceManageTooltip": "数据服务管理功能",
   "unknown": "未知页面"
 }

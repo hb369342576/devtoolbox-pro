@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   ShieldAlert, Plus, Edit, Trash2, RefreshCw, X, 
-  Eye, EyeOff, Lock, Unlock, Filter, List,
+  Eye, EyeOff, Lock, Unlock, Filter, List, Settings,
   ArrowRight, Search, Zap, CheckCircle
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -21,13 +22,14 @@ interface PermissionEntry {
 
 export const PermissionManage: React.FC = () => {
   const { t } = useTranslation();
-  const { showToast } = useToast();
+  const { toast } = useToast();
   
   const [permissions, setPermissions] = useState<PermissionEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean, id: string }>({ isOpen: false, id: '' });
   const [activeStep, setActiveStep] = useState(1); // 1: 权限范围, 2: 字段多级控制
+  const [searchTerm, setSearchTerm] = useState('');
 
   const loadPermissions = async () => {
     setLoading(true);
@@ -64,33 +66,29 @@ export const PermissionManage: React.FC = () => {
         onConfirm={() => {
             setPermissions(prev => prev.filter(p => p.id !== confirmDelete.id));
             setConfirmDelete({ isOpen: false, id: '' });
-            showToast('权限已收回', 'success');
+            toast({ message: t('common.success'), type: 'success' });
         }}
         onCancel={() => setConfirmDelete({ isOpen: false, id: '' })}
         type="danger"
       />
 
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center">
-          <ShieldAlert className="mr-3 text-red-500" />
-          {t('dataService.permissionManage')}
-        </h2>
-        <div className="flex items-center space-x-3">
-             <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-                <input 
-                    type="text" 
-                    placeholder="按用户或 API 搜索..." 
-                    className="pl-10 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 w-64"
-                />
-            </div>
-            <button
-                onClick={() => setShowModal(true)}
-                className="px-4 py-2 bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white rounded-lg font-bold shadow-lg shadow-red-500/20 transition-all flex items-center"
-            >
-                <Plus size={18} className="mr-2" />授权 API 访问
-            </button>
+         <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+            <input 
+                type="text" 
+                placeholder="搜索用户或 API..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm w-64 outline-none focus:ring-2 focus:ring-blue-500 shadow-sm transition-all"
+            />
         </div>
+        <button
+            onClick={() => setShowModal(true)}
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium shadow-sm transition-colors flex items-center text-sm"
+        >
+            <Plus size={16} className="mr-1.5" />授权 API 访问
+        </button>
       </div>
 
       <div className="flex-1 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col">
@@ -105,8 +103,8 @@ export const PermissionManage: React.FC = () => {
                       <th className="px-6 py-4 text-right">操作</th>
                   </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                  {permissions.map(p => (
+              <tbody>
+                  {permissions.filter(p => p.userName.toLowerCase().includes(searchTerm.toLowerCase()) || p.apiName.toLowerCase().includes(searchTerm.toLowerCase())).map(p => (
                       <tr key={p.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
                           <td className="px-6 py-4">
                               <div className="flex items-center">
@@ -151,16 +149,17 @@ export const PermissionManage: React.FC = () => {
           </table>
       </div>
 
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in">
+      {showModal && createPortal(
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
           <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden border border-slate-200 dark:border-slate-700 flex flex-col">
                 <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800/80">
                     <h3 className="font-bold text-lg text-slate-800 dark:text-white">API 权限授权引擎</h3>
-                    <div className="flex items-center space-x-2">
-                        <div className={`w-2.5 h-2.5 rounded-full ${activeStep === 1 ? 'bg-red-500' : 'bg-red-200'}`}></div>
-                        <div className="w-8 h-0.5 bg-slate-200"></div>
-                        <div className={`w-2.5 h-2.5 rounded-full ${activeStep === 2 ? 'bg-red-500' : 'bg-red-200'}`}></div>
-                    </div>
+                    <button 
+                        onClick={() => setShowModal(false)} 
+                        className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-all"
+                    >
+                        <X size={20} />
+                    </button>
                 </div>
 
                 <div className="p-8 h-[400px]">
@@ -252,12 +251,13 @@ export const PermissionManage: React.FC = () => {
                     ) : (
                         <>
                             <button onClick={() => setActiveStep(1)} className="px-4 py-2 text-slate-500 hover:bg-slate-100 rounded-lg">上一步</button>
-                            <button onClick={() => { setShowModal(false); showToast('授权成功', 'success'); }} className="px-8 py-2 bg-gradient-to-r from-red-600 to-orange-600 text-white font-bold rounded-lg shadow-lg shadow-red-500/20">下发权限</button>
+                            <button onClick={() => { setShowModal(false); toast({ message: t('common.success'), type: 'success' }); }} className="px-8 py-2 bg-gradient-to-r from-red-600 to-orange-600 text-white font-bold rounded-lg shadow-lg shadow-red-500/20">{t('dataService.permission.grantPerm')}</button>
                         </>
                     )}
                 </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
