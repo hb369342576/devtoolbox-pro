@@ -250,6 +250,7 @@
     "system": "系统管理",
     "settings": "系统设置",
     "profile": "个人中心",
+    "dataService": "数据服务",
     "unknown": "未知功能"
   },
   "excelToSqlTemplate": "Excel 转 SQL 模板",
@@ -329,5 +330,13 @@
   "newPasswordsDoNotMatch": "两次输入的密码不一致",
   "passwordChangedSuccessful": "密码修改成功",
   "copyContent": "复制内容",
-  "contentCopied": "已复制完整内容"
+  "contentCopied": "已复制完整内容",
+  "dataService": {
+    "title": "数据服务管理",
+    "dataSource": "数据源管理",
+    "apiManage": "API 管理",
+    "userManage": "应用凭证管理",
+    "permissionManage": "权限分配与设置",
+    "docAndTest": "API 日志与联调测试"
+  }
 }

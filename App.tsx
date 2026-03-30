@@ -15,6 +15,7 @@ import { TimeUtility } from './features/TimeUtility';
 import { SystemMonitor } from './features/SystemMonitor';
 import { Settings } from './features/Settings';
 import { FieldMappingTool } from './features/FieldMappingTool';
+import { DataService } from './features/DataService';
 
 import { DataSourceManager } from './features/DataSourceManager';
 import { DataCompareTool } from './features/DataCompareTool';
@@ -332,6 +333,7 @@ export default function App() {
       case 'seatunnel': return <SeatunnelGen connections={connections} onNavigate={handleNavigate} />;
 
       case 'field-mapping': return <FieldMappingTool connections={connections} onNavigate={handleNavigate} />;
+      case 'data-service': return <DataService />;
 
       // DolphinScheduler Routes
       case 'dolphin-project': return <DSManager onNavigate={handleNavigate} />;

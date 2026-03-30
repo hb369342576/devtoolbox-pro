@@ -86,8 +86,17 @@ export const NAV_ITEMS: NavItem[] = [
         category: 'db',
         order: 3,
         visible: true
-      }
+      },
     ]
+  },
+  {
+    id: 'data-service',
+    label: 'nav.dataService',
+    tooltip: 'nav.dataService',
+    icon: Server,
+    category: 'db',
+    order: 5.5,
+    visible: true
   },
   {
     id: 'task-dev',

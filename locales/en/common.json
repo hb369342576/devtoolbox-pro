@@ -250,6 +250,7 @@
     "system": "System",
     "settings": "Settings",
     "profile": "Profile",
+    "dataService": "Data Service",
     "unknown": "Unknown"
   },
   "excelToSqlTemplate": "Excel to SQL Template",
@@ -329,5 +330,13 @@
   "newPasswordsDoNotMatch": "New passwords do not match",
   "passwordChangedSuccessful": "Password changed successfully",
   "copyContent": "Copy Content",
-  "contentCopied": "Full content copied"
+  "contentCopied": "Full content copied",
+  "dataService": {
+    "title": "Data Service Management",
+    "dataSource": "Data Source",
+    "apiManage": "API Management",
+    "userManage": "User AppID Management",
+    "permissionManage": "Permission Control",
+    "docAndTest": "API Docs & Test"
+  }
 }
