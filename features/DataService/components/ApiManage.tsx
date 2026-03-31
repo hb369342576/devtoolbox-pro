@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom';
 import { 
   Plus, Edit, Trash2, RefreshCw, X, Search, 
   Layers, Code, Settings, Play, Database, BookOpen,
-  Check, AlertCircle, ArrowRight, Power, ChevronDown
+  Check, AlertCircle, ArrowRight, Power, ChevronDown,
+  LayoutGrid, LayoutList, Filter
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { dataServiceApi } from '../api';
@@ -57,6 +58,8 @@ export const ApiManage: React.FC<ApiManageProps> = ({ onNavigateToDoc }) => {
   const [activeStep, setActiveStep] = useState(1); // 1: 基本信息, 2: 字段配置
   const [parsingFields, setParsingFields] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [layoutMode, setLayoutMode] = useState<'table' | 'card'>('table');
+  const [statusFilter, setStatusFilter] = useState<'' | '0' | '1' | '2'>('');
 
   // Table selector and SQL testing state
   const [datasourceTables, setDatasourceTables] = useState<string[]>([]);
@@ -312,27 +315,66 @@ export const ApiManage: React.FC<ApiManageProps> = ({ onNavigateToDoc }) => {
         type="danger"
       />
 
-      <div className="flex justify-between items-center mb-6">
-        <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-            <input 
-                type="text" 
-                placeholder="搜索 API..." 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 w-64 shadow-sm"
-            />
+      <div className="flex justify-between items-center mb-6 gap-3 flex-wrap">
+        <div className="flex items-center gap-2 flex-1 flex-wrap">
+          {/* 搜索框 */}
+          <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+              <input 
+                  type="text" 
+                  placeholder="搜索 API..." 
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 w-56 shadow-sm"
+              />
+          </div>
+          {/* 发布状态筛选 */}
+          <div className="relative flex items-center">
+            <Filter size={14} className="absolute left-3 text-slate-400 pointer-events-none" />
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as '' | '0' | '1' | '2')}
+              className="pl-8 pr-8 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 shadow-sm appearance-none cursor-pointer text-slate-700 dark:text-slate-300"
+            >
+              <option value="">全部状态</option>
+              <option value="0">草稿</option>
+              <option value="1">已发布</option>
+              <option value="2">已下线</option>
+            </select>
+            <ChevronDown size={12} className="absolute right-2.5 text-slate-400 pointer-events-none" />
+          </div>
         </div>
-        <button
-            onClick={handleAddNew}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium flex items-center justify-center shadow-sm transition-colors text-sm"
-        >
-            <Plus size={16} className="mr-1.5" />{t('common.add')} API
-        </button>
+        <div className="flex items-center gap-2">
+          {/* 布局切换 */}
+          <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg p-1">
+            <button
+              onClick={() => setLayoutMode('table')}
+              className={`p-1.5 rounded-md transition-all ${layoutMode === 'table' ? 'bg-white dark:bg-slate-700 shadow text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
+              title="表格视图"
+            >
+              <LayoutList size={16} />
+            </button>
+            <button
+              onClick={() => setLayoutMode('card')}
+              className={`p-1.5 rounded-md transition-all ${layoutMode === 'card' ? 'bg-white dark:bg-slate-700 shadow text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
+              title="卡片视图"
+            >
+              <LayoutGrid size={16} />
+            </button>
+          </div>
+          <button
+              onClick={handleAddNew}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium flex items-center justify-center shadow-sm transition-colors text-sm"
+          >
+              <Plus size={16} className="mr-1.5" />{t('common.add')} API
+          </button>
+        </div>
       </div>
 
+
       <div className="flex-1 overflow-auto">
-        <table className="w-full text-left border-separate border-spacing-y-2">
+        {layoutMode === 'table' ? (
+          <table className="w-full text-left border-separate border-spacing-y-2">
             <thead>
                 <tr className="text-slate-500 text-sm font-medium">
                     <th className="px-4 py-2">API 名称</th>
@@ -344,7 +386,9 @@ export const ApiManage: React.FC<ApiManageProps> = ({ onNavigateToDoc }) => {
                 </tr>
             </thead>
             <tbody className="text-sm">
-                {apis.filter(a => a.apiName.toLowerCase().includes(searchTerm.toLowerCase()) || a.apiPath.toLowerCase().includes(searchTerm.toLowerCase())).map(api => (
+                {apis
+                  .filter(a => (a.apiName.toLowerCase().includes(searchTerm.toLowerCase()) || a.apiPath.toLowerCase().includes(searchTerm.toLowerCase())) && (statusFilter === '' || String(a.status) === statusFilter))
+                  .map(api => (
                     <tr key={api.id} className="bg-white dark:bg-slate-800 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-colors group">
                         <td className="px-4 py-4 rounded-l-xl border-y border-l border-slate-100 dark:border-slate-700">
                             <div className="font-bold text-slate-800 dark:text-slate-200">{api.apiName}</div>
@@ -401,7 +445,74 @@ export const ApiManage: React.FC<ApiManageProps> = ({ onNavigateToDoc }) => {
                     </tr>
                 ))}
             </tbody>
-        </table>
+          </table>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {apis
+              .filter(a => (a.apiName.toLowerCase().includes(searchTerm.toLowerCase()) || a.apiPath.toLowerCase().includes(searchTerm.toLowerCase())) && (statusFilter === '' || String(a.status) === statusFilter))
+              .map(api => (
+                <div key={api.id} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-5 hover:shadow-lg transition-all group flex flex-col h-full">
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <div className="font-bold text-slate-800 dark:text-slate-200 text-lg">{api.apiName}</div>
+                      <div className="text-xs text-slate-500 mt-1 line-clamp-2">{api.apiDesc || '暂无描述'}</div>
+                    </div>
+                    <div className="flex items-center space-x-1.5 ml-2 shrink-0">
+                      <div className={`w-2 h-2 rounded-full ${
+                          api.status === 1 ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]' : 
+                          api.status === 2 ? 'bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.6)]' : 
+                          'bg-slate-300'
+                      }`}></div>
+                      <span className={`text-xs font-medium ${
+                          api.status === 1 ? 'text-emerald-600 dark:text-emerald-400' : 
+                          api.status === 2 ? 'text-orange-600 dark:text-orange-400' : 
+                          'text-slate-400'
+                      }`}>
+                          {api.status === 1 ? t('dataService.api.statusPublished') : 
+                            api.status === 2 ? t('dataService.api.statusOffline') : 
+                            t('dataService.api.statusDraft')}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-slate-50 dark:bg-slate-900/50 rounded-lg p-3 mb-4 flex-1">
+                    <div className="text-xs font-mono text-blue-600 dark:text-blue-400 mb-2 truncate" title={api.apiPath}>
+                      {api.apiPath}
+                    </div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${api.queryType === 1 ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' : 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300'}`}>
+                          {api.queryType === 1 ? '表查询' : 'SQL查询'}
+                      </span>
+                      <span className="text-xs text-slate-500 truncate" title={dataSources.find(d => String(d.id) === String(api.datasourceId))?.datasourceName || String(api.datasourceId)}>
+                        DS: {dataSources.find(d => String(d.id) === String(api.datasourceId))?.datasourceName || api.datasourceId}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-center pt-3 border-t border-slate-100 dark:border-slate-700/60 mt-auto">
+                    <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button 
+                          onClick={() => handleToggleStatus(api)} 
+                          className={`p-1.5 rounded-md transition-all ${
+                              api.status === 1 ? 'text-orange-500 hover:bg-orange-50' : 'text-blue-600 hover:bg-blue-50'
+                          }`}
+                          title={api.status === 1 ? t('dataService.api.offlineAction') : t('dataService.api.publishAction')}
+                      >
+                          {api.status === 1 ? <Power size={14} /> : <Play size={14} />}
+                      </button>
+                      {api.status === 1 && (
+                          <button onClick={() => onNavigateToDoc(api.id!)} className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-md transition-all" title="查看文档"><BookOpen size={14} /></button>
+                      )}
+                    </div>
+                    <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => handleEdit(api)} disabled={api.status === 1} className={`p-1.5 rounded-md transition-all ${api.status === 1 ? 'text-slate-300 dark:text-slate-600 cursor-not-allowed' : 'text-slate-400 hover:text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/30'}`} title={api.status === 1 ? '已上线，不可编辑' : '编辑'}><Edit size={14} /></button>
+                      <button onClick={() => api.status !== 1 && setConfirmDelete({ isOpen: true, id: api.id! })} disabled={api.status === 1} className={`p-1.5 rounded-md transition-all ${api.status === 1 ? 'text-slate-300 dark:text-slate-600 cursor-not-allowed' : 'text-slate-400 hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30'}`} title={api.status === 1 ? '已上线，不可删除' : '删除'}><Trash2 size={14} /></button>
+                    </div>
+                  </div>
+                </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {showModal && createPortal(

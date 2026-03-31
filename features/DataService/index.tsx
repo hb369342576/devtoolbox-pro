@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { 
   Database, Workflow, Users, Shield, BookOpen, Sparkles, ChevronLeft, Server,
-  AlertCircle, RefreshCw, X, Globe
+  AlertCircle, RefreshCw, X
 } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { DataSourceManage } from './components/DataSourceManage';
@@ -13,12 +13,12 @@ import { ApiDocAndTest } from './components/ApiDocAndTest';
 import { ConnectionManager } from './components/ConnectionManager';
 import { DataServiceConnection } from '../../types';
 import { setupDataServiceApi, dataServiceApi } from './api';
-import { PublishedManage } from './components/PublishedManage';
+
 
 export const DataService: React.FC = () => {
   const { t } = useTranslation();
   const [activeConnection, setActiveConnection] = useState<DataServiceConnection | null>(null);
-  const [activeTab, setActiveTab] = useState<'dataSource' | 'api' | 'user' | 'permission' | 'doc' | 'published'>('api');
+  const [activeTab, setActiveTab] = useState<'dataSource' | 'api' | 'user' | 'permission' | 'doc'>('api');
   const [selectedApiId, setSelectedApiId] = useState<string | null>(null);
   const [status, setStatus] = useState<'connecting' | 'connected' | 'failed'>('connecting');
   const [showErrorModal, setShowErrorModal] = useState(false);
@@ -39,7 +39,6 @@ export const DataService: React.FC = () => {
   const tabs = [
     { id: 'dataSource', label: t('dataService.dataSourceManage'), icon: Database },
     { id: 'api', label: t('dataService.apiManage'), icon: Workflow },
-    { id: 'published', label: t('dataService.api.publishedList'), icon: Globe },
     { id: 'user', label: t('dataService.userManage'), icon: Users },
     { id: 'permission', label: t('dataService.permissionManage'), icon: Shield },
     { id: 'doc', label: t('dataService.apiDocAndTest'), icon: BookOpen },
@@ -156,7 +155,6 @@ export const DataService: React.FC = () => {
             <>
               {activeTab === 'dataSource' && <DataSourceManage />}
               {activeTab === 'api' && <ApiManage onNavigateToDoc={(id) => { setSelectedApiId(id); setActiveTab('doc'); }} />}
-              {activeTab === 'published' && <PublishedManage onNavigateToDoc={(id) => { setSelectedApiId(id); setActiveTab('doc'); }} />}
               {activeTab === 'user' && <UserManage onNavigateToDoc={(id) => { setSelectedApiId(id); setActiveTab('doc'); }} onNavigateToApi={() => setActiveTab('api')} />}
               {activeTab === 'permission' && <PermissionManage />}
               {activeTab === 'doc' && <ApiDocAndTest preSelectedId={selectedApiId} onIdChange={setSelectedApiId} />}

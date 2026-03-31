@@ -5,6 +5,8 @@
         "main"
     ],
     "permissions": [
+        "core:window:default",
+        "core:window:allow-set-title",
         "dialog:default",
         "fs:default",
         "updater:default",

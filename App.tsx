@@ -31,6 +31,15 @@ import { useTranslation } from "react-i18next";
 /* --- Home Dashboard --- */
 const Dashboard: React.FC<{ onNavigate: (id: string) => void, navItems: any[] }> = ({ onNavigate, navItems }) => {
     const { t, i18n } = useTranslation();
+    const [appName, setAppName] = useState(() => localStorage.getItem('app_custom_name') || 'DevToolbox');
+
+    useEffect(() => {
+        const handleNameChange = (e: any) => {
+            setAppName(e.detail);
+        };
+        window.addEventListener('app_custom_name_changed', handleNameChange);
+        return () => window.removeEventListener('app_custom_name_changed', handleNameChange);
+    }, []);
 
   // Get all leaf nodes from navItems recursively, excluding dashboard
   const getTools = (items: any[]): any[] => {
@@ -52,7 +61,7 @@ const Dashboard: React.FC<{ onNavigate: (id: string) => void, navItems: any[] }>
     <div className="flex flex-col items-center space-y-12 pt-8 pb-8">
       <div className="space-y-4 text-center max-w-3xl px-4">
         <h1 className="text-4xl md:text-5xl font-bold text-slate-900 dark:text-white tracking-tight">
-          {t('common.welcome')} <span className="text-blue-600">DevToolbox</span>
+          {t('common.welcome')} <span className="text-blue-600">{appName}</span>
         </h1>
         <p className="text-lg md:text-xl text-slate-600 dark:text-slate-400">
           {t('common.appDescription')}

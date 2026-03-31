@@ -4,6 +4,7 @@ import { NAV_ITEMS } from '../../constants';
 import { Language, Theme, User } from '../../types';
 import { Tooltip } from './Tooltip';
 import { useTranslation } from "react-i18next";
+import { getCurrent } from '@tauri-apps/api/window';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -38,6 +39,30 @@ export const Layout: React.FC<LayoutProps> = ({
 }) => {
     const { t, i18n } = useTranslation();
   const [collapsed, setCollapsed] = useState(false);
+
+  // App Customization State
+  const [appName, setAppName] = useState(() => localStorage.getItem('app_custom_name') || 'DevToolbox');
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [tempName, setTempName] = useState(appName);
+
+  useEffect(() => {
+    // 1. 同步更改网页 Tab 标题
+    document.title = appName;
+    
+    // 2. 跨端通讯，更改系统任务栏/应用窗口原生的外壳标题
+    const isTauri = typeof window !== 'undefined' && !!(window as any).__TAURI_INTERNALS__ || !!(window as any).__TAURI__;
+    if (isTauri) {
+        getCurrent().setTitle(appName).catch(console.error);
+    }
+  }, [appName]);
+
+  const commitNameChange = () => {
+      const finalName = tempName.trim() || 'DevToolbox';
+      setAppName(finalName);
+      localStorage.setItem('app_custom_name', finalName);
+      window.dispatchEvent(new CustomEvent('app_custom_name_changed', { detail: finalName }));
+      setIsEditingName(false);
+  };
 
   // Top-right User Menu State
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -192,9 +217,32 @@ export const Layout: React.FC<LayoutProps> = ({
               <Settings className="text-white w-5 h-5" />
             </div>
             {!collapsed && (
-              <span className="font-bold text-xl bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 whitespace-nowrap">
-                DevToolbox
-              </span>
+              isEditingName ? (
+                <input
+                    type="text"
+                    autoFocus
+                    value={tempName}
+                    onChange={(e) => setTempName(e.target.value)}
+                    onBlur={commitNameChange}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter') commitNameChange();
+                        if (e.key === 'Escape') setIsEditingName(false);
+                    }}
+                    className="font-bold text-xl bg-transparent outline-none w-36 border-b border-blue-400 text-slate-800 dark:text-white"
+                />
+              ) : (
+                <Tooltip content="双击自定义名称" position="right">
+                    <span 
+                        onDoubleClick={() => {
+                            setTempName(appName);
+                            setIsEditingName(true);
+                        }}
+                        className="font-bold text-xl bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 whitespace-nowrap cursor-pointer hover:opacity-80 transition-opacity"
+                    >
+                        {appName}
+                    </span>
+                </Tooltip>
+              )
             )}
           </div>
         </div>

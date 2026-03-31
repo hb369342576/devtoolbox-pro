@@ -59,8 +59,14 @@ export async function httpFetch(url: string, options: RequestOptions = {}): Prom
         }
     } else {
         // Web 模式：使用原生 fetch
+        // 本地联调时拦截 http://localhost:18087 转发给本地 Vite 的 Proxy，绕过浏览器跨域
+        let finalUrl = url;
+        if (typeof window !== 'undefined' && window.location.hostname === 'localhost' && url.startsWith('http://localhost:18087/dataservice')) {
+            finalUrl = url.replace('http://localhost:18087/dataservice', '/dataservice-proxy');
+        }
+
         try {
-            return await window.fetch(url, {
+            return await window.fetch(finalUrl, {
                 method,
                 headers: headers as HeadersInit,
                 body: body || undefined,
